@@ -23,6 +23,13 @@ function saveSearch(term) {
     displayHistory();
 }
 
+function deleteSearch(term) {
+    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    history = history.filter(t => t !== term);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    displayHistory();
+}
+
 function displayHistory() {
     if (!historyDiv) return;
     const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -30,13 +37,24 @@ function displayHistory() {
         historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍 Recientes:</div>' +
-        history.map(term => `<button class="history-btn" data-term="${term}">${term}</button>`).join('');
+    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍</div>' +
+        history.map(term => `
+            <button class="history-btn" data-term="${term}">
+                ${term}
+                <span class="history-delete" data-term="${term}">✖</span>
+            </button>
+        `)
     
     document.querySelectorAll('.history-btn').forEach(btn => {
         btn.onclick = () => {
             searchInput.value = btn.dataset.term;
             searchBtn.click();
+        };
+    });
+    document.querySelectorAll('.history-delete').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            deleteSearch(btn.dataset.term);
         };
     });
 }

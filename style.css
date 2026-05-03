@@ -202,8 +202,10 @@ button:hover {
 
 .history-btn {
     background: #2a2a2a;
+    position: relative;
     border: none;
     padding: 6px 12px;
+    padding-right: 24px;
     border-radius: 20px;
     color: white;
     cursor: pointer;
@@ -215,7 +217,27 @@ button:hover {
 .history-btn:hover {
     background: #ff0000;
 }
+.history-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+}
 
+.history-delete {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ff0000;
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: auto;
+}
+
+.history-delete:hover {
+    color: white;
+}
 @media (max-width: 768px) {
     .results {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
