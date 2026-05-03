@@ -1,3 +1,5 @@
+const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
+
 // const TARGET_CHANNEL = 'YouTube Movies'; // OLD: filter by channel name
 const TARGET_CHANNEL_ID = 'UClgRkhTL3_hImCAmLdDE4Q'; // NEW: filter by channel ID
 
@@ -31,7 +33,7 @@ function displayHistory() {
         historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍 Recientes:</div>' +
+    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍</div>' +
         history.map(term => `<button class="history-btn" data-term="${term}">${term}</button>`).join('');
     
     document.querySelectorAll('.history-btn').forEach(btn => {
