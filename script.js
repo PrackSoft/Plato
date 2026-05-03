@@ -1,4 +1,3 @@
-// script.js
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -78,20 +77,21 @@ function displayHistory() {
 
 function saveMoviesFromSearch(searchTerm, movies) {
     const saved = JSON.parse(localStorage.getItem(SAVED_MOVIES_KEY) || '[]');
-    const newMovies = movies.map(m => ({
-        id: m.id.videoId,
-        title: m.snippet.title,
-        channel: m.snippet.channelTitle,
-        imageUrl: m.snippet.thumbnails.medium.url,
-        url: `https://youtube.com/watch?v=${m.id.videoId}`,
-        searchTerm: searchTerm,
-        date: new Date().toISOString()
-    }));
-    const combined = [...newMovies, ...saved];
-    const unique = combined.filter((movie, index, self) => 
-        index === self.findIndex(m => m.id === movie.id)
-    );
-    localStorage.setItem(SAVED_MOVIES_KEY, JSON.stringify(unique.slice(0, 200)));
+    const existingIds = new Set(saved.map(m => m.id));
+    const newMovies = movies
+        .filter(m => !existingIds.has(m.id.videoId))
+        .map(m => ({
+            id: m.id.videoId,
+            title: m.snippet.title,
+            channel: m.snippet.channelTitle,
+            imageUrl: m.snippet.thumbnails.medium.url,
+            url: `https://youtube.com/watch?v=${m.id.videoId}`,
+            searchTerm: searchTerm,
+            date: new Date().toISOString()
+        }));
+    if (newMovies.length === 0) return;
+    const updated = [...newMovies, ...saved];
+    localStorage.setItem(SAVED_MOVIES_KEY, JSON.stringify(updated.slice(0, 200)));
 }
 
 function loadSavedMovies(sortBy = 'date') {
