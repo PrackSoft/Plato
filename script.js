@@ -130,6 +130,11 @@ searchBtn.onclick = async () => {
     currentQuery = `${baseQuery} YouTube Movies`;
     allResults = [];
     nextPageToken = null;
+    
+    // Ocultar historial y mostrar búsqueda
+    searchView.style.display = 'block';
+    historyView.style.display = 'none';
+    
     resultsDiv.innerHTML = '';
     statsDiv.innerHTML = '';
     loadMoreBtn.style.display = 'none';
