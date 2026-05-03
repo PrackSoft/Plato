@@ -1,7 +1,9 @@
+// script.js
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
 const STORAGE_KEY = 'plato_search_history';
+const SAVED_MOVIES_KEY = 'plato_saved_movies';
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -10,6 +12,11 @@ const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const statsDiv = document.getElementById('stats');
 const historyDiv = document.getElementById('history');
+const searchView = document.getElementById('searchView');
+const historyView = document.getElementById('historyView');
+const backToSearchBtn = document.getElementById('backToSearchBtn');
+const savedMoviesList = document.getElementById('savedMoviesList');
+const historyStats = document.getElementById('historyStats');
 
 let nextPageToken = null;
 let currentQuery = '';
@@ -37,17 +44,19 @@ function displayHistory() {
         historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍</div>' +
+    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa; cursor: pointer;" id="historyIcon">🔍</div>' +
         history.map(term => `
             <button class="history-btn" data-term="${term}">
                 ${term}
                 <span class="history-delete" data-term="${term}">✖</span>
             </button>
-        `)
+        `).join('');
     
     document.querySelectorAll('.history-btn').forEach(btn => {
         btn.onclick = () => {
             searchInput.value = btn.dataset.term;
+            searchView.style.display = 'block';
+            historyView.style.display = 'none';
             searchBtn.click();
         };
     });
@@ -57,6 +66,60 @@ function displayHistory() {
             deleteSearch(btn.dataset.term);
         };
     });
+    const historyIcon = document.getElementById('historyIcon');
+    if (historyIcon) {
+        historyIcon.onclick = () => {
+            loadSavedMovies();
+            searchView.style.display = 'none';
+            historyView.style.display = 'block';
+        };
+    }
+}
+
+function saveMoviesFromSearch(searchTerm, movies) {
+    const saved = JSON.parse(localStorage.getItem(SAVED_MOVIES_KEY) || '[]');
+    const newMovies = movies.map(m => ({
+        id: m.id.videoId,
+        title: m.snippet.title,
+        channel: m.snippet.channelTitle,
+        imageUrl: m.snippet.thumbnails.medium.url,
+        url: `https://youtube.com/watch?v=${m.id.videoId}`,
+        searchTerm: searchTerm,
+        date: new Date().toISOString()
+    }));
+    const combined = [...newMovies, ...saved];
+    const unique = combined.filter((movie, index, self) => 
+        index === self.findIndex(m => m.id === movie.id)
+    );
+    localStorage.setItem(SAVED_MOVIES_KEY, JSON.stringify(unique.slice(0, 200)));
+}
+
+function loadSavedMovies(sortBy = 'date') {
+    let movies = JSON.parse(localStorage.getItem(SAVED_MOVIES_KEY) || '[]');
+    if (sortBy === 'title') movies.sort((a,b) => a.title.localeCompare(b.title));
+    else if (sortBy === 'channel') movies.sort((a,b) => a.channel.localeCompare(b.channel));
+    else movies.sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    if (movies.length === 0) {
+        savedMoviesList.innerHTML = '<p class="stats">No saved movies yet.</p>';
+        historyStats.innerHTML = '';
+        return;
+    }
+    savedMoviesList.innerHTML = movies.map(movie => `
+        <div class="video-card" onclick="window.open('${movie.url}')">
+            <img src="${movie.imageUrl}" alt="${movie.title}">
+            <div class="info">
+                <h3>${escapeHtml(movie.title)}</h3>
+                <div class="channel">${escapeHtml(movie.channel)}</div>
+                <div class="small">Saved: ${new Date(movie.date).toLocaleDateString()}</div>
+            </div>
+        </div>
+    `).join('');
+    historyStats.innerHTML = `<strong>${movies.length} movies saved</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
+    
+    document.querySelectorAll('#sortButtons button').forEach(btn => {
+        btn.onclick = () => loadSavedMovies(btn.dataset.sort);
+    });
 }
 
 searchBtn.onclick = async () => {
@@ -65,7 +128,6 @@ searchBtn.onclick = async () => {
     
     currentSearchTerm = baseQuery;
     currentQuery = `${baseQuery} YouTube Movies`;
-    
     allResults = [];
     nextPageToken = null;
     resultsDiv.innerHTML = '';
@@ -119,6 +181,7 @@ function displayResults() {
     `).join('');
     
     statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
+    saveMoviesFromSearch(currentSearchTerm, allResults);
 }
 
 function escapeHtml(str) {
@@ -127,5 +190,10 @@ function escapeHtml(str) {
 }
 
 searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchBtn.click(); });
+
+backToSearchBtn.onclick = () => {
+    historyView.style.display = 'none';
+    searchView.style.display = 'block';
+};
 
 displayHistory();

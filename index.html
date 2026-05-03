@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YouTube Movies Search</title>
     <link rel="stylesheet" href="style.css">
-    <!--<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />-->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20,600,0,0" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet">
 </head>
@@ -26,10 +25,21 @@
     </div>
 
     <div class="container">
-        <div id="results" class="results"></div>
-        <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
-        <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
-        <div id="stats" class="stats"></div>
+        <div id="searchView">
+            <div id="results" class="results"></div>
+            <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
+            <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
+            <div id="stats" class="stats"></div>
+        </div>
+
+        <div id="historyView" style="display:none;">
+            <div class="history-header">
+                <button id="backToSearchBtn" class="secondary-btn">← Back to search</button>
+                <h2>Saved movies</h2>
+            </div>
+            <div id="savedMoviesList" class="results"></div>
+            <div id="historyStats" class="stats"></div>
+        </div>
     </div>
 
     <script src="script.js"></script>
