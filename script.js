@@ -33,10 +33,23 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
 }
 
+// Agregar esta función antes de openModal
+function deleteMovieById(movieId) {
+    if (!confirm('¿Eliminar esta película del historial guardado?')) return;
+    let movies = JSON.parse(localStorage.getItem(SAVED_MOVIES_KEY) || '[]');
+    const newMovies = movies.filter(m => m.id !== movieId);
+    localStorage.setItem(SAVED_MOVIES_KEY, JSON.stringify(newMovies));
+    if (historyView.style.display === 'block') loadSavedMovies();
+}
+
+// Modificar openModal para incluir el botón de eliminar
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
-        <h2>${escapeHtml(movie.title)}</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>${escapeHtml(movie.title)}</h2>
+            <span class="delete-movie-btn" style="cursor: pointer; color: #ff0000; font-size: 20px;">🗑️</span>
+        </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <p><strong>Description:</strong></p>
@@ -46,6 +59,13 @@ function openModal(movie) {
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
+    
+    const deleteBtn = document.querySelector('.delete-movie-btn');
+    if (deleteBtn) deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteMovieById(movie.id);
+        modal.style.display = 'none';
+    };
 }
 
 if (closeModal) closeModal.onclick = () => { if (modal) modal.style.display = 'none'; };
