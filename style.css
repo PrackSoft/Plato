@@ -255,14 +255,18 @@ button:hover {
     justify-content: center;
     z-index: 1000;
 }
+
 .modal-content {
     background: #1a1a1a;
     padding: 20px;
     border-radius: 12px;
-    max-width: 500px;
+    max-width: 600px;
     width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
     position: relative;
 }
+
 .close-modal {
     position: absolute;
     top: 10px; right: 15px;

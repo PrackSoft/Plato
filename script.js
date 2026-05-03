@@ -40,8 +40,11 @@ function openModal(movie) {
         <h2>${escapeHtml(movie.title)}</h2>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>Canal:</strong> ${escapeHtml(movie.channel)}</p>
-        <p><strong>Fecha:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Desconocida'}</p>
-        <p><strong>Descripción:</strong> ${escapeHtml(movie.description || 'Sin descripción')}</p>
+        <p><strong>Fecha de publicación:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Desconocida'}</p>
+        <p><strong>Descripción:</strong><br> ${escapeHtml(movie.description || 'Sin descripción')}</p>
+        <p><strong>ID del video:</strong> ${escapeHtml(movie.id)}</p>
+        <p><strong>Término buscado:</strong> ${escapeHtml(movie.searchTerm)}</p>
+        <p><strong>Guardado el:</strong> ${new Date(movie.date).toLocaleString()}</p>
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
@@ -166,6 +169,9 @@ searchBtn.onclick = async () => {
     
     await loadResults();
     saveSearch(baseQuery);
+    
+    // Limpiar el campo de búsqueda después de buscar
+    searchInput.value = '';
 };
 
 loadMoreBtn.onclick = async () => { await loadResults(); };
