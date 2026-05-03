@@ -1,7 +1,7 @@
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwk8HexECnzwdLeW_5Z7fkEwKmwgHbQlF-r3kHpyP58YyvKhlWBv0aWS6bb1pSDqq0qnw/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyK8ors7OYqcNBrecs9xP-dCqvZhfuAgSfh6O8_Q9iH11Gmd5fJ5NgSTKa5vk5mQz83Eg/exec';
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
