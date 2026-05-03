@@ -38,11 +38,11 @@ function openModal(movie) {
     modalBody.innerHTML = `
         <h2>${escapeHtml(movie.title)}</h2>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
-        <p><strong>Fecha de publicación:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Desconocida'}</p>
-        <p><strong>Descripción:</strong></p>
-        <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">${escapeHtml(movie.description || 'Sin descripción')}</div>
-        <p><strong>Guardado el:</strong> ${new Date(movie.date).toLocaleString()}</p>
-        <p><strong>Término buscado:</strong> ${escapeHtml(movie.searchTerm)}</p>
+        <p><strong>Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
+        <p><strong>Description:</strong></p>
+        <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">${escapeHtml(movie.description || 'No Description')}</div>
+        <p><strong>Search:</strong> ${new Date(movie.date).toLocaleString()}</p>
+        <p><strong>Key Words:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
@@ -158,7 +158,7 @@ searchBtn.onclick = async () => {
     if (!baseQuery) return;
     
     currentSearchTerm = baseQuery;
-    currentQuery = `${baseQuery} YouTube Movies`;
+    currentQuery = `${baseQuery} Películas Gratis YouTube Películas y TV de YouTube`;
     allResults = [];
     nextPageToken = null;
     resultsDiv.innerHTML = '';
