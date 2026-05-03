@@ -49,13 +49,13 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-        transform: rotate(90deg);
+    /*transform: rotate(90deg);*/
 
 }
 
 .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 24;
-    transform: rotate(45deg);
+    /*transform: rotate(45deg);*/
     display: inline-block;
     margin-top: -6px;
 }
