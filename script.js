@@ -1,4 +1,3 @@
-// script.js completo
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -42,6 +41,8 @@ function openModal(movie) {
         <p><strong>Fecha de publicación:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Desconocida'}</p>
         <p><strong>Descripción:</strong></p>
         <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">${escapeHtml(movie.description || 'Sin descripción')}</div>
+        <p><strong>Guardado el:</strong> ${new Date(movie.date).toLocaleString()}</p>
+        <p><strong>Término buscado:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
@@ -166,8 +167,6 @@ searchBtn.onclick = async () => {
     
     await loadResults();
     saveSearch(baseQuery);
-    
-    // Limpiar el campo de búsqueda después de buscar
     searchInput.value = '';
 };
 
