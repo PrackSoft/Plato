@@ -46,12 +46,12 @@ function openModal(movie) {
     modalBody.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span class="delete-movie-btn" style="cursor: pointer; color: #ff0000; font-size: 20px;">🗑️</span>
-            <h2>${escapeHtml(movie.title)}</h2>
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
+        <h2>${escapeHtml(movie.title)}</h2>
         <p><strong>Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <p><strong>Description:</strong></p>
-        <div style="max-height: 300px; overflow-y: auto; margin-bottom: 16px;">${escapeHtml(movie.description || 'No Description')}</div>
+        <div style="max-height: 900px; overflow-y: auto; margin-bottom: 16px;">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Words:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
