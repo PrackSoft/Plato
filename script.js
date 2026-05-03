@@ -1,5 +1,5 @@
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
-const TARGET_CHANNEL = 'YouTube Movies';
+const TARGET_CHANNEL_ID = 'UClgRkhTL3_hImCAmLdDE4Q'; // Filter by channel ID
 const MAX_RESULTS_PER_PAGE = 50;
 const STORAGE_KEY = 'plato_search_history';
 
@@ -70,7 +70,7 @@ async function loadResults() {
         const data = await response.json();
         
         if (data.items) {
-            const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
+            const filtered = data.items.filter(video => video.snippet.channelId === TARGET_CHANNEL_ID);
             allResults = [...allResults, ...filtered];
             displayResults();
             nextPageToken = data.nextPageToken || null;
@@ -85,7 +85,7 @@ async function loadResults() {
 
 function displayResults() {
     if (allResults.length === 0 && !nextPageToken) {
-        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ${TARGET_CHANNEL}.</div>`;
+        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ID ${TARGET_CHANNEL_ID}.</div>`;
         statsDiv.innerHTML = '';
         return;
     }
@@ -100,7 +100,7 @@ function displayResults() {
         </div>
     `).join('');
     
-    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
+    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel ID: ${TARGET_CHANNEL_ID} · Search: "${currentSearchTerm}"`;
 }
 
 function escapeHtml(str) {
