@@ -1,0 +1,32 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Movies Search</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="logo">
+                🎬 YT Movies <span>BETA</span>
+            </div>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Buscar por título, actor, director...">
+                <button id="searchBtn">Buscar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="results" class="results"></div>
+        <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
+        <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
+        <div id="stats" class="stats"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
