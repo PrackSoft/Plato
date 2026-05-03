@@ -1,8 +1,5 @@
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
-
-// const TARGET_CHANNEL = 'YouTube Movies'; // OLD: filter by channel name
-const TARGET_CHANNEL_ID = 'UClgRkhTL3_hImCAmLdDE4Q'; // NEW: filter by channel ID
-
+const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
 const STORAGE_KEY = 'plato_search_history';
 
@@ -33,7 +30,7 @@ function displayHistory() {
         historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍</div>' +
+    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍 Recientes:</div>' +
         history.map(term => `<button class="history-btn" data-term="${term}">${term}</button>`).join('');
     
     document.querySelectorAll('.history-btn').forEach(btn => {
@@ -73,10 +70,7 @@ async function loadResults() {
         const data = await response.json();
         
         if (data.items) {
-            // OLD: filter by channelTitle === TARGET_CHANNEL
-            // const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
-            // NEW: filter by channelId
-            const filtered = data.items.filter(video => video.snippet.channelId === TARGET_CHANNEL_ID);
+            const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
             displayResults();
             nextPageToken = data.nextPageToken || null;
@@ -91,7 +85,7 @@ async function loadResults() {
 
 function displayResults() {
     if (allResults.length === 0 && !nextPageToken) {
-        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ${TARGET_CHANNEL_ID}.</div>`;
+        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ${TARGET_CHANNEL}.</div>`;
         statsDiv.innerHTML = '';
         return;
     }
@@ -106,7 +100,7 @@ function displayResults() {
         </div>
     `).join('');
     
-    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel ID: ${TARGET_CHANNEL_ID} · Search: "${currentSearchTerm}"`;
+    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
 }
 
 function escapeHtml(str) {
