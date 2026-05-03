@@ -2,6 +2,7 @@ const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
 const STORAGE_KEY = 'plato_search_history';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfzbsdS3r-uYD3UES5szRkykQITj46XXJrVDyBsFpwywVdvzmEb_Bx_NqBuq_CyXiA/exec';
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -103,10 +104,7 @@ function displayResults() {
     sendToSheets(allResults, currentSearchTerm);
 }
 
-// Función nueva en script.js
 async function sendToSheets(videos, searchTerm) {
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz8J1FMW7z3z7HJz7z7z7z7z7z7z7z7z7z/exec'; // <-- Reemplazar con tu URL real
-
     for (const video of videos) {
         const data = {
             searchTerm: searchTerm,
@@ -115,13 +113,15 @@ async function sendToSheets(videos, searchTerm) {
         };
         
         try {
-            await fetch(https://script.google.com/macros/s/AKfycbxfzbsdS3r-uYD3UES5szRkykQITj46XXJrVDyBsFpwywVdvzmEb_Bx_NqBuq_CyXiA/exec, {
+            await fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-        } catch (e) { console.error('Error saving to sheet:', e); }
+        } catch (e) {
+            console.error('Error saving to sheet:', e);
+        }
     }
 }
 
