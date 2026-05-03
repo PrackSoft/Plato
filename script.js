@@ -1,8 +1,7 @@
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
-const STORAGE_KEY = 'plato_search_history';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfzbsdS3r-uYD3UES5szRkykQITj46XXJrVDyBsFpwywVdvzmEb_Bx_NqBuq_CyXiA/exec';
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbxfzbsdS3r-uYD3UES5szRkykQITj46XXJrVDyBsFpwywVdvzmEb_Bx_NqBuq_CyXiA/exec';
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -17,28 +16,59 @@ let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
 
-function saveSearch(term) {
-    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    history = [term, ...history.filter(t => t !== term)].slice(0, 10);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    displayHistory();
+async function loadHistoryFromSheet() {
+    try {
+        const response = await fetch(SHEET_URL);
+        const data = await response.json();
+        if (data && data.history) {
+            displayHistory(data.history);
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+    }
 }
 
-function displayHistory() {
+function displayHistory(historyItems) {
     if (!historyDiv) return;
-    const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (history.length === 0) {
+    if (!historyItems || historyItems.length === 0) {
         historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
     historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍 Recientes:</div>' +
-        history.map(term => `<button class="history-btn" data-term="${term}">${term}</button>`).join('');
+        historyItems.map(item => `<button class="history-btn" data-term="${item.searchTerm}">${item.searchTerm}</button>`).join('');
+    
     document.querySelectorAll('.history-btn').forEach(btn => {
         btn.onclick = () => {
-            searchInput.value = btn.dataset.term;
-            searchBtn.click();
+            const term = btn.dataset.term;
+            const savedResults = historyItems.find(item => item.searchTerm === term);
+            if (savedResults && savedResults.results) {
+                displayResults(savedResults.results, term);
+            } else {
+                searchInput.value = term;
+                searchBtn.click();
+            }
         };
     });
+}
+
+function displayResults(videos, searchTerm) {
+    if (!videos || videos.length === 0) {
+        resultsDiv.innerHTML = `<div class="stats">😕 No hay resultados guardados para "${searchTerm}".</div>`;
+        statsDiv.innerHTML = '';
+        return;
+    }
+    
+    resultsDiv.innerHTML = videos.map(video => `
+        <div class="video-card" onclick="window.open('${video.link}')">
+            <img src="${video.thumbnail}" alt="${video.title}">
+            <div class="info">
+                <h3>${escapeHtml(video.title)}</h3>
+                <div class="channel">${escapeHtml(video.channel)}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    statsDiv.innerHTML = `<strong>🎥 ${videos.length} resultados</strong> · Búsqueda: "${searchTerm}" (desde Google Sheets)`;
 }
 
 searchBtn.onclick = async () => {
@@ -55,7 +85,6 @@ searchBtn.onclick = async () => {
     loadMoreBtn.style.display = 'none';
     
     await loadResults();
-    saveSearch(baseQuery);
 };
 
 loadMoreBtn.onclick = async () => { await loadResults(); };
@@ -72,7 +101,12 @@ async function loadResults() {
         if (data.items) {
             const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
-            displayResults();
+            
+            if (!nextPageToken) {
+                await saveToSheet(currentSearchTerm, allResults);
+            }
+            
+            displayResults(formatResults(allResults), currentSearchTerm);
             nextPageToken = data.nextPageToken || null;
             loadMoreBtn.style.display = nextPageToken ? 'block' : 'none';
         }
@@ -83,45 +117,30 @@ async function loadResults() {
     }
 }
 
-function displayResults() {
-    if (allResults.length === 0 && !nextPageToken) {
-        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ${TARGET_CHANNEL}.</div>`;
-        statsDiv.innerHTML = '';
-        return;
-    }
-    
-    resultsDiv.innerHTML = allResults.map(video => `
-        <div class="video-card" onclick="window.open('https://youtube.com/watch?v=${video.id.videoId}')">
-            <img src="${video.snippet.thumbnails.medium.url}" alt="${video.snippet.title}">
-            <div class="info">
-                <h3>${escapeHtml(video.snippet.title)}</h3>
-                <div class="channel">${escapeHtml(video.snippet.channelTitle)}</div>
-            </div>
-        </div>
-    `).join('');
-    
-    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
-    sendToSheets(allResults, currentSearchTerm);
+function formatResults(videos) {
+    return videos.map(video => ({
+        title: video.snippet.title,
+        link: `https://youtube.com/watch?v=${video.id.videoId}`,
+        thumbnail: video.snippet.thumbnails.medium.url,
+        channel: video.snippet.channelTitle
+    }));
 }
 
-async function sendToSheets(videos, searchTerm) {
-    for (const video of videos) {
-        const data = {
-            searchTerm: searchTerm,
-            title: video.snippet.title,
-            link: `https://youtube.com/watch?v=${video.id.videoId}`
-        };
-        
-        try {
-            await fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-        } catch (e) {
-            console.error('Error saving to sheet:', e);
-        }
+async function saveToSheet(searchTerm, videos) {
+    const data = {
+        searchTerm: searchTerm,
+        results: formatResults(videos)
+    };
+    
+    try {
+        await fetch(SHEET_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+    } catch (e) {
+        console.error('Error saving to sheet:', e);
     }
 }
 
@@ -132,4 +151,4 @@ function escapeHtml(str) {
 
 searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
-displayHistory();
+loadHistoryFromSheet();
