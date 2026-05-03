@@ -1,7 +1,7 @@
-// script.js (igual que antes, sin cambios)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
+const STORAGE_KEY = 'plato_search_history';
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -9,18 +9,43 @@ const searchInput = document.getElementById('searchInput');
 const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const statsDiv = document.getElementById('stats');
+const historyDiv = document.getElementById('history');
 
 let nextPageToken = null;
 let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
 
+function saveSearch(term) {
+    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    history = [term, ...history.filter(t => t !== term)].slice(0, 10);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    displayHistory();
+}
+
+function displayHistory() {
+    if (!historyDiv) return;
+    const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (history.length === 0) {
+        historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
+        return;
+    }
+    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">🔍 Recientes:</div>' +
+        history.map(term => `<button class="history-btn" data-term="${term}">${term}</button>`).join('');
+    document.querySelectorAll('.history-btn').forEach(btn => {
+        btn.onclick = () => {
+            searchInput.value = btn.dataset.term;
+            searchBtn.click();
+        };
+    });
+}
+
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
     
     currentSearchTerm = baseQuery;
-    currentQuery = `${baseQuery} YouTube Movies Películas Gratis YouTube`;
+    currentQuery = `${baseQuery} YouTube Movies`;
     
     allResults = [];
     nextPageToken = null;
@@ -29,31 +54,24 @@ searchBtn.onclick = async () => {
     loadMoreBtn.style.display = 'none';
     
     await loadResults();
+    saveSearch(baseQuery);
 };
 
-loadMoreBtn.onclick = async () => {
-    await loadResults();
-};
+loadMoreBtn.onclick = async () => { await loadResults(); };
 
 async function loadResults() {
     loadingDiv.style.display = 'block';
-    
     try {
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(currentQuery)}&key=${API_KEY}`;
-        if (nextPageToken) {
-            url += `&pageToken=${nextPageToken}`;
-        }
+        if (nextPageToken) url += `&pageToken=${nextPageToken}`;
         
         const response = await fetch(url);
         const data = await response.json();
         
         if (data.items) {
-            const filtered = data.items.filter(video => 
-                video.snippet.channelTitle === TARGET_CHANNEL
-            );
+            const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
             displayResults();
-            
             nextPageToken = data.nextPageToken || null;
             loadMoreBtn.style.display = nextPageToken ? 'block' : 'none';
         }
@@ -66,7 +84,7 @@ async function loadResults() {
 
 function displayResults() {
     if (allResults.length === 0 && !nextPageToken) {
-        resultsDiv.innerHTML = `<div class="stats">😕 No se encontraron videos del canal "${TARGET_CHANNEL}" para "${currentSearchTerm}". Probá con otras palabras.</div>`;
+        resultsDiv.innerHTML = `<div class="stats">😕 No results for "${currentSearchTerm}" in channel ${TARGET_CHANNEL}.</div>`;
         statsDiv.innerHTML = '';
         return;
     }
@@ -81,7 +99,7 @@ function displayResults() {
         </div>
     `).join('');
     
-    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} resultados</strong> · Canal: ${TARGET_CHANNEL} · Búsqueda: "${currentSearchTerm}"`;
+    statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
 }
 
 function escapeHtml(str) {
@@ -89,6 +107,6 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
 }
 
-searchInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') searchBtn.click();
-});
+searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchBtn.click(); });
+
+displayHistory();
