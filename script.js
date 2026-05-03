@@ -1,3 +1,4 @@
+// script.js completo
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -17,7 +18,6 @@ const backToSearchBtn = document.getElementById('backToSearchBtn');
 const savedMoviesList = document.getElementById('savedMoviesList');
 const historyStats = document.getElementById('historyStats');
 
-// Elementos del modal
 const modal = document.getElementById('movieModal');
 const closeModal = document.querySelector('.close-modal');
 const modalBody = document.getElementById('modalBody');
@@ -38,9 +38,10 @@ function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
         <h2>${escapeHtml(movie.title)}</h2>
+        <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>Canal:</strong> ${escapeHtml(movie.channel)}</p>
-        <p><strong>Fecha:</strong> ${new Date(movie.publishedAt).toLocaleDateString()}</p>
-        <p><strong>Descripción:</strong> ${escapeHtml(movie.description)}</p>
+        <p><strong>Fecha:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Desconocida'}</p>
+        <p><strong>Descripción:</strong> ${escapeHtml(movie.description || 'Sin descripción')}</p>
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
@@ -218,6 +219,16 @@ searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchB
 backToSearchBtn.onclick = () => {
     historyView.style.display = 'none';
     searchView.style.display = 'block';
+};
+
+document.getElementById('clearStorageBtn').onclick = () => {
+    if (confirm('¿Borrar todo el historial y las películas guardadas?')) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(SAVED_MOVIES_KEY);
+        displayHistory();
+        if (historyView.style.display === 'block') loadSavedMovies();
+        alert('Datos borrados correctamente');
+    }
 };
 
 displayHistory();
