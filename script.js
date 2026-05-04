@@ -103,7 +103,7 @@ function displayHistory() {
     document.querySelectorAll('.history-btn').forEach(btn => {
         btn.onclick = () => {
             searchInput.value = btn.dataset.term;
-            searchView.style.display = 'block';
+            searchView.style.display = '';
             historyView.style.display = 'none';
             searchBtn.click();
         };
@@ -184,6 +184,9 @@ searchBtn.onclick = async () => {
     statsDiv.innerHTML = '';
     loadMoreBtn.style.display = 'none';
     
+    searchView.style.display = '';
+    historyView.style.display = 'none';
+    
     await loadResults();
     saveSearch(baseQuery);
     searchInput.value = '';
@@ -239,7 +242,7 @@ searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchB
 
 backToSearchBtn.onclick = () => {
     historyView.style.display = 'none';
-    searchView.style.display = 'block';
+    searchView.style.display = '';
 };
 
 document.getElementById('clearStorageBtn').onclick = () => {
