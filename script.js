@@ -60,7 +60,7 @@ function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span class="delete-movie-btn" style="cursor: pointer; color: #ff0000; font-size: 20px;">🗑️</span>
+            <span class="delete-movie-btn material-symbols-outlined">delete_forever</span>
             <h2 style="margin: 0; text-align: center;">${escapeHtml(movie.title)}</h2>
             <div style="width: 20px;"></div>
         </div>
