@@ -1,8 +1,9 @@
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
-const STORAGE_KEY = 'plato_search_history';
-const SAVED_MOVIES_KEY = 'plato_saved_movies';
+const STORAGE_KEY = 'plato_search_history';      // Lista de términos buscados
+const SAVED_MOVIES_KEY = 'plato_saved_movies';   // Películas filtradas (solo canal objetivo)
+const RAW_SEARCH_KEY = 'plato_raw_searches';     // Resultados crudos (sin filtrar) por término
 
 const searchBtn = document.getElementById('searchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
@@ -10,7 +11,13 @@ const searchInput = document.getElementById('searchInput');
 const resultsDiv = document.getElementById('results');
 const loadingDiv = document.getElementById('loading');
 const statsDiv = document.getElementById('stats');
-const historyDiv = document.getElementById('history');
+
+const fullSearchDiv = document.getElementById('fullSearch');      // contenedor de los tags
+const fullSearchView = document.getElementById('fullSearchView');
+const fullSearchResults = document.getElementById('fullSearchResults');
+const fullSearchStats = document.getElementById('fullSearchStats');
+const backToSearchFromFull = document.getElementById('backToSearchFromFull');
+
 const searchView = document.getElementById('searchView');
 const historyView = document.getElementById('historyView');
 const backToSearchBtn = document.getElementById('backToSearchBtn');
@@ -84,45 +91,97 @@ function deleteSearch(term) {
     displayHistory();
 }
 
+// Guardar resultados crudos (sin filtrar) para un término
+function saveRawSearch(searchTerm, rawItems) {
+    let rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
+    const newEntry = {
+        searchTerm: searchTerm,
+        date: new Date().toISOString(),
+        results: rawItems.map(item => ({
+            id: item.id.videoId,
+            title: item.snippet.title,
+            channel: item.snippet.channelTitle,
+            imageUrl: item.snippet.thumbnails.medium.url,
+            url: `https://youtube.com/watch?v=${item.id.videoId}`,
+            description: item.snippet.description,
+            publishedAt: item.snippet.publishedAt
+        }))
+    };
+    // Reemplazar si ya existe el mismo término (actualizar)
+    const index = rawSearches.findIndex(entry => entry.searchTerm === searchTerm);
+    if (index !== -1) {
+        rawSearches[index] = newEntry;
+    } else {
+        rawSearches.unshift(newEntry);
+    }
+    // Mantener solo los últimos 20 términos
+    rawSearches = rawSearches.slice(0, 20);
+    localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
+}
+
 function displayHistory() {
-    if (!historyDiv) return;
+    if (!fullSearchDiv) return;
     const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     if (history.length === 0) {
-        historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
+        fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    historyDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa; cursor: pointer;" id="historyIcon">🔍</div>' +
+    // Cambiamos clase "history-btn" por "fullsearch-btn"
+    fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa; cursor: pointer;" id="historyIcon">🔍</div>' +
         history.map(term => `
-            <button class="history-btn" data-term="${term}">
+            <button class="fullsearch-btn" data-term="${term}">
                 ${term}
                 <span class="history-delete" data-term="${term}">✖</span>
             </button>
         `).join('');
     
-    document.querySelectorAll('.history-btn').forEach(btn => {
+    // Evento para los botones de búsqueda completa (antes .history-btn)
+    document.querySelectorAll('.fullsearch-btn').forEach(btn => {
         btn.onclick = () => {
-            searchInput.value = btn.dataset.term;
-            searchView.style.display = '';
-            historyView.style.display = 'none';
-            searchBtn.click();
+            const term = btn.dataset.term;
+            const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
+            const search = rawData.find(item => item.searchTerm === term);
+            if (search && search.results.length) {
+                fullSearchResults.innerHTML = search.results.map(movie => `
+                    <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+                        <img src="${movie.imageUrl}" alt="${movie.title}">
+                        <div class="info">
+                            <h3>${escapeHtml(movie.title)}</h3>
+                            <div class="channel">${escapeHtml(movie.channel)}</div>
+                        </div>
+                    </div>
+                `).join('');
+                fullSearchStats.innerHTML = `<strong>${search.results.length} resultados</strong> para "${term}" (sin filtro)`;
+                searchView.style.display = 'none';
+                historyView.style.display = 'none';
+                fullSearchView.style.display = 'block';
+            } else {
+                alert('No hay resultados guardados sin filtrar para este término. Realiza una búsqueda primero.');
+            }
         };
     });
+    
+    // Eliminar tag
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             deleteSearch(btn.dataset.term);
         };
     });
+    
+    // Lupa (historial filtrado)
     const historyIcon = document.getElementById('historyIcon');
     if (historyIcon) {
         historyIcon.onclick = () => {
             loadSavedMovies();
             searchView.style.display = 'none';
             historyView.style.display = 'block';
+            fullSearchView.style.display = 'none';
         };
     }
 }
 
+// Guardar películas filtradas (solo canal objetivo) - ya existente
 function saveMoviesFromSearch(searchTerm, movies) {
     const saved = JSON.parse(localStorage.getItem(SAVED_MOVIES_KEY) || '[]');
     const existingIds = new Set(saved.map(m => m.id));
@@ -185,6 +244,7 @@ searchBtn.onclick = async () => {
     
     searchView.style.display = '';
     historyView.style.display = 'none';
+    fullSearchView.style.display = 'none';
     
     await loadResults();
     saveSearch(baseQuery);
@@ -203,6 +263,9 @@ async function loadResults() {
         const data = await response.json();
         
         if (data.items) {
+            // Guardar resultados crudos (sin filtrar) antes de filtrar
+            saveRawSearch(currentSearchTerm, data.items);
+            
             const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
             displayResults();
@@ -242,12 +305,19 @@ searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchB
 backToSearchBtn.onclick = () => {
     historyView.style.display = 'none';
     searchView.style.display = '';
+    fullSearchView.style.display = 'none';
+};
+
+backToSearchFromFull.onclick = () => {
+    fullSearchView.style.display = 'none';
+    searchView.style.display = 'block';
 };
 
 document.getElementById('clearStorageBtn').onclick = () => {
     if (confirm('¿Borrar todo el historial y las películas guardadas?')) {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(SAVED_MOVIES_KEY);
+        localStorage.removeItem(RAW_SEARCH_KEY);
         displayHistory();
         if (historyView.style.display === 'block') loadSavedMovies();
         alert('Datos borrados correctamente');

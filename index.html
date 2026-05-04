@@ -1,4 +1,4 @@
-<!-- index.html completo -->
+<!-- index.html completo (sin cambios, tal como lo envió) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,43 +12,59 @@
 <body>
     <div class="header">
         <div class="container">
+            
             <div class="logo">
                 <span class="material-symbols-outlined">looks</span>
                 PLATO
             </div>
+
+            <!-- Search Bar -->
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search free YouTube movies by title, actor, director..." autocomplete="off">
                 <button id="searchBtn">Search</button>
             </div>
-            <div id="history"></div>
+
+            <!-- Tags -->
+            <div id="fullSearch"></div>
             <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
                 <button id="clearStorageBtn" style="background: #333; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer;">🗑️ Borrar todo</button>
             </div>
-        </div>
-    </div>
 
-    <div class="container">
-        <div id="searchView">
-            <div id="results" class="results"></div>
-            <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
-            <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
-            <div id="stats" class="stats"></div>
-        </div>
-
-        <div id="historyView" style="display:none;">
-            <div class="history-header">
-                <button id="backToSearchBtn" class="secondary-btn">← Back to search</button>
-                <h2>Saved Movies</h2>
+            <!-- ? -->
+            <div id="searchView">
+                <div id="results" class="results"></div>
+                <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
+                <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
+                <div id="stats" class="stats"></div>
             </div>
-            <div id="savedMoviesList" class="results"></div>
-            <div id="historyStats" class="stats"></div>
-        </div>
 
-        <div id="movieModal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <div id="modalBody"></div>
-                <button id="watchMovieBtn" class="primary-btn">Ver película en YouTube</button>
+            <!-- History (Filtered by channel "YouTube Movies") -->
+            <div id="historyView" style="display:none;">
+                <div class="history-header">
+                    <button id="backToSearchBtn" class="secondary-btn">← Back to search</button>
+                    <h2>Saved Movies</h2>
+                </div>
+                <div id="savedMoviesList" class="results"></div>
+                <div id="historyStats" class="stats"></div>
+            </div>
+
+            <!-- Full Search View -->
+            <div id="fullSearchView" style="display:none;">
+                <div class="history-header">
+                    <button id="backToSearchFromFull" class="secondary-btn">← Back to search</button>
+                    <h2>Full Search Results (from saved)</h2>
+                </div>
+                <div id="fullSearchResults" class="results"></div>
+                <div id="fullSearchStats" class="stats"></div>
+            </div>
+
+            <!-- Modal -->
+            <div id="movieModal" class="modal" style="display:none;">
+                <div class="modal-content">
+                    <span class="close-modal">&times;</span>
+                    <div id="modalBody"></div>
+                    <button id="watchMovieBtn" class="primary-btn">Ver película en YouTube</button>
+                </div>
             </div>
         </div>
     </div>
