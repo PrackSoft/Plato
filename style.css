@@ -189,20 +189,18 @@ button:hover {
 }
 
 .search-wrapper {
-    display: flex; 
-    flex-wrap: wrap; 
-    align-items: start; 
-    gap: 8px;
-}
-
-#fullSearch {
     display: flex;
     flex-wrap: wrap;
+    align-items: start;
     gap: 8px;
-    margin: 10px 0;
 }
 
-/* Clase para los botones de búsqueda completa (antes .history-btn) */
+/* Los hijos de #fullSearch se convierten en hijos directos del wrapper */
+#fullSearch {
+    display: contents;
+}
+
+/* Clase para los botones de búsqueda completa */
 .full-search-btn {
     background: #2a2a2a;
     position: relative;
@@ -214,6 +212,9 @@ button:hover {
     font-size: 12px;
     transition: background 0.2s;
     margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .full-search-btn:hover {
@@ -235,32 +236,18 @@ button:hover {
     color: white;
 }
 
-/*.secondary-btn {
-    background: #2a2a2a;
-    padding: 8px 16px;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    display: inline-block;
-}*/
-
-/*.history-header {
-    display: grid;
-    grid-template-columns: center;
-    align-items: start;
-    gap: 20px;
-    margin: 20px 0;
-}*/
-
 .modal {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: rgba(0,0,0,0.8);
     display: flex;
-    align-items: flex-start;      /* antes 'center' */
+    align-items: flex-start;
     justify-content: center;
     z-index: 1000;
-    padding-top: 10vh;            /* margen superior */
+    padding-top: 10vh;
 }
 
 .modal-content {
@@ -276,7 +263,8 @@ button:hover {
 
 .close-modal {
     position: absolute;
-    top: 10px; right: 15px;
+    top: 10px;
+    right: 15px;
     font-size: 24px;
     cursor: pointer;
     color: #ff0000;
