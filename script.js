@@ -104,17 +104,14 @@ function saveRawSearch(searchTerm, rawItems) {
             imageUrl: item.snippet.thumbnails.medium.url,
             url: `https://youtube.com/watch?v=${item.id.videoId}`,
             description: item.snippet.description,
-            publishedAt: item.snippet.publishedAt
+            publishedAt: item.snippet.publishedAt,
+            searchTerm: searchTerm,
+            date: new Date().toISOString()
         }))
     };
-    // Reemplazar si ya existe el mismo término (actualizar)
     const index = rawSearches.findIndex(entry => entry.searchTerm === searchTerm);
-    if (index !== -1) {
-        rawSearches[index] = newEntry;
-    } else {
-        rawSearches.unshift(newEntry);
-    }
-    // Mantener solo los últimos 20 términos
+    if (index !== -1) rawSearches[index] = newEntry;
+    else rawSearches.unshift(newEntry);
     rawSearches = rawSearches.slice(0, 20);
     localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
 }
