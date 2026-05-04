@@ -127,7 +127,7 @@ function displayHistory() {
     if (!fullSearchDiv) return;
     const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     if (history.length === 0) {
-        fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
+        fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches.</div>';
         return;
     }
     // Cambiar el icono: usar un Google Icon (Material Icon)
@@ -156,7 +156,7 @@ function displayHistory() {
                         </div>
                     </div>
                 `).join('');
-                fullSearchStats.innerHTML = `<strong>${search.results.length} resultados</strong> para "${term}" (sin filtro)`;
+                fullSearchStats.innerHTML = `<strong>${search.results.length} results</strong> for "${term}" (no filter)`;
 
                 // Actualizar el título de la vista fullSearchView con el término buscado
                 const fullSearchTitle = document.querySelector('#fullSearchView .history-header h2');
@@ -166,7 +166,7 @@ function displayHistory() {
                 historyView.style.display = 'none';
                 fullSearchView.style.display = 'block';
             } else {
-                alert('No hay resultados guardados para este término. Realiza una búsqueda primero.');
+                alert('There are no saved results for this term. Please perform a search first.');
             }
         };
     });
@@ -314,7 +314,7 @@ function displayResults() {
 searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchBtn.click(); });
 
 document.getElementById('clearStorageBtn').onclick = () => {
-    if (confirm('¿Borrar todo el historial y las películas guardadas?')) {
+    if (confirm('Delete all "Saved Free Movies" and "Full Search Results"?')) {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(RAW_SEARCH_KEY);
         displayHistory();
