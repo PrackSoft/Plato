@@ -130,7 +130,6 @@ function displayHistory() {
         fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches.</div>';
         return;
     }
-    // Cambiar el icono: usar un Google Icon (Material Icon)
     fullSearchDiv.innerHTML = '<button class="full-search-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
         history.map(term => `
             <button class="full-search-btn" data-term="${term}">
@@ -140,7 +139,6 @@ function displayHistory() {
         `).join('');
     
     document.querySelectorAll('.full-search-btn').forEach(btn => {
-        // Saltamos el botón #historyIcon que no tiene data-term
         if (!btn.dataset.term) return;
         btn.onclick = () => {
             const term = btn.dataset.term;
@@ -157,11 +155,8 @@ function displayHistory() {
                     </div>
                 `).join('');
                 fullSearchStats.innerHTML = `<strong>${search.results.length} results</strong> for "${term}" (no filter)`;
-
-                // Actualizar el título de la vista fullSearchView con el término buscado
                 const fullSearchTitle = document.querySelector('#fullSearchView .history-header h2');
                 if (fullSearchTitle) fullSearchTitle.innerText = `Full Search Results: "${term}"`;
-
                 searchView.style.display = 'none';
                 historyView.style.display = 'none';
                 fullSearchView.style.display = 'block';
@@ -189,7 +184,7 @@ function displayHistory() {
     }
 }
 
-// En script.js, dentro de loadSavedMovies, al principio:
+// ========== loadSavedMovies – CORREGIDA para agrupar por fecha local ==========
 function loadSavedMovies(sortBy = 'date') {
     const titleMap = {
         date: 'Saved Movies (by date)',
@@ -233,9 +228,14 @@ function loadSavedMovies(sortBy = 'date') {
         return;
     }
     
-    // Si se ordena por fecha, agrupar por día; si no, mostrar lista plana
+    // Si se ordena por fecha, agrupar por día (usando fecha local)
     if (sortBy === 'date') {
-        // Agrupar por fecha (YYYY-MM-DD)
+        // Función auxiliar para obtener clave YYYY-MM-DD en zona local
+        const getLocalDateKey = (d) => {
+            const date = new Date(d);
+            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+        };
+        
         const groups = new Map();
         const today = new Date();
         today.setHours(0,0,0,0);
@@ -243,10 +243,9 @@ function loadSavedMovies(sortBy = 'date') {
         yesterday.setDate(today.getDate() - 1);
         
         uniqueMovies.forEach(movie => {
-            const movieDate = new Date(movie.date);
-            const dateKey = movieDate.toISOString().split('T')[0]; // YYYY-MM-DD
-            if (!groups.has(dateKey)) groups.set(dateKey, []);
-            groups.get(dateKey).push(movie);
+            const localKey = getLocalDateKey(movie.date);
+            if (!groups.has(localKey)) groups.set(localKey, []);
+            groups.get(localKey).push(movie);
         });
         
         // Ordenar grupos por fecha descendente (más reciente primero)
@@ -254,8 +253,9 @@ function loadSavedMovies(sortBy = 'date') {
         
         let html = '';
         for (const [dateKey, movies] of sortedGroups) {
+            const [year, month, day] = dateKey.split('-');
+            const groupDate = new Date(year, month-1, day);
             let label;
-            const groupDate = new Date(dateKey);
             if (groupDate.toDateString() === today.toDateString()) {
                 label = 'Today';
             } else if (groupDate.toDateString() === yesterday.toDateString()) {
@@ -278,7 +278,6 @@ function loadSavedMovies(sortBy = 'date') {
             html += `</div></div>`;
         }
         savedMoviesList.innerHTML = html;
-        // Asegurar que el contenedor principal se comporte como bloque
         savedMoviesList.style.display = 'block';
     } else {
         // Lista plana (sin agrupar)
@@ -294,7 +293,7 @@ function loadSavedMovies(sortBy = 'date') {
         savedMoviesList.style.display = 'grid';
     }
     
-    // Botones de ordenamiento (no se modifican)
+    // Botones de ordenamiento
     historyStats.innerHTML = `<strong>${uniqueMovies.length} movies saved</strong> (filtered by channel ${TARGET_CHANNEL}) · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
     
     document.querySelectorAll('#sortButtons button').forEach(btn => {
@@ -336,7 +335,6 @@ async function loadResults() {
         
         if (data.items) {
             saveRawSearch(currentSearchTerm, data.items);
-            
             const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
             displayResults();
