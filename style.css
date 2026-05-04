@@ -63,10 +63,7 @@ body {
     margin: 0 0 1px 0;
 }
 
-.material-symbols-outlined {
-    font-size: 20px !important;
-    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 1 !important;
-}
+
 
 .search-box {
     display: flex;
@@ -205,7 +202,7 @@ button:hover {
     background: #2a2a2a;
     position: relative;
     border: none;
-    padding: 6px 18px;
+    /*padding: 6px 18px;*/
     border-radius: 20px;
     color: white;
     cursor: pointer;
@@ -215,10 +212,24 @@ button:hover {
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    height: 32px;
+    padding: 0 18px;
+    line-height: 32px;
 }
 
 .full-search-btn:hover {
     background: #ff0000;
+}
+
+
+.full-search-btn .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.material-symbols-outlined {
+    /*font-size: 20px !important;*/
+    font-variation-settings: 'FILL' 0, 'wght' 600, 'GRAD' 0, 'opsz' 1 !important;
 }
 
 .history-delete {
@@ -282,3 +293,5 @@ button:hover {
         width: 100%;
     }
 }
+
+
