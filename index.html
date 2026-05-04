@@ -1,4 +1,3 @@
-<!-- index.html completo (sin cambios, tal como lo envió) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -12,13 +11,12 @@
 <body>
     <div class="header">
         <div class="container">
-            
+            <!-- Navbar -->
+                <!-- Hacer botón de menú con el span, para desplegar modal oculto en columna izquierda, que incluye links para navegar la página -->
             <div class="logo">
                 <span class="material-symbols-outlined">looks</span>
                 PLATO
             </div>
-
-            <!-- Search Bar -->
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search free YouTube movies by title, actor, director..." autocomplete="off">
                 <button id="searchBtn">Search</button>
@@ -41,7 +39,6 @@
             <!-- History (Filtered by channel "YouTube Movies") -->
             <div id="historyView" style="display:none;">
                 <div class="history-header">
-                    <button id="backToSearchBtn" class="secondary-btn">← Back to search</button>
                     <h2>Saved Movies</h2>
                 </div>
                 <div id="savedMoviesList" class="results"></div>
@@ -51,8 +48,7 @@
             <!-- Full Search View -->
             <div id="fullSearchView" style="display:none;">
                 <div class="history-header">
-                    <button id="backToSearchFromFull" class="secondary-btn">← Back to search</button>
-                    <h2>Full Search Results (from saved)</h2>
+                    <h2>Full Search Results</h2>
                 </div>
                 <div id="fullSearchResults" class="results"></div>
                 <div id="fullSearchStats" class="stats"></div>

@@ -16,11 +16,9 @@ const fullSearchDiv = document.getElementById('fullSearch');        // Container
 const fullSearchView = document.getElementById('fullSearchView');
 const fullSearchResults = document.getElementById('fullSearchResults');
 const fullSearchStats = document.getElementById('fullSearchStats');
-const backToSearchFromFull = document.getElementById('backToSearchFromFull');
 
 const searchView = document.getElementById('searchView');
 const historyView = document.getElementById('historyView');
-const backToSearchBtn = document.getElementById('backToSearchBtn');
 const savedMoviesList = document.getElementById('savedMoviesList');
 const historyStats = document.getElementById('historyStats');
 
@@ -42,7 +40,6 @@ function escapeHtml(str) {
 
 function deleteMovieById(movieId) {
     if (!confirm('¿Eliminar esta película del historial guardado?')) return;
-    // Remove from raw searches (all entries)
     let rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     let updated = false;
     rawSearches = rawSearches.map(entry => {
@@ -53,14 +50,9 @@ function deleteMovieById(movieId) {
     if (updated) {
         localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
     }
-    // Refresh views if visible
     if (historyView.style.display === 'block') loadSavedMovies();
-    if (fullSearchView.style.display === 'block') {
-        // Re-load current full search (if open) – we need the term from current view? simpler: close and reopen?
-        // For simplicity, we just reload saved movies view.
-    }
     if (searchView.style.display === 'block') {
-        // Reload current search results? Not necessary, as they are from live API.
+        // No need to reload search results (they come from live API)
     }
 }
 
@@ -73,7 +65,7 @@ function openModal(movie) {
             <div style="width: 20px;"></div>
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
-        <p><strong>Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
+        <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <div style="white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
@@ -107,7 +99,6 @@ function deleteSearch(term) {
     displayHistory();
 }
 
-// Save raw API results (complete, unfiltered) for a term
 function saveRawSearch(searchTerm, rawItems) {
     let rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     const newEntry = {
@@ -147,7 +138,6 @@ function displayHistory() {
             </button>
         `).join('');
     
-    // Full search (unfiltered) from raw data
     document.querySelectorAll('.fullsearch-btn').forEach(btn => {
         btn.onclick = () => {
             const term = btn.dataset.term;
@@ -173,7 +163,6 @@ function displayHistory() {
         };
     });
     
-    // Delete tag
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
@@ -181,11 +170,10 @@ function displayHistory() {
         };
     });
     
-    // History view (filtered by TARGET_CHANNEL)
     const historyIcon = document.getElementById('historyIcon');
     if (historyIcon) {
         historyIcon.onclick = () => {
-            loadSavedMovies();  // This will load filtered movies from raw data
+            loadSavedMovies();
             searchView.style.display = 'none';
             historyView.style.display = 'block';
             fullSearchView.style.display = 'none';
@@ -193,10 +181,8 @@ function displayHistory() {
     }
 }
 
-// Load saved movies filtered by TARGET_CHANNEL (from raw data)
 function loadSavedMovies(sortBy = 'date') {
     const rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
-    // Collect all movies from all terms, filter by channel
     let allMovies = [];
     rawSearches.forEach(entry => {
         entry.results.forEach(movie => {
@@ -205,7 +191,6 @@ function loadSavedMovies(sortBy = 'date') {
             }
         });
     });
-    // Remove duplicates by id (keep first occurrence)
     const uniqueMovies = [];
     const ids = new Set();
     allMovies.forEach(m => {
@@ -214,7 +199,7 @@ function loadSavedMovies(sortBy = 'date') {
             uniqueMovies.push(m);
         }
     });
-    // Sort
+    
     if (sortBy === 'title') uniqueMovies.sort((a,b) => a.title.localeCompare(b.title));
     else if (sortBy === 'channel') uniqueMovies.sort((a,b) => a.channel.localeCompare(b.channel));
     else uniqueMovies.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -240,7 +225,6 @@ function loadSavedMovies(sortBy = 'date') {
     });
 }
 
-// Normal search (displays filtered results, but saves raw data)
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
@@ -253,7 +237,7 @@ searchBtn.onclick = async () => {
     statsDiv.innerHTML = '';
     loadMoreBtn.style.display = 'none';
     
-    searchView.style.display = '';
+    searchView.style.display = 'block';
     historyView.style.display = 'none';
     fullSearchView.style.display = 'none';
     
@@ -274,10 +258,8 @@ async function loadResults() {
         const data = await response.json();
         
         if (data.items) {
-            // Save raw results first
             saveRawSearch(currentSearchTerm, data.items);
             
-            // Filter for display (only TARGET_CHANNEL)
             const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
             allResults = [...allResults, ...filtered];
             displayResults();
@@ -312,17 +294,6 @@ function displayResults() {
 }
 
 searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchBtn.click(); });
-
-backToSearchBtn.onclick = () => {
-    historyView.style.display = 'none';
-    searchView.style.display = '';
-    fullSearchView.style.display = 'none';
-};
-
-backToSearchFromFull.onclick = () => {
-    fullSearchView.style.display = 'none';
-    searchView.style.display = 'block';
-};
 
 document.getElementById('clearStorageBtn').onclick = () => {
     if (confirm('¿Borrar todo el historial y las películas guardadas?')) {
