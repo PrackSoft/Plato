@@ -130,7 +130,8 @@ function displayHistory() {
         fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">Sin búsquedas recientes</div>';
         return;
     }
-    fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa; cursor: pointer;" id="historyIcon">🔍</div>' +
+    // Cambiar el icono: usar un Google Icon (Material Icon)
+    fullSearchDiv.innerHTML = '<button class="fullsearch-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
         history.map(term => `
             <button class="fullsearch-btn" data-term="${term}">
                 ${term}
@@ -139,6 +140,8 @@ function displayHistory() {
         `).join('');
     
     document.querySelectorAll('.fullsearch-btn').forEach(btn => {
+        // Saltamos el botón #historyIcon que no tiene data-term
+        if (!btn.dataset.term) return;
         btn.onclick = () => {
             const term = btn.dataset.term;
             const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
