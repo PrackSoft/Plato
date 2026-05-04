@@ -52,7 +52,6 @@ function openModal(movie) {
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <div style="white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
-        <div style="max-height: none; overflow-y: visible; margin-bottom: 16px; white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Words:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
