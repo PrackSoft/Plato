@@ -184,7 +184,17 @@ function displayHistory() {
     }
 }
 
+// En script.js, dentro de loadSavedMovies, al principio:
 function loadSavedMovies(sortBy = 'date') {
+    // Título dinámico
+    const titleMap = {
+        date: 'Saved Movies (by date)',
+        title: 'Saved Movies (by title)',
+        channel: 'Saved Movies (by channel)'
+    };
+    const historyTitle = document.getElementById('historyTitle');
+    if (historyTitle) historyTitle.innerText = titleMap[sortBy] || 'Saved Movies';
+    
     const rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     let allMovies = [];
     rawSearches.forEach(entry => {
