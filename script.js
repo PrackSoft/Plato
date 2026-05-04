@@ -157,6 +157,11 @@ function displayHistory() {
                     </div>
                 `).join('');
                 fullSearchStats.innerHTML = `<strong>${search.results.length} resultados</strong> para "${term}" (sin filtro)`;
+
+                // Actualizar el título de la vista fullSearchView con el término buscado
+                const fullSearchTitle = document.querySelector('#fullSearchView .history-header h2');
+                if (fullSearchTitle) fullSearchTitle.innerText = `Full Search Results: "${term}"`;
+
                 searchView.style.display = 'none';
                 historyView.style.display = 'none';
                 fullSearchView.style.display = 'block';
