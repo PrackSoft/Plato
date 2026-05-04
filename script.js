@@ -191,7 +191,6 @@ function displayHistory() {
 
 // En script.js, dentro de loadSavedMovies, al principio:
 function loadSavedMovies(sortBy = 'date') {
-    // Título dinámico
     const titleMap = {
         date: 'Saved Movies (by date)',
         title: 'Saved Movies (by title)',
@@ -209,6 +208,7 @@ function loadSavedMovies(sortBy = 'date') {
             }
         });
     });
+    // Eliminar duplicados por id
     const uniqueMovies = [];
     const ids = new Set();
     allMovies.forEach(m => {
@@ -218,24 +218,83 @@ function loadSavedMovies(sortBy = 'date') {
         }
     });
     
-    if (sortBy === 'title') uniqueMovies.sort((a,b) => a.title.localeCompare(b.title));
-    else if (sortBy === 'channel') uniqueMovies.sort((a,b) => a.channel.localeCompare(b.channel));
-    else uniqueMovies.sort((a,b) => new Date(b.date) - new Date(a.date));
+    // Ordenar según sortBy
+    if (sortBy === 'title') {
+        uniqueMovies.sort((a,b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'channel') {
+        uniqueMovies.sort((a,b) => a.channel.localeCompare(b.channel));
+    } else { // date
+        uniqueMovies.sort((a,b) => new Date(b.date) - new Date(a.date));
+    }
     
     if (uniqueMovies.length === 0) {
         savedMoviesList.innerHTML = '<p class="stats">No saved movies yet (filtered by ' + TARGET_CHANNEL + ').</p>';
         historyStats.innerHTML = '';
         return;
     }
-    savedMoviesList.innerHTML = uniqueMovies.map(movie => `
-        <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
-            <img src="${movie.imageUrl}" alt="${movie.title}">
-            <div class="info">
-                <h3>${escapeHtml(movie.title)}</h3>
-                <div class="channel">${escapeHtml(movie.channel)}</div>
+    
+    // Si se ordena por fecha, agrupar por día; si no, mostrar lista plana
+    if (sortBy === 'date') {
+        // Agrupar por fecha (YYYY-MM-DD)
+        const groups = new Map();
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        
+        uniqueMovies.forEach(movie => {
+            const movieDate = new Date(movie.date);
+            const dateKey = movieDate.toISOString().split('T')[0]; // YYYY-MM-DD
+            if (!groups.has(dateKey)) groups.set(dateKey, []);
+            groups.get(dateKey).push(movie);
+        });
+        
+        // Ordenar grupos por fecha descendente (más reciente primero)
+        const sortedGroups = Array.from(groups.entries()).sort((a,b) => new Date(b[0]) - new Date(a[0]));
+        
+        let html = '';
+        for (const [dateKey, movies] of sortedGroups) {
+            let label;
+            const groupDate = new Date(dateKey);
+            if (groupDate.toDateString() === today.toDateString()) {
+                label = 'Today';
+            } else if (groupDate.toDateString() === yesterday.toDateString()) {
+                label = 'Yesterday';
+            } else {
+                label = groupDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+            html += `<div class="date-group">`;
+            html += `<div class="group-date">${label}</div>`;
+            html += `<div class="results-group">`;
+            html += movies.map(movie => `
+                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+                    <img src="${movie.imageUrl}" alt="${movie.title}">
+                    <div class="info">
+                        <h3>${escapeHtml(movie.title)}</h3>
+                        <div class="channel">${escapeHtml(movie.channel)}</div>
+                    </div>
+                </div>
+            `).join('');
+            html += `</div></div>`;
+        }
+        savedMoviesList.innerHTML = html;
+        // Asegurar que el contenedor principal se comporte como bloque
+        savedMoviesList.style.display = 'block';
+    } else {
+        // Lista plana (sin agrupar)
+        savedMoviesList.innerHTML = uniqueMovies.map(movie => `
+            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+                <img src="${movie.imageUrl}" alt="${movie.title}">
+                <div class="info">
+                    <h3>${escapeHtml(movie.title)}</h3>
+                    <div class="channel">${escapeHtml(movie.channel)}</div>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+        savedMoviesList.style.display = 'grid';
+    }
+    
+    // Botones de ordenamiento (no se modifican)
     historyStats.innerHTML = `<strong>${uniqueMovies.length} movies saved</strong> (filtered by channel ${TARGET_CHANNEL}) · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
     
     document.querySelectorAll('#sortButtons button').forEach(btn => {

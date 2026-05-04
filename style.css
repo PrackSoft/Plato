@@ -247,6 +247,26 @@ button:hover {
     color: white;
 }
 
+/* Estilos para agrupación por fecha en Saved Movies */
+.date-group {
+    margin-bottom: 32px;
+}
+
+.group-date {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3a3a3a;
+    color: #ff0000;
+}
+
+.results-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+}
+
 .modal {
     position: fixed;
     top: 0;
