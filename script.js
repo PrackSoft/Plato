@@ -131,15 +131,15 @@ function displayHistory() {
         return;
     }
     // Cambiar el icono: usar un Google Icon (Material Icon)
-    fullSearchDiv.innerHTML = '<button class="fullsearch-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
+    fullSearchDiv.innerHTML = '<button class="full-search-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
         history.map(term => `
-            <button class="fullsearch-btn" data-term="${term}">
+            <button class="full-search-btn" data-term="${term}">
                 ${term}
                 <span class="history-delete" data-term="${term}">✖</span>
             </button>
         `).join('');
     
-    document.querySelectorAll('.fullsearch-btn').forEach(btn => {
+    document.querySelectorAll('.full-search-btn').forEach(btn => {
         // Saltamos el botón #historyIcon que no tiene data-term
         if (!btn.dataset.term) return;
         btn.onclick = () => {

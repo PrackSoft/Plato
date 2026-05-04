@@ -24,16 +24,16 @@
             </div>
 
             <!-- Tags -->
-            <div id="fullSearch"></div>
-            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
-                <button id="clearStorageBtn" style="background: #333; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer;">🗑️ Borrar todo</button>
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+                <div id="fullSearch" style="display: flex; flex-wrap: wrap; gap: 8px; flex: 1;"></div>
+                <button id="clearStorageBtn" class="full-search-btn material-symbols-outlined">delete_forever</button>
             </div>
 
             <!-- ? -->
             <div id="searchView">
                 <div id="results" class="results"></div>
                 <button id="loadMoreBtn" style="display:none;">Cargar más resultados</button>
-                <div id="loading" class="loading" style="display:none;">🔍 Buscando películas...</div>
+                <div id="loading" class="loading material-symbols-outlined" style="display:none;">video_search</div>
                 <div id="stats" class="stats"></div>
             </div>
 

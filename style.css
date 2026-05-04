@@ -196,12 +196,11 @@ button:hover {
 }
 
 /* Clase para los botones de búsqueda completa (antes .history-btn) */
-.fullsearch-btn {
+.full-search-btn {
     background: #2a2a2a;
     position: relative;
     border: none;
     padding: 6px 12px;
-    padding-right: 24px;
     border-radius: 20px;
     color: white;
     cursor: pointer;
@@ -210,7 +209,7 @@ button:hover {
     margin: 0;
 }
 
-.fullsearch-btn:hover {
+.full-search-btn:hover {
     background: #ff0000;
 }
 
