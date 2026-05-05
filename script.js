@@ -187,12 +187,12 @@ function displayHistory() {
 // ========== loadSavedMovies – CORREGIDA para agrupar por fecha local ==========
 function loadSavedMovies(sortBy = 'date') {
     const titleMap = {
-        date: 'Saved Movies (by date)',
-        title: 'Saved Movies (by title)',
-        channel: 'Saved Movies (by channel)'
+        date: 'Saved Free Movies (by date)',
+        title: 'Saved Free Movies (by title)',
+        channel: 'Saved Free Movies (by channel)'
     };
     const historyTitle = document.getElementById('historyTitle');
-    if (historyTitle) historyTitle.innerText = titleMap[sortBy] || 'Saved Movies';
+    if (historyTitle) historyTitle.innerText = titleMap[sortBy] || 'Saved Free Movies';
     
     const rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     let allMovies = [];
@@ -223,7 +223,7 @@ function loadSavedMovies(sortBy = 'date') {
     }
     
     if (uniqueMovies.length === 0) {
-        savedMoviesList.innerHTML = '<p class="stats">No saved movies yet (filtered by ' + TARGET_CHANNEL + ').</p>';
+        savedMoviesList.innerHTML = '<p class="stats">No saved free movies yet (filtered by ' + TARGET_CHANNEL + ').</p>';
         historyStats.innerHTML = '';
         return;
     }
