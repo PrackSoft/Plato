@@ -1,4 +1,4 @@
-// script.js - Unified storage with common render function and date grouping for Saved Movies
+// script.js - Unified storage with common render function and date grouping for both views
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -55,11 +55,11 @@ function deleteMovieById(movieId) {
         const titleH2 = document.querySelector('#fullSearchView .history-header h2');
         const match = titleH2?.innerText.match(/"([^"]+)"/);
         if (match) {
-            const activeTitle = match[1];
+            const activeTerm = match[1];
             const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
-            const search = rawData.find(item => item.searchTerm === activeTitle);
+            const search = rawData.find(item => item.searchTerm === activeTerm);
             if (search && search.results.length) {
-                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort || 'date', false, `Full Search Results: "${activeTitle}"`);
+                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort || 'date', activeTerm);
             }
         }
     }
@@ -155,7 +155,7 @@ function displayHistory() {
             const search = rawData.find(item => item.searchTerm === term);
             if (search && search.results.length) {
                 currentFullSort = 'date';
-                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort, false, `Full Search Results: "${term}"`);
+                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort, term);
                 searchView.style.display = 'none';
                 historyView.style.display = 'none';
                 fullSearchView.style.display = 'block';
@@ -192,8 +192,9 @@ function getLocalDateKey(d) {
 }
 
 // Función común de renderizado
-function renderMovies(movies, container, statsContainer, sortBy, groupByDate = false, customTitle = null) {
+function renderMovies(movies, container, statsContainer, sortBy, term = null) {
     let sorted = [...movies];
+    const isDateSort = (sortBy === 'date');
     
     if (sortBy === 'title') {
         sorted.sort((a,b) => a.title.localeCompare(b.title));
@@ -209,8 +210,10 @@ function renderMovies(movies, container, statsContainer, sortBy, groupByDate = f
         return;
     }
     
-    // Si se requiere agrupación por fecha y sortBy es 'date'
-    if (groupByDate && sortBy === 'date') {
+    // Agrupar por fecha tanto para savedMoviesList como para fullSearchResults cuando ordena por fecha
+    const shouldGroup = isDateSort;
+    
+    if (shouldGroup) {
         const groups = new Map();
         const todayKey = getLocalDateKey(new Date());
         const yesterdayDate = new Date();
@@ -265,27 +268,35 @@ function renderMovies(movies, container, statsContainer, sortBy, groupByDate = f
         container.style.display = 'grid';
     }
     
-    // Botones de ordenamiento
+    // Actualizar título y botones de ordenamiento
     const sortId = `sortButtons-${container.id}`;
+    if (container.id === 'fullSearchResults' && term) {
+        const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : 'by channel');
+        const titleText = `Full Search Results: "${term}" (${sortLabel})`;
+        const titleEl = document.querySelector('#fullSearchView .history-header h2');
+        if (titleEl) titleEl.innerText = titleText;
+        document.title = titleText;
+    } else if (container.id === 'savedMoviesList') {
+        const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : 'by channel');
+        const titleText = `Saved Free Movies (${sortLabel})`;
+        const titleEl = document.getElementById('historyTitle');
+        if (titleEl) titleEl.innerText = titleText;
+        document.title = titleText;
+    }
+    
     statsContainer.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="${sortId}">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
     
     const buttons = statsContainer.querySelectorAll(`#${sortId} button`);
     buttons.forEach(btn => {
         btn.onclick = () => {
             if (container.id === 'fullSearchResults') {
-                renderMovies(movies, container, statsContainer, btn.dataset.sort, false, customTitle);
+                renderMovies(movies, container, statsContainer, btn.dataset.sort, term);
                 currentFullSort = btn.dataset.sort;
             } else if (container.id === 'savedMoviesList') {
                 loadSavedMovies(btn.dataset.sort);
             }
         };
     });
-    
-    // Actualizar título
-    if (customTitle && container.id === 'fullSearchResults') {
-        const titleEl = document.querySelector('#fullSearchView .history-header h2');
-        if (titleEl) titleEl.innerText = customTitle;
-    }
 }
 
 function loadSavedMovies(sortBy = 'date') {
@@ -308,18 +319,7 @@ function loadSavedMovies(sortBy = 'date') {
         }
     });
     
-    // Título dinámico
-    const titleMap = {
-        date: 'Saved Free Movies (by date)',
-        title: 'Saved Free Movies (by title)',
-        channel: 'Saved Free Movies (by channel)'
-    };
-    const historyTitle = document.getElementById('historyTitle');
-    if (historyTitle) historyTitle.innerText = titleMap[sortBy] || 'Saved Free Movies';
-    
-    // Renderizar con o sin agrupación según sortBy
-    const group = (sortBy === 'date');
-    renderMovies(uniqueMovies, savedMoviesList, historyStats, sortBy, group, null);
+    renderMovies(uniqueMovies, savedMoviesList, historyStats, sortBy, null);
 }
 
 searchBtn.onclick = async () => {
@@ -337,6 +337,7 @@ searchBtn.onclick = async () => {
     searchView.style.display = 'block';
     historyView.style.display = 'none';
     fullSearchView.style.display = 'none';
+    document.title = `Search: ${baseQuery}`;
     
     await loadResults();
     saveSearch(baseQuery);
