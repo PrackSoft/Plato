@@ -1,7 +1,8 @@
-// script.js - Unified storage with common render function and date grouping for both views
+// script.js - Unified storage with accumulation of results for repeated searches
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
+const MAX_RESULTS_PER_TERM = 500; // Maximum number of accumulated results per search term
 const STORAGE_KEY = 'plato_search_history';
 const RAW_SEARCH_KEY = 'plato_raw_searches';
 
@@ -110,24 +111,52 @@ function deleteSearch(term) {
 
 function saveRawSearch(searchTerm, rawItems) {
     let rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
+    const existingIndex = rawSearches.findIndex(entry => entry.searchTerm === searchTerm);
+    
+    let existingResults = [];
+    if (existingIndex !== -1) {
+        existingResults = rawSearches[existingIndex].results;
+    }
+    
+    // Merge new items with existing, avoiding duplicates by id
+    const combined = [...existingResults, ...rawItems.map(item => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        channel: item.snippet.channelTitle,
+        imageUrl: item.snippet.thumbnails.medium.url,
+        url: `https://youtube.com/watch?v=${item.id.videoId}`,
+        description: item.snippet.description,
+        publishedAt: item.snippet.publishedAt,
+        searchTerm: searchTerm,
+        date: new Date().toISOString()
+    }))];
+    
+    // Remove duplicates (keep first occurrence based on id)
+    const unique = [];
+    const ids = new Set();
+    for (const movie of combined) {
+        if (!ids.has(movie.id)) {
+            ids.add(movie.id);
+            unique.push(movie);
+        }
+    }
+    
+    // Sort by date (newest first) and limit to MAX_RESULTS_PER_TERM
+    unique.sort((a,b) => new Date(b.date) - new Date(a.date));
+    const limited = unique.slice(0, MAX_RESULTS_PER_TERM);
+    
     const newEntry = {
         searchTerm: searchTerm,
         date: new Date().toISOString(),
-        results: rawItems.map(item => ({
-            id: item.id.videoId,
-            title: item.snippet.title,
-            channel: item.snippet.channelTitle,
-            imageUrl: item.snippet.thumbnails.medium.url,
-            url: `https://youtube.com/watch?v=${item.id.videoId}`,
-            description: item.snippet.description,
-            publishedAt: item.snippet.publishedAt,
-            searchTerm: searchTerm,
-            date: new Date().toISOString()
-        }))
+        results: limited
     };
-    const index = rawSearches.findIndex(entry => entry.searchTerm === searchTerm);
-    if (index !== -1) rawSearches[index] = newEntry;
-    else rawSearches.unshift(newEntry);
+    
+    if (existingIndex !== -1) {
+        rawSearches[existingIndex] = newEntry;
+    } else {
+        rawSearches.unshift(newEntry);
+    }
+    // Keep only last 20 search terms
     rawSearches = rawSearches.slice(0, 20);
     localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
 }
