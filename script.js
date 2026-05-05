@@ -1,8 +1,8 @@
-// script.js - Unified storage with accumulation and secondary sorting (title) for date/channel
+// script.js - Refactored with common sorting and clean grouping logic
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
-const MAX_RESULTS_PER_TERM = 500; // Maximum number of accumulated results per search term
+const MAX_RESULTS_PER_TERM = 500;
 const STORAGE_KEY = 'plato_search_history';
 const RAW_SEARCH_KEY = 'plato_raw_searches';
 
@@ -48,9 +48,7 @@ function deleteMovieById(movieId) {
         if (newResults.length !== entry.results.length) updated = true;
         return { ...entry, results: newResults };
     }).filter(entry => entry.results.length > 0);
-    if (updated) {
-        localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
-    }
+    if (updated) localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
     if (historyView.style.display === 'block') loadSavedMovies();
     if (fullSearchView.style.display === 'block') {
         const titleH2 = document.querySelector('#fullSearchView .history-header h2');
@@ -59,7 +57,7 @@ function deleteMovieById(movieId) {
             const activeTerm = match[1];
             const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
             const search = rawData.find(item => item.searchTerm === activeTerm);
-            if (search && search.results.length) {
+            if (search?.results.length) {
                 renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort || 'date', activeTerm);
             }
         }
@@ -82,7 +80,6 @@ function openModal(movie) {
     `;
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
-    
     const deleteBtn = document.querySelector('.delete-movie-btn');
     if (deleteBtn) deleteBtn.onclick = (e) => {
         e.stopPropagation();
@@ -112,12 +109,7 @@ function deleteSearch(term) {
 function saveRawSearch(searchTerm, rawItems) {
     let rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     const existingIndex = rawSearches.findIndex(entry => entry.searchTerm === searchTerm);
-    
-    let existingResults = [];
-    if (existingIndex !== -1) {
-        existingResults = rawSearches[existingIndex].results;
-    }
-    
+    let existingResults = existingIndex !== -1 ? rawSearches[existingIndex].results : [];
     const newItems = rawItems.map(item => ({
         id: item.id.videoId,
         title: item.snippet.title,
@@ -129,9 +121,7 @@ function saveRawSearch(searchTerm, rawItems) {
         searchTerm: searchTerm,
         date: new Date().toISOString()
     }));
-    
     const combined = [...existingResults, ...newItems];
-    // Remove duplicates by id (keep first occurrence)
     const unique = [];
     const ids = new Set();
     for (const movie of combined) {
@@ -140,23 +130,11 @@ function saveRawSearch(searchTerm, rawItems) {
             unique.push(movie);
         }
     }
-    
-    // Sort by date (newest first) and limit to MAX_RESULTS_PER_TERM
     unique.sort((a,b) => new Date(b.date) - new Date(a.date));
     const limited = unique.slice(0, MAX_RESULTS_PER_TERM);
-    
-    const newEntry = {
-        searchTerm: searchTerm,
-        date: new Date().toISOString(),
-        results: limited
-    };
-    
-    if (existingIndex !== -1) {
-        rawSearches[existingIndex] = newEntry;
-    } else {
-        rawSearches.unshift(newEntry);
-    }
-    // Keep only last 20 search terms
+    const newEntry = { searchTerm: searchTerm, date: new Date().toISOString(), results: limited };
+    if (existingIndex !== -1) rawSearches[existingIndex] = newEntry;
+    else rawSearches.unshift(newEntry);
     rawSearches = rawSearches.slice(0, 20);
     localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
 }
@@ -182,7 +160,7 @@ function displayHistory() {
             const term = btn.dataset.term;
             const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
             const search = rawData.find(item => item.searchTerm === term);
-            if (search && search.results.length) {
+            if (search?.results.length) {
                 currentFullSort = 'date';
                 renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort, term);
                 searchView.style.display = 'none';
@@ -214,34 +192,36 @@ function displayHistory() {
 
 let currentFullSort = 'date';
 
-// Helper: local date key YYYY-MM-DD
 function getLocalDateKey(d) {
     const date = new Date(d);
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
 
-// Common rendering function with secondary sorting for date and channel
-function renderMovies(movies, container, statsContainer, sortBy, term = null) {
-    let sorted = [...movies];
-    const isDateSort = (sortBy === 'date');
-    
-    if (sortBy === 'title') {
-        sorted.sort((a,b) => a.title.localeCompare(b.title));
-    } else if (sortBy === 'channel') {
-        // Primary: channel name, secondary: title
+// ========== COMMON SORTING FUNCTION ==========
+function sortMovies(movies, primarySort) {
+    const sorted = [...movies];
+    if (primarySort === 'title') {
+        sorted.sort((a,b) => a.title.localeCompare(b.title, undefined, { sensitivity: 'base' }));
+    } else if (primarySort === 'channel') {
         sorted.sort((a,b) => {
-            const channelCompare = a.channel.localeCompare(b.channel);
+            const channelCompare = a.channel.localeCompare(b.channel, undefined, { sensitivity: 'base' });
             if (channelCompare !== 0) return channelCompare;
-            return a.title.localeCompare(b.title);
+            return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
         });
     } else { // date
-        // Primary: date descending (newest first), secondary: title ascending
         sorted.sort((a,b) => {
             const dateCompare = new Date(b.date) - new Date(a.date);
             if (dateCompare !== 0) return dateCompare;
-            return a.title.localeCompare(b.title);
+            return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
         });
     }
+    return sorted;
+}
+
+// ========== RENDER FUNCTION (uses sortMovies, groups only when primarySort === 'date') ==========
+function renderMovies(movies, container, statsContainer, sortBy, term = null) {
+    let sorted = sortMovies(movies, sortBy);
+    const isDateSort = (sortBy === 'date');
     
     if (sorted.length === 0) {
         container.innerHTML = `<p class="stats">No movies to display.</p>`;
@@ -249,10 +229,8 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         return;
     }
     
-    // Group by date when sorting by date (for both views)
-    const shouldGroup = isDateSort;
-    
-    if (shouldGroup) {
+    if (isDateSort) {
+        // Group by local date
         const groups = new Map();
         const todayKey = getLocalDateKey(new Date());
         const yesterdayDate = new Date();
@@ -265,6 +243,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
             groups.get(localKey).push(movie);
         });
         
+        // Sort groups by date descending (Today first, then Yesterday, then older)
         const sortedGroups = Array.from(groups.entries()).sort((a,b) => new Date(b[0]) - new Date(a[0]));
         
         let html = '';
@@ -294,7 +273,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         container.innerHTML = html;
         container.style.display = 'block';
     } else {
-        // Flat grid
+        // Flat grid (title, channel)
         container.innerHTML = sorted.map(movie => `
             <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
                 <img src="${movie.imageUrl}" alt="${movie.title}">
@@ -307,7 +286,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         container.style.display = 'grid';
     }
     
-    // Update title and sorting buttons
+    // Update title and sort buttons
     const sortId = `sortButtons-${container.id}`;
     if (container.id === 'fullSearchResults' && term) {
         const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : 'by channel');
@@ -343,12 +322,9 @@ function loadSavedMovies(sortBy = 'date') {
     let allMovies = [];
     rawSearches.forEach(entry => {
         entry.results.forEach(movie => {
-            if (movie.channel === TARGET_CHANNEL) {
-                allMovies.push(movie);
-            }
+            if (movie.channel === TARGET_CHANNEL) allMovies.push(movie);
         });
     });
-    // Remove duplicates by id
     const uniqueMovies = [];
     const ids = new Set();
     allMovies.forEach(m => {
@@ -357,14 +333,12 @@ function loadSavedMovies(sortBy = 'date') {
             uniqueMovies.push(m);
         }
     });
-    
     renderMovies(uniqueMovies, savedMoviesList, historyStats, sortBy, null);
 }
 
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
-    
     currentSearchTerm = baseQuery;
     currentQuery = `${baseQuery} Películas Gratis YouTube Películas y TV de YouTube`;
     allResults = [];
@@ -372,12 +346,10 @@ searchBtn.onclick = async () => {
     resultsDiv.innerHTML = '';
     statsDiv.innerHTML = '';
     loadMoreBtn.style.display = 'none';
-    
     searchView.style.display = 'block';
     historyView.style.display = 'none';
     fullSearchView.style.display = 'none';
     document.title = `Search: ${baseQuery}`;
-    
     await loadResults();
     saveSearch(baseQuery);
     searchInput.value = '';
@@ -390,10 +362,8 @@ async function loadResults() {
     try {
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(currentQuery)}&key=${API_KEY}`;
         if (nextPageToken) url += `&pageToken=${nextPageToken}`;
-        
         const response = await fetch(url);
         const data = await response.json();
-        
         if (data.items) {
             saveRawSearch(currentSearchTerm, data.items);
             const filtered = data.items.filter(video => video.snippet.channelTitle === TARGET_CHANNEL);
@@ -415,7 +385,6 @@ function displayResults() {
         statsDiv.innerHTML = '';
         return;
     }
-    
     resultsDiv.innerHTML = allResults.map(video => `
         <div class="video-card" onclick="window.open('https://youtube.com/watch?v=${video.id.videoId}')">
             <img src="${video.snippet.thumbnails.medium.url}" alt="${video.snippet.title}">
@@ -425,7 +394,6 @@ function displayResults() {
             </div>
         </div>
     `).join('');
-    
     statsDiv.innerHTML = `<strong>🎥 ${allResults.length} results</strong> · Channel: ${TARGET_CHANNEL} · Search: "${currentSearchTerm}"`;
 }
 
