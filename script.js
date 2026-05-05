@@ -184,7 +184,7 @@ function displayHistory() {
     }
 }
 
-// ========== loadSavedMovies – CORREGIDA para agrupar por fecha local ==========
+// ========== loadSavedMovies – FECHA CORREGIDA (comparación directa de claves) ==========
 function loadSavedMovies(sortBy = 'date') {
     const titleMap = {
         date: 'Saved Free Movies (by date)',
@@ -237,10 +237,11 @@ function loadSavedMovies(sortBy = 'date') {
         };
         
         const groups = new Map();
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
+        // Calcular claves de hoy y ayer en local usando la misma función
+        const todayKey = getLocalDateKey(new Date());
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterdayKey = getLocalDateKey(yesterdayDate);
         
         uniqueMovies.forEach(movie => {
             const localKey = getLocalDateKey(movie.date);
@@ -253,14 +254,15 @@ function loadSavedMovies(sortBy = 'date') {
         
         let html = '';
         for (const [dateKey, movies] of sortedGroups) {
-            const [year, month, day] = dateKey.split('-');
-            const groupDate = new Date(year, month-1, day);
             let label;
-            if (groupDate.toDateString() === today.toDateString()) {
+            if (dateKey === todayKey) {
                 label = 'Today';
-            } else if (groupDate.toDateString() === yesterday.toDateString()) {
+            } else if (dateKey === yesterdayKey) {
                 label = 'Yesterday';
             } else {
+                // Formatear fecha para mostrar
+                const [year, month, day] = dateKey.split('-');
+                const groupDate = new Date(year, month-1, day);
                 label = groupDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             }
             html += `<div class="date-group">`;
