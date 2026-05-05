@@ -1,4 +1,4 @@
-// script.js - Unified storage with accumulation of results for repeated searches
+// script.js - Unified storage with accumulation and secondary sorting (title) for date/channel
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -118,8 +118,7 @@ function saveRawSearch(searchTerm, rawItems) {
         existingResults = rawSearches[existingIndex].results;
     }
     
-    // Merge new items with existing, avoiding duplicates by id
-    const combined = [...existingResults, ...rawItems.map(item => ({
+    const newItems = rawItems.map(item => ({
         id: item.id.videoId,
         title: item.snippet.title,
         channel: item.snippet.channelTitle,
@@ -129,9 +128,10 @@ function saveRawSearch(searchTerm, rawItems) {
         publishedAt: item.snippet.publishedAt,
         searchTerm: searchTerm,
         date: new Date().toISOString()
-    }))];
+    }));
     
-    // Remove duplicates (keep first occurrence based on id)
+    const combined = [...existingResults, ...newItems];
+    // Remove duplicates by id (keep first occurrence)
     const unique = [];
     const ids = new Set();
     for (const movie of combined) {
@@ -214,13 +214,13 @@ function displayHistory() {
 
 let currentFullSort = 'date';
 
-// Función auxiliar para obtener clave YYYY-MM-DD en zona local
+// Helper: local date key YYYY-MM-DD
 function getLocalDateKey(d) {
     const date = new Date(d);
     return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
 
-// Función común de renderizado
+// Common rendering function with secondary sorting for date and channel
 function renderMovies(movies, container, statsContainer, sortBy, term = null) {
     let sorted = [...movies];
     const isDateSort = (sortBy === 'date');
@@ -228,9 +228,19 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
     if (sortBy === 'title') {
         sorted.sort((a,b) => a.title.localeCompare(b.title));
     } else if (sortBy === 'channel') {
-        sorted.sort((a,b) => a.channel.localeCompare(b.channel));
+        // Primary: channel name, secondary: title
+        sorted.sort((a,b) => {
+            const channelCompare = a.channel.localeCompare(b.channel);
+            if (channelCompare !== 0) return channelCompare;
+            return a.title.localeCompare(b.title);
+        });
     } else { // date
-        sorted.sort((a,b) => new Date(b.date) - new Date(a.date));
+        // Primary: date descending (newest first), secondary: title ascending
+        sorted.sort((a,b) => {
+            const dateCompare = new Date(b.date) - new Date(a.date);
+            if (dateCompare !== 0) return dateCompare;
+            return a.title.localeCompare(b.title);
+        });
     }
     
     if (sorted.length === 0) {
@@ -239,7 +249,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         return;
     }
     
-    // Agrupar por fecha tanto para savedMoviesList como para fullSearchResults cuando ordena por fecha
+    // Group by date when sorting by date (for both views)
     const shouldGroup = isDateSort;
     
     if (shouldGroup) {
@@ -284,7 +294,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         container.innerHTML = html;
         container.style.display = 'block';
     } else {
-        // Vista plana (cuadrícula)
+        // Flat grid
         container.innerHTML = sorted.map(movie => `
             <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
                 <img src="${movie.imageUrl}" alt="${movie.title}">
@@ -297,7 +307,7 @@ function renderMovies(movies, container, statsContainer, sortBy, term = null) {
         container.style.display = 'grid';
     }
     
-    // Actualizar título y botones de ordenamiento
+    // Update title and sorting buttons
     const sortId = `sortButtons-${container.id}`;
     if (container.id === 'fullSearchResults' && term) {
         const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : 'by channel');
@@ -338,7 +348,7 @@ function loadSavedMovies(sortBy = 'date') {
             }
         });
     });
-    // Eliminar duplicados por id
+    // Remove duplicates by id
     const uniqueMovies = [];
     const ids = new Set();
     allMovies.forEach(m => {
