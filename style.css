@@ -301,6 +301,22 @@ button:hover {
     color: #ff0000;
 }
 
+/* Añadir al final de style.css si no está */
+.secondary-btn {
+    background: #2a2a2a;
+    padding: 0 18px;
+    height: 52px;
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+}
+.secondary-btn:hover {
+    background: #3a3a3a;
+}
+
 @media (max-width: 768px) {
     .results {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
