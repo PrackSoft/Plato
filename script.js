@@ -1,4 +1,4 @@
-// script.js - Unified storage: only raw search results, filtered views derive from it
+// script.js - Unified storage with common render function for both filtered and full search views
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -51,8 +51,19 @@ function deleteMovieById(movieId) {
         localStorage.setItem(RAW_SEARCH_KEY, JSON.stringify(rawSearches));
     }
     if (historyView.style.display === 'block') loadSavedMovies();
+    if (fullSearchView.style.display === 'block') {
+        // Re-cargar la vista full actual si es necesario (por simplicidad, se puede recargar desde localStorage)
+        const activeTitle = fullSearchTitle.innerText.match(/"([^"]+)"/)?.[1];
+        if (activeTitle) {
+            const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
+            const search = rawData.find(item => item.searchTerm === activeTitle);
+            if (search && search.results.length) {
+                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort || 'date', `Full Search Results: "${activeTitle}"`);
+            }
+        }
+    }
     if (searchView.style.display === 'block') {
-        // No need to reload search results (they come from live API)
+        // No need to reload search results
     }
 }
 
@@ -145,18 +156,9 @@ function displayHistory() {
             const rawData = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
             const search = rawData.find(item => item.searchTerm === term);
             if (search && search.results.length) {
-                fullSearchResults.innerHTML = search.results.map(movie => `
-                    <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
-                        <img src="${movie.imageUrl}" alt="${movie.title}">
-                        <div class="info">
-                            <h3>${escapeHtml(movie.title)}</h3>
-                            <div class="channel">${escapeHtml(movie.channel)}</div>
-                        </div>
-                    </div>
-                `).join('');
-                fullSearchStats.innerHTML = `<strong>${search.results.length} results</strong> for "${term}" (no filter)`;
-                const fullSearchTitle = document.querySelector('#fullSearchView .history-header h2');
-                if (fullSearchTitle) fullSearchTitle.innerText = `Full Search Results: "${term}"`;
+                // Guardar el sort actual para la vista full (por defecto date)
+                currentFullSort = 'date';
+                renderMovies(search.results, fullSearchResults, fullSearchStats, currentFullSort, `Full Search Results: "${term}"`);
                 searchView.style.display = 'none';
                 historyView.style.display = 'none';
                 fullSearchView.style.display = 'block';
@@ -176,7 +178,7 @@ function displayHistory() {
     const historyIcon = document.getElementById('historyIcon');
     if (historyIcon) {
         historyIcon.onclick = () => {
-            loadSavedMovies();
+            loadSavedMovies(); // Esta función ahora usará renderMovies internamente
             searchView.style.display = 'none';
             historyView.style.display = 'block';
             fullSearchView.style.display = 'none';
@@ -184,16 +186,62 @@ function displayHistory() {
     }
 }
 
-// ========== loadSavedMovies – FECHA CORREGIDA (comparación directa de claves) ==========
-function loadSavedMovies(sortBy = 'date') {
-    const titleMap = {
-        date: 'Saved Free Movies (by date)',
-        title: 'Saved Free Movies (by title)',
-        channel: 'Saved Free Movies (by channel)'
-    };
-    const historyTitle = document.getElementById('historyTitle');
-    if (historyTitle) historyTitle.innerText = titleMap[sortBy] || 'Saved Free Movies';
+// ========== FUNCIÓN COMÚN DE RENDERIZADO ==========
+let currentFullSort = 'date'; // Para recordar el orden en fullSearchView
+
+function renderMovies(movies, container, statsContainer, sortBy, titlePrefix) {
+    // Copiar array para no mutar el original
+    let sorted = [...movies];
     
+    if (sortBy === 'title') {
+        sorted.sort((a,b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'channel') {
+        sorted.sort((a,b) => a.channel.localeCompare(b.channel));
+    } else { // date
+        sorted.sort((a,b) => new Date(b.date) - new Date(a.date));
+    }
+    
+    if (sorted.length === 0) {
+        container.innerHTML = `<p class="stats">No movies to display.</p>`;
+        statsContainer.innerHTML = '';
+        return;
+    }
+    
+    // Generar HTML
+    container.innerHTML = sorted.map(movie => `
+        <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+            <img src="${movie.imageUrl}" alt="${movie.title}">
+            <div class="info">
+                <h3>${escapeHtml(movie.title)}</h3>
+                <div class="channel">${escapeHtml(movie.channel)}</div>
+            </div>
+        </div>
+    `).join('');
+    
+    // Añadir botones de ordenamiento
+    statsContainer.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons-${container.id}">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
+    
+    // Asignar eventos a los botones
+    const buttons = statsContainer.querySelectorAll(`#sortButtons-${container.id} button`);
+    buttons.forEach(btn => {
+        btn.onclick = () => {
+            renderMovies(movies, container, statsContainer, btn.dataset.sort, titlePrefix);
+            if (container.id === 'fullSearchResults') currentFullSort = btn.dataset.sort;
+        };
+    });
+    
+    // Opcional: actualizar título si se proporciona
+    if (titlePrefix && container.id === 'fullSearchResults') {
+        const titleEl = document.querySelector('#fullSearchView .history-header h2');
+        if (titleEl) titleEl.innerText = titlePrefix;
+    } else if (titlePrefix && container.id === 'savedMoviesList') {
+        const titleEl = document.getElementById('historyTitle');
+        if (titleEl) titleEl.innerText = titlePrefix;
+    }
+}
+
+// ========== loadSavedMovies ahora usa renderMovies ==========
+function loadSavedMovies(sortBy = 'date') {
     const rawSearches = JSON.parse(localStorage.getItem(RAW_SEARCH_KEY) || '[]');
     let allMovies = [];
     rawSearches.forEach(entry => {
@@ -213,94 +261,16 @@ function loadSavedMovies(sortBy = 'date') {
         }
     });
     
-    // Ordenar según sortBy
-    if (sortBy === 'title') {
-        uniqueMovies.sort((a,b) => a.title.localeCompare(b.title));
-    } else if (sortBy === 'channel') {
-        uniqueMovies.sort((a,b) => a.channel.localeCompare(b.channel));
-    } else { // date
-        uniqueMovies.sort((a,b) => new Date(b.date) - new Date(a.date));
-    }
+    // Título dinámico
+    const titleMap = {
+        date: 'Saved Free Movies (by date)',
+        title: 'Saved Free Movies (by title)',
+        channel: 'Saved Free Movies (by channel)'
+    };
+    renderMovies(uniqueMovies, savedMoviesList, historyStats, sortBy, titleMap[sortBy]);
     
-    if (uniqueMovies.length === 0) {
-        savedMoviesList.innerHTML = '<p class="stats">No saved free movies yet (filtered by ' + TARGET_CHANNEL + ').</p>';
-        historyStats.innerHTML = '';
-        return;
-    }
-    
-    // Si se ordena por fecha, agrupar por día (usando fecha local)
-    if (sortBy === 'date') {
-        // Función auxiliar para obtener clave YYYY-MM-DD en zona local
-        const getLocalDateKey = (d) => {
-            const date = new Date(d);
-            return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-        };
-        
-        const groups = new Map();
-        // Calcular claves de hoy y ayer en local usando la misma función
-        const todayKey = getLocalDateKey(new Date());
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayKey = getLocalDateKey(yesterdayDate);
-        
-        uniqueMovies.forEach(movie => {
-            const localKey = getLocalDateKey(movie.date);
-            if (!groups.has(localKey)) groups.set(localKey, []);
-            groups.get(localKey).push(movie);
-        });
-        
-        // Ordenar grupos por fecha descendente (más reciente primero)
-        const sortedGroups = Array.from(groups.entries()).sort((a,b) => new Date(b[0]) - new Date(a[0]));
-        
-        let html = '';
-        for (const [dateKey, movies] of sortedGroups) {
-            let label;
-            if (dateKey === todayKey) {
-                label = 'Today';
-            } else if (dateKey === yesterdayKey) {
-                label = 'Yesterday';
-            } else {
-                // Formatear fecha para mostrar
-                const [year, month, day] = dateKey.split('-');
-                const groupDate = new Date(year, month-1, day);
-                label = groupDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            }
-            html += `<div class="date-group">`;
-            html += `<div class="group-date">${label}</div>`;
-            html += `<div class="results-group">`;
-            html += movies.map(movie => `
-                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
-                    <img src="${movie.imageUrl}" alt="${movie.title}">
-                    <div class="info">
-                        <h3>${escapeHtml(movie.title)}</h3>
-                        <div class="channel">${escapeHtml(movie.channel)}</div>
-                    </div>
-                </div>
-            `).join('');
-            html += `</div></div>`;
-        }
-        savedMoviesList.innerHTML = html;
-        savedMoviesList.style.display = 'block';
-    } else {
-        // Lista plana (sin agrupar)
-        savedMoviesList.innerHTML = uniqueMovies.map(movie => `
-            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
-                <img src="${movie.imageUrl}" alt="${movie.title}">
-                <div class="info">
-                    <h3>${escapeHtml(movie.title)}</h3>
-                    <div class="channel">${escapeHtml(movie.channel)}</div>
-                </div>
-            </div>
-        `).join('');
-        savedMoviesList.style.display = 'grid';
-    }
-    
-    // Botones de ordenamiento
-    historyStats.innerHTML = `<strong>${uniqueMovies.length} movies saved</strong> (filtered by channel ${TARGET_CHANNEL}) · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
-    
-    document.querySelectorAll('#sortButtons button').forEach(btn => {
-        btn.onclick = () => loadSavedMovies(btn.dataset.sort);
-    });
+    // Forzar que savedMoviesList use grid (el render común usa grid por defecto)
+    savedMoviesList.style.display = 'grid';
 }
 
 searchBtn.onclick = async () => {
