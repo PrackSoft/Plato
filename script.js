@@ -1,4 +1,4 @@
-// script.js completo con la nueva funcionalidad de configuración (sin atajo de teclado)
+// script.js completo con iconos dinámicos para el botón de ajustes
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -7,7 +7,6 @@ const STORAGE_KEY = 'plato_search_history';
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 
-// Claves para preferencias del modal (separadas por modo)
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 
@@ -35,8 +34,7 @@ let currentViewMode = 'filtered';
 let currentSort = 'date';
 let currentTermForView = null;
 
-// Variables para gestionar la vista de configuración
-let previousViewState = null; // guarda { viewMode, termForView, sort } para volver atrás
+let previousViewState = null;
 let isSettingsView = false;
 
 function escapeHtml(str) {
@@ -139,7 +137,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
 }
 
 function updateView() {
-    if (isSettingsView) return; // no actualizar mientras se muestra configuración
+    if (isSettingsView) return;
     const storageKey = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     let movies = [];
@@ -168,9 +166,18 @@ function updateView() {
     renderMovies(movies, currentSort, titlePrefix);
 }
 
-// Mostrar vista de configuración
+function updateSettingsIcon() {
+    // Cambia el icono del botón de ajustes según el modo actual
+    if (currentViewMode === 'filtered') {
+        settingsBtn.innerHTML = 'settings_heart';
+        settingsBtn.title = 'Settings for Free Movies';
+    } else {
+        settingsBtn.innerHTML = 'video_settings';
+        settingsBtn.title = 'Settings for Excluded Results';
+    }
+}
+
 function showSettings() {
-    // Guardar estado actual para poder volver
     previousViewState = {
         viewMode: currentViewMode,
         termForView: currentTermForView,
@@ -178,7 +185,6 @@ function showSettings() {
     };
     isSettingsView = true;
     resultsTitle.innerText = 'Settings';
-    // Crear contenido de configuración
     const currentPrefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
     resultsGrid.innerHTML = `
@@ -194,18 +200,15 @@ function showSettings() {
         </div>
     `;
     resultsStats.innerHTML = '';
-    // Evento para el checkbox
     const checkbox = document.getElementById('showExtraInfoCheckbox');
     if (checkbox) {
         checkbox.onchange = () => {
             localStorage.setItem(currentPrefKey, checkbox.checked);
         };
     }
-    // Evento para el botón back
     const backBtn = document.getElementById('backFromSettingsBtn');
     if (backBtn) {
         backBtn.onclick = () => {
-            // Restaurar vista anterior
             isSettingsView = false;
             if (previousViewState) {
                 currentViewMode = previousViewState.viewMode;
@@ -214,10 +217,9 @@ function showSettings() {
                 previousViewState = null;
             }
             updateView();
-            // También refrescar la barra superior por si cambió el modo (aunque no debería)
             refreshTopBar();
             configureTrashButton();
-            // Ajustar el color del logo según el modo actual
+            updateSettingsIcon(); // asegurar icono correcto al salir
             if (currentViewMode === 'excluded') {
                 modeToggle.classList.add('excluded-mode');
                 document.body.classList.add('excluded-mode');
@@ -378,12 +380,10 @@ function configureTrashButton() {
     }
 }
 
-// Configuración del botón de ajustes
 settingsBtn.onclick = () => {
     if (!isSettingsView) {
         showSettings();
     } else {
-        // Si ya está en configuración, no hacer nada (o volver)
         const backBtn = document.getElementById('backFromSettingsBtn');
         if (backBtn) backBtn.click();
     }
@@ -416,8 +416,8 @@ async function performSearch(query) {
             if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
             currentViewMode = 'filtered';
             configureTrashButton();
+            updateSettingsIcon(); // actualizar icono del botón de ajustes
             if (isSettingsView) {
-                // Si estábamos en settings, volver a la vista de películas
                 const backBtn = document.getElementById('backFromSettingsBtn');
                 if (backBtn) backBtn.click();
             }
@@ -438,7 +438,7 @@ searchBtn.onclick = async () => {
 };
 
 function toggleMode() {
-    if (isSettingsView) return; // no cambiar modo mientras se ven ajustes
+    if (isSettingsView) return;
     currentViewMode = (currentViewMode === 'filtered') ? 'excluded' : 'filtered';
     currentTermForView = null;
     currentSort = 'date';
@@ -452,6 +452,7 @@ function toggleMode() {
     }
     refreshTopBar();
     configureTrashButton();
+    updateSettingsIcon(); // actualizar icono al cambiar de modo
 }
 modeToggle.onclick = toggleMode;
 
@@ -463,10 +464,10 @@ function init() {
     currentSort = 'date';
     isSettingsView = false;
     updateView();
+    updateSettingsIcon(); // asegurar icono inicial
 }
 init();
 
-// Función openModal simplificada: muestra el bloque extra solo si la preferencia está activa
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
@@ -481,8 +482,6 @@ function openModal(movie) {
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
-
-    // Verificar preferencia según modo actual
     const prefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const showExtra = localStorage.getItem(prefKey) === 'true';
     if (showExtra) {
@@ -508,10 +507,8 @@ function openModal(movie) {
         extraDiv.innerHTML = html;
         modalBody.appendChild(extraDiv);
     }
-
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
-
     const deleteBtn = modalBody.querySelector('.delete-movie-btn');
     if (deleteBtn) deleteBtn.onclick = () => {
         let filtered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
