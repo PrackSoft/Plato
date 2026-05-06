@@ -384,7 +384,7 @@ function openModal(movie) {
     const extraContainer = document.createElement('div');
     extraContainer.id = 'extraInfoContainer';
     extraContainer.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000; display: none;';
-    extraContainer.innerHTML = '<div style="font-weight: bold; margin-bottom: 4px;">🔍 Información técnica (presiona Ctrl+Alt+I / Cmd+Alt+I para ocultar/mostrar)</div><div id="extraInfoContent"></div>';
+    extraContainer.innerHTML = '<div style="font-weight: bold; margin-bottom: 4px;">🔍 Información técnica (presiona Ctrl+Shift+I / Control+Shift+I para ocultar/mostrar)</div><div id="extraInfoContent"></div>';
     modalBody.appendChild(extraContainer);
 
     // Función para llenar la información adicional (se ejecuta solo la primera vez que se activa)
@@ -414,11 +414,11 @@ function openModal(movie) {
         extraFilled = true;
     };
 
-    // Manejador de teclado global (se añade una sola vez, pero podemos ponerlo al abrir el modal)
+    // Manejador de teclado (cambiado a Ctrl+Shift+I / Control+Shift+I)
     const keyHandler = (e) => {
-        if ((e.ctrlKey && e.altKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
+        if (e.ctrlKey && e.shiftKey && e.key === 'i') {
             e.preventDefault();
-            fillExtraInfo();               // llena la primera vez
+            fillExtraInfo();
             const isVisible = extraContainer.style.display === 'block';
             extraContainer.style.display = isVisible ? 'none' : 'block';
         }
