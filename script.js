@@ -161,7 +161,7 @@ function updateView() {
 
 // Guarda por separado: trigo (filtered) y paja (excluded)
 function saveSearchResults(searchTerm, rawItems) {
-    // 1. Separar items
+    // Separar trigo y paja
     const filteredItems = [];
     const excludedItems = [];
     rawItems.forEach(item => {
@@ -183,45 +183,29 @@ function saveSearchResults(searchTerm, rawItems) {
         }
     });
 
-    // 2. Actualizar almacén de filtrados (trigo)
-    let filteredSearches = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
-    let filteredIndex = filteredSearches.findIndex(entry => entry.searchTerm === searchTerm);
-    let existingFiltered = filteredIndex !== -1 ? filteredSearches[filteredIndex].results : [];
-    let combinedFiltered = [...existingFiltered, ...filteredItems];
-    const uniqueFiltered = [];
-    const filteredIds = new Set();
-    for (const m of combinedFiltered) {
-        if (!filteredIds.has(m.id)) {
-            filteredIds.add(m.id);
-            uniqueFiltered.push(m);
-        }
-    }
-    uniqueFiltered.sort((a,b) => new Date(b.date) - new Date(a.date));
-    const limitedFiltered = uniqueFiltered.slice(0, MAX_RESULTS_PER_TERM);
-    const filteredEntry = { searchTerm, date: new Date().toISOString(), results: limitedFiltered };
-    if (filteredIndex !== -1) filteredSearches[filteredIndex] = filteredEntry;
-    else filteredSearches.unshift(filteredEntry);
-    localStorage.setItem(FILTERED_SEARCH_KEY, JSON.stringify(filteredSearches.slice(0, 20)));
+    function updateBucket(storageKey, newItems) {
+        let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        let index = searches.findIndex(entry => entry.searchTerm === searchTerm);
+        let existing = index !== -1 ? searches[index].results : [];
 
-    // 3. Actualizar almacén de excluidos (paja)
-    let excludedSearches = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-    let excludedIndex = excludedSearches.findIndex(entry => entry.searchTerm === searchTerm);
-    let existingExcluded = excludedIndex !== -1 ? excludedSearches[excludedIndex].results : [];
-    let combinedExcluded = [...existingExcluded, ...excludedItems];
-    const uniqueExcluded = [];
-    const excludedIds = new Set();
-    for (const m of combinedExcluded) {
-        if (!excludedIds.has(m.id)) {
-            excludedIds.add(m.id);
-            uniqueExcluded.push(m);
-        }
+        // Mezclar, pero sin reemplazar duplicados: solo añadir los que no existan por id
+        const existingIds = new Set(existing.map(m => m.id));
+        const toAdd = newItems.filter(m => !existingIds.has(m.id));
+        const combined = [...existing, ...toAdd];
+
+        // Ordenar por fecha descendente (más nuevo primero)
+        combined.sort((a,b) => new Date(b.date) - new Date(a.date));
+        const limited = combined.slice(0, MAX_RESULTS_PER_TERM); // mantiene los más nuevos
+
+        const entry = { searchTerm, date: new Date().toISOString(), results: limited };
+        if (index !== -1) searches[index] = entry;
+        else searches.unshift(entry);
+        searches = searches.slice(0, 20);
+        localStorage.setItem(storageKey, JSON.stringify(searches));
     }
-    uniqueExcluded.sort((a,b) => new Date(b.date) - new Date(a.date));
-    const limitedExcluded = uniqueExcluded.slice(0, MAX_RESULTS_PER_TERM);
-    const excludedEntry = { searchTerm, date: new Date().toISOString(), results: limitedExcluded };
-    if (excludedIndex !== -1) excludedSearches[excludedIndex] = excludedEntry;
-    else excludedSearches.unshift(excludedEntry);
-    localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(excludedSearches.slice(0, 20)));
+
+    updateBucket(FILTERED_SEARCH_KEY, filteredItems);
+    updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
 function updateTags() {
