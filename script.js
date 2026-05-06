@@ -8,14 +8,14 @@ const FILTERED_SEARCH_KEY = 'plato_filtered_searches'; // Trigo: channel === TAR
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches'; // Paja: channel !== TARGET_CHANNEL
 
 const searchBtn = document.getElementById('searchBtn');
-const excludedSearchBtn = document.getElementById('excludedSearchBtn');
+const fullSearchBtn = document.getElementById('fullSearchBtn');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
 const searchInput = document.getElementById('searchInput');
 const resultsGrid = document.getElementById('resultsGrid');
 const resultsTitle = document.getElementById('resultsTitle');
 const resultsStats = document.getElementById('resultsStats');
 const loadingDiv = document.getElementById('loading');
-const excludedSearchSearchDiv = document.getElementById('excludedSearchSearch');
+const fullSearchDiv = document.getElementById('fullSearch');
 const clearStorageBtn = document.getElementById('clearStorageBtn');
 const modal = document.getElementById('movieModal');
 const closeModal = document.querySelector('.close-modal');
@@ -38,7 +38,7 @@ function escapeHtml(str) {
 
 function getLocalDateKey(d) {
     const date = new Date(d);
-    return `${date.getexcludedSearchYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
 }
 
 function sortMovies(movies, primarySort) {
@@ -226,14 +226,14 @@ function saveSearchResults(searchTerm, rawItems) {
 
 function updateTags() {
     const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    if (!excludedSearchSearchDiv) return;
+    if (!fullSearchDiv) return;
     if (history.length === 0) {
-        excludedSearchSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches.</div>';
+        fullSearchDiv.innerHTML = '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches.</div>';
         return;
     }
-    excludedSearchSearchDiv.innerHTML = '<button class="excludedSearch-search-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
+    fullSearchDiv.innerHTML = '<button class="full-search-btn material-symbols-outlined" id="historyIcon">filter_alt</button>' +
         history.map(term => `
-            <button class="excludedSearch-search-btn tag-btn" data-term="${term}">
+            <button class="full-search-btn tag-btn" data-term="${term}">
                 ${term}
                 <span class="history-delete" data-term="${term}">✖</span>
             </button>
@@ -324,8 +324,8 @@ searchBtn.onclick = async () => {
     await performSearch(currentSearchTerm);
 };
 
-excludedSearchBtn.onclick = () => {
-    currentViewMode = 'excluded';   // excludedSearch Search = paja (resultados no gratuitos)
+fullSearchBtn.onclick = () => {
+    currentViewMode = 'excluded';   // Full Search = paja (resultados no gratuitos)
     currentTermForView = null;      // unión de todos los términos
     currentSort = 'date';
     updateView();
