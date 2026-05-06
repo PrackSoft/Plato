@@ -1,4 +1,4 @@
-/* style.css - base (igual que antes, solo añadimos .excluded-mode para el logo) */
+/* style.css completo */
 * {
     margin: 0;
     padding: 0;
@@ -206,7 +206,7 @@ button:hover {
     color: white;
     cursor: pointer;
     font-size: 12px;
-    transition: background 0.2s;
+    transition: background 0.2s, color 0.2s;
     margin: 0;
     display: inline-flex;
     align-items: center;
@@ -218,6 +218,7 @@ button:hover {
 
 .full-search-btn:hover {
     background: #ff0000;
+    color: white;
 }
 
 .full-search-btn .material-symbols-outlined {
@@ -238,6 +239,15 @@ button:hover {
 
 .history-delete:hover {
     color: white;
+}
+
+/* Modo excluido: hover de los botones de control (tags, union, trash) con fondo blanco y texto rojo */
+body.excluded-mode .full-search-btn:hover {
+    background: white;
+    color: #ff0000;
+}
+body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
+    color: #ff0000;
 }
 
 .date-group {

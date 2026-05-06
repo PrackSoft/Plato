@@ -1,4 +1,4 @@
-// script.js - modo filtrado (rojo) / excluido (blanco) con interfaz consistente
+// script.js completo
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -7,7 +7,6 @@ const STORAGE_KEY = 'plato_search_history';
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 
-// DOM elements
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
 const resultsGrid = document.getElementById('resultsGrid');
@@ -23,16 +22,14 @@ const modalBody = document.getElementById('modalBody');
 const watchBtn = document.getElementById('watchMovieBtn');
 let currentMovieUrl = '';
 
-// estado de la app
 let nextPageToken = null;
 let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
-let currentViewMode = 'filtered';   // 'filtered' (rojo) o 'excluded' (blanco)
+let currentViewMode = 'filtered';
 let currentSort = 'date';
-let currentTermForView = null;      // null = unión de todos, string = término específico
+let currentTermForView = null;
 
-// ----- funciones auxiliares -----
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -53,7 +50,7 @@ function sortMovies(movies, primarySort) {
             if (channelCompare !== 0) return channelCompare;
             return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
         });
-    } else { // date
+    } else {
         sorted.sort((a,b) => {
             const dateCompare = new Date(b.date) - new Date(a.date);
             if (dateCompare !== 0) return dateCompare;
@@ -63,7 +60,6 @@ function sortMovies(movies, primarySort) {
     return sorted;
 }
 
-// renderizado principal (con agrupación por fecha cuando sortBy === 'date')
 function renderMovies(movies, sortBy, titlePrefix) {
     const sorted = sortMovies(movies, sortBy);
     const isDateSort = (sortBy === 'date');
@@ -133,7 +129,6 @@ function renderMovies(movies, sortBy, titlePrefix) {
     });
 }
 
-// actualiza datos según currentViewMode, currentTermForView, currentSort
 function updateView() {
     const storageKey = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -144,7 +139,6 @@ function updateView() {
     } else {
         const all = [];
         searches.forEach(entry => all.push(...entry.results));
-        // eliminar duplicados globales por id
         const unique = [];
         const ids = new Set();
         all.forEach(m => {
@@ -164,7 +158,6 @@ function updateView() {
     renderMovies(movies, currentSort, titlePrefix);
 }
 
-// guarda resultados de búsqueda separando trigo (filtered) y paja (excluded)
 function saveSearchResults(searchTerm, rawItems) {
     const filteredItems = [];
     const excludedItems = [];
@@ -207,10 +200,8 @@ function saveSearchResults(searchTerm, rawItems) {
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
-// refresca la barra de tags y el botón de unión (según modo actual)
 function refreshTopBar() {
     const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    // icono y título para el botón de unión
     const filterIcon = (currentViewMode === 'filtered') ? 'filter_alt' : 'video_search';
     const filterTitle = (currentViewMode === 'filtered') ? 'Show all Free Movies' : 'Show all Excluded Results';
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
@@ -226,7 +217,6 @@ function refreshTopBar() {
         `).join('');
         fullSearchDiv.innerHTML = html;
     }
-    // botón de unión
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
@@ -235,7 +225,6 @@ function refreshTopBar() {
             updateView();
         };
     }
-    // tags: muestra resultados del término según modo actual
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             currentTermForView = btn.dataset.term;
@@ -243,7 +232,6 @@ function refreshTopBar() {
             updateView();
         };
     });
-    // botón de borrar de cada tag
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
@@ -253,7 +241,6 @@ function refreshTopBar() {
     });
 }
 
-// elimina un término completo de todas las bolsas y del historial
 function deleteSearchTerm(term) {
     let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     history = history.filter(t => t !== term);
@@ -274,7 +261,6 @@ function deleteSearchTerm(term) {
     }
 }
 
-// configura el botón de borrar global según modo actual
 function configureTrashButton() {
     if (currentViewMode === 'filtered') {
         clearStorageBtn.onclick = () => {
@@ -307,7 +293,6 @@ function configureTrashButton() {
     }
 }
 
-// búsqueda a la API y almacenamiento
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
@@ -316,12 +301,10 @@ async function performSearch(query) {
         const data = await response.json();
         if (data.items) {
             saveSearchResults(currentSearchTerm, data.items);
-            // después de buscar, mostrar los resultados filtrados (gratuitos) del término
             currentViewMode = 'filtered';
             currentTermForView = currentSearchTerm;
             currentSort = 'date';
             updateView();
-            // actualizar historial de términos
             let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!history.includes(currentSearchTerm)) {
                 history.unshift(currentSearchTerm);
@@ -333,8 +316,8 @@ async function performSearch(query) {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
                 refreshTopBar();
             }
-            // actualizar el color del logo (forzar modo filtrado)
             if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
+            if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
             currentViewMode = 'filtered';
             configureTrashButton();
         }
@@ -345,7 +328,6 @@ async function performSearch(query) {
     }
 }
 
-// ---- Event listeners ----
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
@@ -354,7 +336,6 @@ searchBtn.onclick = async () => {
     await performSearch(currentSearchTerm);
 };
 
-// Toggle de modo (rojo -> blanco / blanco -> rojo)
 function toggleMode() {
     currentViewMode = (currentViewMode === 'filtered') ? 'excluded' : 'filtered';
     currentTermForView = null;
@@ -362,15 +343,16 @@ function toggleMode() {
     updateView();
     if (currentViewMode === 'excluded') {
         modeToggle.classList.add('excluded-mode');
+        document.body.classList.add('excluded-mode');
     } else {
         modeToggle.classList.remove('excluded-mode');
+        document.body.classList.remove('excluded-mode');
     }
-    refreshTopBar();          // cambia icono de unión y comportamiento de tags
-    configureTrashButton();   // cambia qué borra el botón de borrar global
+    refreshTopBar();
+    configureTrashButton();
 }
 modeToggle.onclick = toggleMode;
 
-// Inicialización
 function init() {
     refreshTopBar();
     configureTrashButton();
@@ -381,7 +363,6 @@ function init() {
 }
 init();
 
-// ----- Modal -----
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
