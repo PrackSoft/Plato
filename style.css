@@ -230,6 +230,38 @@ button:hover {
     line-height: 1;
 }
 
+/* Estilo para checkbox en la vista de configuración */
+#resultsGrid input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid white;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    position: relative;
+}
+
+#resultsGrid input[type="checkbox"]:checked {
+    background: #ff0000;
+    border-color: #ff0000;
+}
+
+#resultsGrid input[type="checkbox"]:checked::after {
+    content: "✓";
+    color: white;
+    font-size: 14px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#resultsGrid input[type="checkbox"]:hover {
+    border-color: #ff0000;
+}
+
 .history-delete {
     position: absolute;
     right: 6px;
