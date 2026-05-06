@@ -1,3 +1,4 @@
+<!-- index.html (único contenedor reutilizable, sin duplicación de vistas) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -18,16 +19,16 @@
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search free YouTube movies by title, actor, director..." autocomplete="off">
                 <button id="searchBtn">Search</button>
-                <button id="fullSearchBtn" class="secondary-btn">Full Search</button>
+                <button id="excludedSearchBtn" class="secondary-btn">excludedSearch Search</button>
             </div>
 
             <!-- Tags -->
             <div class="search-wrapper">
-                <div id="fullSearch"></div>
-                <button id="clearStorageBtn" class="full-search-btn material-symbols-outlined">delete_forever</button>
+                <div id="excludedSearchSearch"></div>
+                <button id="clearStorageBtn" class="excludedSearch-search-btn material-symbols-outlined">delete_forever</button>
             </div>
 
-            <!-- VISTA ÚNICA DE RESULTADOS (se muestra según el modo) -->
+            <!-- VISTA ÚNICA DE RESULTADOS (cambia según el modo) -->
             <div id="resultsContainer">
                 <div class="history-header">
                     <h2 id="resultsTitle">Saved Free Movies (by date)</h2>

@@ -192,13 +192,13 @@ button:hover {
     gap: 8px;
 }
 
-/* Los hijos de #fullSearch se convierten en hijos directos del wrapper */
-#fullSearch {
+/* Los hijos de #excludedSearchSearch se convierten en hijos directos del wrapper */
+#excludedSearchSearch {
     display: contents;
 }
 
 /* Clase para los botones de búsqueda completa */
-.full-search-btn {
+.excludedSearch-search-btn {
     background: #2a2a2a;
     position: relative;
     border: none;
@@ -217,12 +217,12 @@ button:hover {
     line-height: 32px;
 }
 
-.full-search-btn:hover {
+.excludedSearch-search-btn:hover {
     background: #ff0000;
 }
 
 
-.full-search-btn .material-symbols-outlined {
+.excludedSearch-search-btn .material-symbols-outlined {
     font-size: 18px;
     line-height: 1;
 }
