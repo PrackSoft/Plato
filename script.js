@@ -365,6 +365,8 @@ init();
 
 function openModal(movie) {
     if (!modal) return;
+
+    // Construir el contenido base (igual que antes)
     modalBody.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span class="delete-movie-btn material-symbols-outlined" style="cursor:pointer;">delete_forever</span>
@@ -377,8 +379,78 @@ function openModal(movie) {
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
+
+    // Crear contenedor para la información extra (inicialmente oculto)
+    const extraContainer = document.createElement('div');
+    extraContainer.id = 'extraInfoContainer';
+    extraContainer.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000; display: none;';
+    extraContainer.innerHTML = '<div style="font-weight: bold; margin-bottom: 4px;">🔍 Información técnica (presiona Ctrl+Alt+I / Cmd+Alt+I para ocultar/mostrar)</div><div id="extraInfoContent"></div>';
+    modalBody.appendChild(extraContainer);
+
+    // Función para llenar la información adicional (se ejecuta solo la primera vez que se activa)
+    let extraFilled = false;
+    const fillExtraInfo = () => {
+        if (extraFilled) return;
+        const contentDiv = extraContainer.querySelector('#extraInfoContent');
+        // Lista de todas las propiedades del objeto movie que queremos mostrar
+        const fields = [
+            { label: 'ID del video', value: movie.id },
+            { label: 'Título', value: movie.title },
+            { label: 'Canal', value: movie.channel },
+            { label: 'URL', value: movie.url },
+            { label: 'Fecha de publicación (API)', value: movie.publishedAt ? new Date(movie.publishedAt).toLocaleString() : null },
+            { label: 'Fecha de guardado', value: movie.date ? new Date(movie.date).toLocaleString() : null },
+            { label: 'Término de búsqueda', value: movie.searchTerm },
+            { label: 'Descripción (primeros 200 caracteres)', value: movie.description ? movie.description.substring(0, 200) + (movie.description.length > 200 ? '…' : '') : null },
+            { label: 'URL de miniatura (medium)', value: movie.imageUrl },
+        ];
+        let html = '<ul style="margin: 0; padding-left: 16px;">';
+        fields.forEach(f => {
+            const displayValue = f.value ? escapeHtml(String(f.value)) : '<span style="color: #ff9999;">missing</span>';
+            html += `<li><strong>${f.label}:</strong> ${displayValue}</li>`;
+        });
+        html += '</ul>';
+        contentDiv.innerHTML = html;
+        extraFilled = true;
+    };
+
+    // Manejador de teclado global (se añade una sola vez, pero podemos ponerlo al abrir el modal)
+    const keyHandler = (e) => {
+        if ((e.ctrlKey && e.altKey && e.key === 'i') || (e.metaKey && e.altKey && e.key === 'i')) {
+            e.preventDefault();
+            fillExtraInfo();               // llena la primera vez
+            const isVisible = extraContainer.style.display === 'block';
+            extraContainer.style.display = isVisible ? 'none' : 'block';
+        }
+    };
+    window.addEventListener('keydown', keyHandler);
+
+    // Guardar el manejador para removerlo al cerrar el modal (opcional, evita duplicados)
+    const removeHandler = () => {
+        window.removeEventListener('keydown', keyHandler);
+    };
+    // Modificar el cierre del modal para limpiar el listener
+    const originalClose = closeModal.onclick;
+    closeModal.onclick = () => {
+        removeHandler();
+        if (originalClose) originalClose();
+        modal.style.display = 'none';
+    };
+    // También limpiar al hacer clic fuera del modal
+    const originalWindowClick = window.onclick;
+    window.onclick = (e) => {
+        if (e.target === modal) {
+            removeHandler();
+            if (originalWindowClick) originalWindowClick(e);
+            modal.style.display = 'none';
+        } else if (originalWindowClick) {
+            originalWindowClick(e);
+        }
+    };
+
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
+
     const deleteBtn = modalBody.querySelector('.delete-movie-btn');
     if (deleteBtn) deleteBtn.onclick = () => {
         let filtered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
@@ -390,6 +462,8 @@ function openModal(movie) {
         localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(newExcluded));
         updateView();
         modal.style.display = 'none';
+        // También remover el listener al eliminar
+        window.removeEventListener('keydown', keyHandler);
     };
 }
 if (closeModal) closeModal.onclick = () => { modal.style.display = 'none'; };
