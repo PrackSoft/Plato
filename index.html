@@ -1,4 +1,3 @@
-<!-- index.html (único contenedor reutilizable, sin duplicación de vistas) -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13,13 +12,12 @@
     <div class="header">
         <div class="container">
             <div class="logo">
-                <span class="material-symbols-outlined">looks</span>
+                <span class="material-symbols-outlined" id="modeToggle">looks</span>
                 PLATO
             </div>
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="Search free YouTube movies by title, actor, director..." autocomplete="off">
                 <button id="searchBtn">Search</button>
-                <button id="fullSearchBtn" class="secondary-btn">Full Search</button>
             </div>
 
             <!-- Tags -->
@@ -28,7 +26,7 @@
                 <button id="clearStorageBtn" class="full-search-btn material-symbols-outlined">delete_forever</button>
             </div>
 
-            <!-- VISTA ÚNICA DE RESULTADOS (cambia según el modo) -->
+            <!-- VISTA ÚNICA DE RESULTADOS -->
             <div id="resultsContainer">
                 <div class="history-header">
                     <h2 id="resultsTitle">Saved Free Movies (by date)</h2>

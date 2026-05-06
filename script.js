@@ -1,15 +1,13 @@
-// script.js - Separación total: FILTERED (trigo) y EXCLUDED (paja), sin duplicados
+// script.js - Toggle between filtered (Free) and excluded (Full Search) via logo icon
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
-const STORAGE_KEY = 'plato_search_history';            // Lista de términos buscados
-const FILTERED_SEARCH_KEY = 'plato_filtered_searches'; // Trigo: channel === TARGET_CHANNEL
-const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches'; // Paja: channel !== TARGET_CHANNEL
+const STORAGE_KEY = 'plato_search_history';
+const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
+const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 
 const searchBtn = document.getElementById('searchBtn');
-const fullSearchBtn = document.getElementById('fullSearchBtn');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
 const searchInput = document.getElementById('searchInput');
 const resultsGrid = document.getElementById('resultsGrid');
 const resultsTitle = document.getElementById('resultsTitle');
@@ -17,6 +15,7 @@ const resultsStats = document.getElementById('resultsStats');
 const loadingDiv = document.getElementById('loading');
 const fullSearchDiv = document.getElementById('fullSearch');
 const clearStorageBtn = document.getElementById('clearStorageBtn');
+const modeToggle = document.getElementById('modeToggle');
 const modal = document.getElementById('movieModal');
 const closeModal = document.querySelector('.close-modal');
 const modalBody = document.getElementById('modalBody');
@@ -27,9 +26,9 @@ let nextPageToken = null;
 let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
-let currentViewMode = 'filtered'; // 'filtered' (trigo) o 'excluded' (paja)
+let currentViewMode = 'filtered';   // 'filtered' (Free) or 'excluded' (Non‑Free)
 let currentSort = 'date';
-let currentTermForView = null;     // null = unión de todos los términos, string = término específico
+let currentTermForView = null;
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -159,9 +158,7 @@ function updateView() {
     renderMovies(movies, currentSort, titlePrefix);
 }
 
-// Guarda por separado: trigo (filtered) y paja (excluded)
 function saveSearchResults(searchTerm, rawItems) {
-    // Separar trigo y paja
     const filteredItems = [];
     const excludedItems = [];
     rawItems.forEach(item => {
@@ -187,16 +184,11 @@ function saveSearchResults(searchTerm, rawItems) {
         let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
         let index = searches.findIndex(entry => entry.searchTerm === searchTerm);
         let existing = index !== -1 ? searches[index].results : [];
-
-        // Mezclar, pero sin reemplazar duplicados: solo añadir los que no existan por id
         const existingIds = new Set(existing.map(m => m.id));
         const toAdd = newItems.filter(m => !existingIds.has(m.id));
         const combined = [...existing, ...toAdd];
-
-        // Ordenar por fecha descendente (más nuevo primero)
         combined.sort((a,b) => new Date(b.date) - new Date(a.date));
-        const limited = combined.slice(0, MAX_RESULTS_PER_TERM); // mantiene los más nuevos
-
+        const limited = combined.slice(0, MAX_RESULTS_PER_TERM);
         const entry = { searchTerm, date: new Date().toISOString(), results: limited };
         if (index !== -1) searches[index] = entry;
         else searches.unshift(entry);
@@ -224,7 +216,7 @@ function updateTags() {
         `).join('');
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
-            currentViewMode = 'filtered';      // Los tags muestran el trigo (Free Movies) de ese término
+            currentViewMode = 'filtered';
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
             updateView();
@@ -308,13 +300,6 @@ searchBtn.onclick = async () => {
     await performSearch(currentSearchTerm);
 };
 
-fullSearchBtn.onclick = () => {
-    currentViewMode = 'excluded';   // Full Search = paja (resultados no gratuitos)
-    currentTermForView = null;      // unión de todos los términos
-    currentSort = 'date';
-    updateView();
-};
-
 clearStorageBtn.onclick = () => {
     if (confirm('Delete all search history and saved movies?')) {
         localStorage.removeItem(STORAGE_KEY);
@@ -329,6 +314,21 @@ clearStorageBtn.onclick = () => {
     }
 };
 
+// Toggle between filtered and excluded modes by clicking the logo icon
+function toggleMode() {
+    currentViewMode = currentViewMode === 'filtered' ? 'excluded' : 'filtered';
+    currentTermForView = null;
+    currentSort = 'date';
+    updateView();
+    if (currentViewMode === 'excluded') {
+        modeToggle.classList.add('excluded-mode');
+    } else {
+        modeToggle.classList.remove('excluded-mode');
+    }
+}
+modeToggle.onclick = toggleMode;
+
+// Modal functions
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `

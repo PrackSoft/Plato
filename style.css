@@ -287,6 +287,18 @@ button:hover {
     color: #ff0000;
 }
 
+/* Modo alternativo (excluidos) - icono invertido */
+.logo .excluded-mode {
+    background: white !important;
+    color: #ff0000 !important;
+    border: 1.5px solid #ff0000 !important;
+}
+
+/* Puntero para indicar que es clickeable */
+#modeToggle {
+    cursor: pointer;
+}
+
 @media (max-width: 768px) {
     .results, .results-group {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
