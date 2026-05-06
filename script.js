@@ -278,7 +278,7 @@ function configureTrashButton() {
         clearStorageBtn.title = 'Delete all Free Movies data';
     } else {
         clearStorageBtn.onclick = () => {
-            if (confirm('Delete ALL Excluded (Non‑Free) data? (This will erase all results that are not from "YouTube Movies" channel)')) {
+            if (confirm('Delete ALL Excludedcd . data? (This will erase all results that are not from "YouTube Movies" channel)')) {
                 localStorage.removeItem(EXCLUDED_SEARCH_KEY);
                 refreshTopBar();
                 if (currentViewMode === 'excluded') {

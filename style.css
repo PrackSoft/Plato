@@ -117,6 +117,10 @@ body {
     padding: 20px 0;
 }
 
+.history-header {
+    padding-top: 12px;
+}
+
 .video-card {
     background: #1a1a1a;
     border-radius: 12px;
