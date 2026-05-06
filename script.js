@@ -1,4 +1,4 @@
-// script.js completo
+// script.js completo con la nueva funcionalidad de configuración (sin atajo de teclado)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL = 'YouTube Movies';
 const MAX_RESULTS_PER_PAGE = 50;
@@ -6,6 +6,10 @@ const MAX_RESULTS_PER_TERM = 500;
 const STORAGE_KEY = 'plato_search_history';
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
+
+// Claves para preferencias del modal (separadas por modo)
+const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
+const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -15,6 +19,7 @@ const resultsStats = document.getElementById('resultsStats');
 const loadingDiv = document.getElementById('loading');
 const fullSearchDiv = document.getElementById('fullSearch');
 const clearStorageBtn = document.getElementById('clearStorageBtn');
+const settingsBtn = document.getElementById('settingsBtn');
 const modeToggle = document.getElementById('modeToggle');
 const modal = document.getElementById('movieModal');
 const closeModal = document.querySelector('.close-modal');
@@ -29,6 +34,10 @@ let currentSearchTerm = '';
 let currentViewMode = 'filtered';
 let currentSort = 'date';
 let currentTermForView = null;
+
+// Variables para gestionar la vista de configuración
+let previousViewState = null; // guarda { viewMode, termForView, sort } para volver atrás
+let isSettingsView = false;
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -124,12 +133,13 @@ function renderMovies(movies, sortBy, titlePrefix) {
     buttons.forEach(btn => {
         btn.onclick = () => {
             currentSort = btn.dataset.sort;
-            updateView();
+            if (!isSettingsView) updateView();
         };
     });
 }
 
 function updateView() {
+    if (isSettingsView) return; // no actualizar mientras se muestra configuración
     const storageKey = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     let movies = [];
@@ -156,6 +166,67 @@ function updateView() {
     const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : 'by channel');
     const titlePrefix = `${titleMap[currentViewMode]} (${sortLabel})`;
     renderMovies(movies, currentSort, titlePrefix);
+}
+
+// Mostrar vista de configuración
+function showSettings() {
+    // Guardar estado actual para poder volver
+    previousViewState = {
+        viewMode: currentViewMode,
+        termForView: currentTermForView,
+        sort: currentSort
+    };
+    isSettingsView = true;
+    resultsTitle.innerText = 'Settings';
+    // Crear contenido de configuración
+    const currentPrefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
+    const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
+    resultsGrid.innerHTML = `
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
+            <h3 style="margin-bottom: 20px;">Display options for ${currentViewMode === 'filtered' ? 'Free Movies' : 'Excluded Results'}</h3>
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                <input type="checkbox" id="showExtraInfoCheckbox" ${currentPrefValue ? 'checked' : ''}>
+                <span>Show technical information in movie modal (ID, dates, etc.)</span>
+            </label>
+            <div style="margin-top: 30px;">
+                <button id="backFromSettingsBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px;">← Back</button>
+            </div>
+        </div>
+    `;
+    resultsStats.innerHTML = '';
+    // Evento para el checkbox
+    const checkbox = document.getElementById('showExtraInfoCheckbox');
+    if (checkbox) {
+        checkbox.onchange = () => {
+            localStorage.setItem(currentPrefKey, checkbox.checked);
+        };
+    }
+    // Evento para el botón back
+    const backBtn = document.getElementById('backFromSettingsBtn');
+    if (backBtn) {
+        backBtn.onclick = () => {
+            // Restaurar vista anterior
+            isSettingsView = false;
+            if (previousViewState) {
+                currentViewMode = previousViewState.viewMode;
+                currentTermForView = previousViewState.termForView;
+                currentSort = previousViewState.sort;
+                previousViewState = null;
+            }
+            updateView();
+            // También refrescar la barra superior por si cambió el modo (aunque no debería)
+            refreshTopBar();
+            configureTrashButton();
+            // Ajustar el color del logo según el modo actual
+            if (currentViewMode === 'excluded') {
+                modeToggle.classList.add('excluded-mode');
+                document.body.classList.add('excluded-mode');
+            } else {
+                modeToggle.classList.remove('excluded-mode');
+                document.body.classList.remove('excluded-mode');
+            }
+        };
+    }
 }
 
 function saveSearchResults(searchTerm, rawItems) {
@@ -220,6 +291,7 @@ function refreshTopBar() {
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
+            if (isSettingsView) return;
             currentTermForView = null;
             currentSort = 'date';
             updateView();
@@ -227,6 +299,7 @@ function refreshTopBar() {
     }
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
+            if (isSettingsView) return;
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
             updateView();
@@ -251,13 +324,17 @@ function deleteSearchTerm(term) {
     let excluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
     excluded = excluded.filter(entry => entry.searchTerm !== term);
     localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(excluded));
-    refreshTopBar();
-    if ((currentViewMode === 'filtered' && currentTermForView === term) || (currentViewMode === 'excluded' && currentTermForView === term)) {
-        currentTermForView = null;
-        currentSort = 'date';
-        updateView();
+    if (!isSettingsView) {
+        refreshTopBar();
+        if ((currentViewMode === 'filtered' && currentTermForView === term) || (currentViewMode === 'excluded' && currentTermForView === term)) {
+            currentTermForView = null;
+            currentSort = 'date';
+            updateView();
+        } else {
+            updateView();
+        }
     } else {
-        updateView();
+        refreshTopBar();
     }
 }
 
@@ -266,11 +343,15 @@ function configureTrashButton() {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Free Movies data? (This will erase all filtered results from "YouTube Movies" channel)')) {
                 localStorage.removeItem(FILTERED_SEARCH_KEY);
-                refreshTopBar();
-                if (currentViewMode === 'filtered') {
-                    currentTermForView = null;
-                    currentSort = 'date';
-                    updateView();
+                if (!isSettingsView) {
+                    refreshTopBar();
+                    if (currentViewMode === 'filtered') {
+                        currentTermForView = null;
+                        currentSort = 'date';
+                        updateView();
+                    }
+                } else {
+                    refreshTopBar();
                 }
                 alert('All Free Movies data cleared.');
             }
@@ -278,13 +359,17 @@ function configureTrashButton() {
         clearStorageBtn.title = 'Delete all Free Movies data';
     } else {
         clearStorageBtn.onclick = () => {
-            if (confirm('Delete ALL Excludedcd . data? (This will erase all results that are not from "YouTube Movies" channel)')) {
+            if (confirm('Delete ALL Excluded data? (This will erase all results that are not from "YouTube Movies" channel)')) {
                 localStorage.removeItem(EXCLUDED_SEARCH_KEY);
-                refreshTopBar();
-                if (currentViewMode === 'excluded') {
-                    currentTermForView = null;
-                    currentSort = 'date';
-                    updateView();
+                if (!isSettingsView) {
+                    refreshTopBar();
+                    if (currentViewMode === 'excluded') {
+                        currentTermForView = null;
+                        currentSort = 'date';
+                        updateView();
+                    }
+                } else {
+                    refreshTopBar();
                 }
                 alert('All Excluded data cleared.');
             }
@@ -292,6 +377,17 @@ function configureTrashButton() {
         clearStorageBtn.title = 'Delete all Excluded results';
     }
 }
+
+// Configuración del botón de ajustes
+settingsBtn.onclick = () => {
+    if (!isSettingsView) {
+        showSettings();
+    } else {
+        // Si ya está en configuración, no hacer nada (o volver)
+        const backBtn = document.getElementById('backFromSettingsBtn');
+        if (backBtn) backBtn.click();
+    }
+};
 
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
@@ -304,7 +400,7 @@ async function performSearch(query) {
             currentViewMode = 'filtered';
             currentTermForView = currentSearchTerm;
             currentSort = 'date';
-            updateView();
+            if (!isSettingsView) updateView();
             let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if (!history.includes(currentSearchTerm)) {
                 history.unshift(currentSearchTerm);
@@ -320,6 +416,11 @@ async function performSearch(query) {
             if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
             currentViewMode = 'filtered';
             configureTrashButton();
+            if (isSettingsView) {
+                // Si estábamos en settings, volver a la vista de películas
+                const backBtn = document.getElementById('backFromSettingsBtn');
+                if (backBtn) backBtn.click();
+            }
         }
     } catch (error) {
         resultsGrid.innerHTML = `<p class="stats">Error: ${error.message}</p>`;
@@ -337,6 +438,7 @@ searchBtn.onclick = async () => {
 };
 
 function toggleMode() {
+    if (isSettingsView) return; // no cambiar modo mientras se ven ajustes
     currentViewMode = (currentViewMode === 'filtered') ? 'excluded' : 'filtered';
     currentTermForView = null;
     currentSort = 'date';
@@ -359,14 +461,14 @@ function init() {
     currentViewMode = 'filtered';
     currentTermForView = null;
     currentSort = 'date';
+    isSettingsView = false;
     updateView();
 }
 init();
 
+// Función openModal simplificada: muestra el bloque extra solo si la preferencia está activa
 function openModal(movie) {
     if (!modal) return;
-
-    // Construir el contenido base (igual que antes)
     modalBody.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <span class="delete-movie-btn material-symbols-outlined" style="cursor:pointer;">delete_forever</span>
@@ -380,19 +482,12 @@ function openModal(movie) {
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
 
-    // Crear contenedor para la información extra (inicialmente oculto)
-    const extraContainer = document.createElement('div');
-    extraContainer.id = 'extraInfoContainer';
-    extraContainer.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000; display: none;';
-    extraContainer.innerHTML = '<div style="font-weight: bold; margin-bottom: 4px;">🔍 Información técnica (presiona Ctrl+Shift+I / Control+Shift+I para ocultar/mostrar)</div><div id="extraInfoContent"></div>';
-    modalBody.appendChild(extraContainer);
-
-    // Función para llenar la información adicional (se ejecuta solo la primera vez que se activa)
-    let extraFilled = false;
-    const fillExtraInfo = () => {
-        if (extraFilled) return;
-        const contentDiv = extraContainer.querySelector('#extraInfoContent');
-        // Lista de todas las propiedades del objeto movie que queremos mostrar
+    // Verificar preferencia según modo actual
+    const prefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
+    const showExtra = localStorage.getItem(prefKey) === 'true';
+    if (showExtra) {
+        const extraDiv = document.createElement('div');
+        extraDiv.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000;';
         const fields = [
             { label: 'ID del video', value: movie.id },
             { label: 'Título', value: movie.title },
@@ -410,43 +505,9 @@ function openModal(movie) {
             html += `<li><strong>${f.label}:</strong> ${displayValue}</li>`;
         });
         html += '</ul>';
-        contentDiv.innerHTML = html;
-        extraFilled = true;
-    };
-
-    // Manejador de teclado (cambiado a Ctrl+Shift+I / Control+Shift+I)
-    const keyHandler = (e) => {
-        if (e.ctrlKey && e.shiftKey && e.key === 'i') {
-            e.preventDefault();
-            fillExtraInfo();
-            const isVisible = extraContainer.style.display === 'block';
-            extraContainer.style.display = isVisible ? 'none' : 'block';
-        }
-    };
-    window.addEventListener('keydown', keyHandler);
-
-    // Guardar el manejador para removerlo al cerrar el modal (opcional, evita duplicados)
-    const removeHandler = () => {
-        window.removeEventListener('keydown', keyHandler);
-    };
-    // Modificar el cierre del modal para limpiar el listener
-    const originalClose = closeModal.onclick;
-    closeModal.onclick = () => {
-        removeHandler();
-        if (originalClose) originalClose();
-        modal.style.display = 'none';
-    };
-    // También limpiar al hacer clic fuera del modal
-    const originalWindowClick = window.onclick;
-    window.onclick = (e) => {
-        if (e.target === modal) {
-            removeHandler();
-            if (originalWindowClick) originalWindowClick(e);
-            modal.style.display = 'none';
-        } else if (originalWindowClick) {
-            originalWindowClick(e);
-        }
-    };
+        extraDiv.innerHTML = html;
+        modalBody.appendChild(extraDiv);
+    }
 
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
@@ -460,10 +521,8 @@ function openModal(movie) {
         const newExcluded = removeFromArray(excluded, movie.id);
         localStorage.setItem(FILTERED_SEARCH_KEY, JSON.stringify(newFiltered));
         localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(newExcluded));
-        updateView();
+        if (!isSettingsView) updateView();
         modal.style.display = 'none';
-        // También remover el listener al eliminar
-        window.removeEventListener('keydown', keyHandler);
     };
 }
 if (closeModal) closeModal.onclick = () => { modal.style.display = 'none'; };
