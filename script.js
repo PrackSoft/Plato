@@ -1,6 +1,5 @@
 // script.js completo con iconos dinámicos para el botón de ajustes
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
-//const TARGET_CHANNEL = 'YouTube Movies';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
@@ -168,7 +167,6 @@ function updateView() {
 }
 
 function updateSettingsIcon() {
-    // Cambia el icono del botón de ajustes según el modo actual
     if (currentViewMode === 'filtered') {
         settingsBtn.innerHTML = 'settings_heart';
         settingsBtn.title = 'Settings for Free Movies';
@@ -220,7 +218,7 @@ function showSettings() {
             updateView();
             refreshTopBar();
             configureTrashButton();
-            updateSettingsIcon(); // asegurar icono correcto al salir
+            updateSettingsIcon();
             if (currentViewMode === 'excluded') {
                 modeToggle.classList.add('excluded-mode');
                 document.body.classList.add('excluded-mode');
@@ -247,7 +245,6 @@ function saveSearchResults(searchTerm, rawItems) {
             searchTerm: searchTerm,
             date: new Date().toISOString()
         };
-        //if (item.snippet.channelTitle === TARGET_CHANNEL) 
         if (item.snippet.channelId === TARGET_CHANNEL_ID) {
             filteredItems.push(movie);
         } else {
@@ -309,37 +306,29 @@ function refreshTopBar() {
             updateView();
         };
     });
+
+    // ========== CORRECCIÓN DE LA «X»: borra solo del modo actual ==========
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             const term = btn.dataset.term;
-            deleteSearchTerm(term);
+            const bucketToDelete = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+            let searches = JSON.parse(localStorage.getItem(bucketToDelete) || '[]');
+            searches = searches.filter(entry => entry.searchTerm !== term);
+            localStorage.setItem(bucketToDelete, JSON.stringify(searches));
+            // Si la vista actual estaba mostrando este término, reiniciamos a la unión
+            if (currentTermForView === term) {
+                currentTermForView = null;
+                currentSort = 'date';
+                updateView();
+            }
+            // Si el término ya no tiene datos en ningún bucket, podríamos eliminarlo del historial de términos (opcional).
+            // Lo dejamos porque el usuario puede querer mantener el tag; si quiere borrarlo permanentemente,
+            // existe el botón de borrar todo. Por ahora, el tag permanece.
+            refreshTopBar(); // para refrescar los eventos (aunque el tag sigue ahí)
         };
     });
-}
-
-function deleteSearchTerm(term) {
-    let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    history = history.filter(t => t !== term);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    let filtered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
-    filtered = filtered.filter(entry => entry.searchTerm !== term);
-    localStorage.setItem(FILTERED_SEARCH_KEY, JSON.stringify(filtered));
-    let excluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-    excluded = excluded.filter(entry => entry.searchTerm !== term);
-    localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(excluded));
-    if (!isSettingsView) {
-        refreshTopBar();
-        if ((currentViewMode === 'filtered' && currentTermForView === term) || (currentViewMode === 'excluded' && currentTermForView === term)) {
-            currentTermForView = null;
-            currentSort = 'date';
-            updateView();
-        } else {
-            updateView();
-        }
-    } else {
-        refreshTopBar();
-    }
+    // ========== FIN DE LA CORRECCIÓN ==========
 }
 
 function configureTrashButton() {
@@ -418,7 +407,7 @@ async function performSearch(query) {
             if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
             currentViewMode = 'filtered';
             configureTrashButton();
-            updateSettingsIcon(); // actualizar icono del botón de ajustes
+            updateSettingsIcon();
             if (isSettingsView) {
                 const backBtn = document.getElementById('backFromSettingsBtn');
                 if (backBtn) backBtn.click();
@@ -454,7 +443,7 @@ function toggleMode() {
     }
     refreshTopBar();
     configureTrashButton();
-    updateSettingsIcon(); // actualizar icono al cambiar de modo
+    updateSettingsIcon();
 }
 modeToggle.onclick = toggleMode;
 
@@ -466,7 +455,7 @@ function init() {
     currentSort = 'date';
     isSettingsView = false;
     updateView();
-    updateSettingsIcon(); // asegurar icono inicial
+    updateSettingsIcon();
 }
 init();
 
