@@ -1,4 +1,4 @@
-// script.js - Modos independientes: cada modo tiene sus propios tags generados desde su bolsa
+// script.js - Modos independientes con enriquecimiento de datos (videos.list)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -231,22 +231,29 @@ function showSettings() {
     }
 }
 
-function saveSearchResults(searchTerm, rawItems) {
+// Función guardar resultados enriquecidos (ahora con más campos)
+function saveSearchResults(searchTerm, enrichedItems) {
     const filteredItems = [];
     const excludedItems = [];
-    rawItems.forEach(item => {
+    enrichedItems.forEach(item => {
         const movie = {
-            id: item.id.videoId,
-            title: item.snippet.title,
-            channel: item.snippet.channelTitle,
-            imageUrl: item.snippet.thumbnails.medium.url,
-            url: `https://youtube.com/watch?v=${item.id.videoId}`,
-            description: item.snippet.description,
-            publishedAt: item.snippet.publishedAt,
+            id: item.id,
+            title: item.title,
+            channel: item.channel,
+            imageUrl: item.imageUrl,
+            url: item.url,
+            description: item.description,       // descripción completa
+            publishedAt: item.publishedAt,
             searchTerm: searchTerm,
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            // nuevos campos
+            duration: item.duration,
+            viewCount: item.viewCount,
+            likeCount: item.likeCount,
+            commentCount: item.commentCount,
+            tags: item.tags
         };
-        if (item.snippet.channelId === TARGET_CHANNEL_ID) {
+        if (item.channelId === TARGET_CHANNEL_ID) {
             filteredItems.push(movie);
         } else {
             excludedItems.push(movie);
@@ -372,6 +379,7 @@ settingsBtn.onclick = () => {
     }
 };
 
+// ========== BÚSQUEDA PRINCIPAL CON SEGUNDA LLAMADA A videos.list ==========
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
@@ -382,25 +390,79 @@ async function performSearch(query) {
             const keywords = query + ' Películas Gratis YouTube Películas y TV de YouTube';
             url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(keywords)}&key=${API_KEY}`;
         }
-        const response = await fetch(url);
-        const data = await response.json();
-        if (data.items) {
-            console.log('Descripción cruda de la API:', data.items[0]?.snippet.description);
-            saveSearchResults(currentSearchTerm, data.items);
-            currentViewMode = 'filtered';
-            currentTermForView = currentSearchTerm;
-            currentSort = 'date';
-            if (!isSettingsView) updateView();
-            refreshTopBar();
-            if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
-            if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
-            currentViewMode = 'filtered';
-            configureTrashButton();
-            updateSettingsIcon();
-            if (isSettingsView) {
-                const backBtn = document.getElementById('backFromSettingsBtn');
-                if (backBtn) backBtn.click();
-            }
+        const searchResponse = await fetch(url);
+        const searchData = await searchResponse.json();
+        if (!searchData.items) return;
+
+        // Extraer IDs de los videos
+        const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
+        if (videoIds.length === 0) return;
+
+        // Segunda llamada a videos.list para obtener datos completos
+        const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
+        const videosResponse = await fetch(videosUrl);
+        const videosData = await videosResponse.json();
+
+        // Crear un mapa para acceder rápidamente a los datos enriquecidos
+        const detailsMap = new Map();
+        if (videosData.items) {
+            videosData.items.forEach(video => {
+                const snippet = video.snippet;
+                const statistics = video.statistics || {};
+                const contentDetails = video.contentDetails || {};
+                detailsMap.set(video.id, {
+                    fullDescription: snippet.description,
+                    tags: snippet.tags || [],
+                    viewCount: statistics.viewCount || 'N/A',
+                    likeCount: statistics.likeCount || 'N/A',
+                    commentCount: statistics.commentCount || 'N/A',
+                    duration: contentDetails.duration || 'N/A',
+                    channelId: snippet.channelId,
+                    channelTitle: snippet.channelTitle,
+                    title: snippet.title,
+                    publishedAt: snippet.publishedAt,
+                    thumbnails: snippet.thumbnails
+                });
+            });
+        }
+
+        // Fusionar los datos en un array de objetos enriquecidos
+        const enrichedItems = searchData.items.map(item => {
+            const videoId = item.id.videoId;
+            const extra = detailsMap.get(videoId) || {};
+            return {
+                id: videoId,
+                title: extra.title || item.snippet.title,
+                channel: extra.channelTitle || item.snippet.channelTitle,
+                channelId: extra.channelId || item.snippet.channelId,
+                imageUrl: extra.thumbnails?.medium?.url || item.snippet.thumbnails.medium.url,
+                url: `https://youtube.com/watch?v=${videoId}`,
+                description: extra.fullDescription || item.snippet.description,
+                publishedAt: extra.publishedAt || item.snippet.publishedAt,
+                // nuevos campos
+                duration: extra.duration,
+                viewCount: extra.viewCount,
+                likeCount: extra.likeCount,
+                commentCount: extra.commentCount,
+                tags: extra.tags
+            };
+        });
+
+        // Guardar resultados enriquecidos
+        saveSearchResults(currentSearchTerm, enrichedItems);
+        currentViewMode = 'filtered';
+        currentTermForView = currentSearchTerm;
+        currentSort = 'date';
+        if (!isSettingsView) updateView();
+        refreshTopBar();
+        if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
+        if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
+        currentViewMode = 'filtered';
+        configureTrashButton();
+        updateSettingsIcon();
+        if (isSettingsView) {
+            const backBtn = document.getElementById('backFromSettingsBtn');
+            if (backBtn) backBtn.click();
         }
     } catch (error) {
         resultsGrid.innerHTML = `<p class="stats">Error: ${error.message}</p>`;
@@ -448,9 +510,19 @@ function init() {
 }
 init();
 
-// ========== NUEVA FUNCIÓN openModal SIN ESTILOS INLINE ==========
+// ========== MODAL CON INFORMACIÓN ENRIQUECIDA ==========
 function openModal(movie) {
     if (!modal) return;
+    // Formatear duración (PT1H2M3S -> 1:02:03)
+    let formattedDuration = 'Unknown';
+    if (movie.duration && movie.duration !== 'N/A') {
+        const match = movie.duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+        const hours = (match[1] ? match[1].slice(0,-1) : 0);
+        const minutes = (match[2] ? match[2].slice(0,-1) : 0);
+        const seconds = (match[3] ? match[3].slice(0,-1) : 0);
+        formattedDuration = `${hours ? hours+':' : ''}${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    }
+
     modalBody.innerHTML = `
         <div class="modal-header">
             <span class="material-symbols-outlined modal-delete-btn">delete_forever</span>
@@ -460,6 +532,7 @@ function openModal(movie) {
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <div class="modal-description">${escapeHtml(movie.description || 'No Description')}</div>
+        <p><strong>Duration:</strong> ${formattedDuration}</p>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
@@ -468,7 +541,19 @@ function openModal(movie) {
     if (showExtra) {
         const extraDiv = document.createElement('div');
         extraDiv.className = 'modal-extra-info';
-        extraDiv.innerHTML = `<ul><li><strong>ID del video:</strong> ${escapeHtml(movie.id)}</li><li><strong>Canal:</strong> ${escapeHtml(movie.channel)}</li><li><strong>URL:</strong> ${escapeHtml(movie.url)}</li><li><strong>URL de miniatura (medium):</strong> ${escapeHtml(movie.imageUrl)}</li></ul>`;
+        let tagsHtml = '';
+        if (movie.tags && movie.tags.length) {
+            tagsHtml = `<li><strong>Tags:</strong> ${escapeHtml(movie.tags.join(', '))}</li>`;
+        }
+        extraDiv.innerHTML = `<ul>
+            <li><strong>ID del video:</strong> ${escapeHtml(movie.id)}</li>
+            <li><strong>Canal:</strong> ${escapeHtml(movie.channel)}</li>
+            <li><strong>URL:</strong> ${escapeHtml(movie.url)}</li>
+            <li><strong>Views:</strong> ${movie.viewCount || 'N/A'}</li>
+            <li><strong>Likes:</strong> ${movie.likeCount || 'N/A'}</li>
+            <li><strong>Comments:</strong> ${movie.commentCount || 'N/A'}</li>
+            ${tagsHtml}
+        </ul>`;
         modalBody.appendChild(extraDiv);
     }
     currentMovieUrl = movie.url;
