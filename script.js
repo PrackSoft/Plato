@@ -452,6 +452,7 @@ function init() {
 }
 init();
 
+// ========== FUNCIÓN openModal MODIFICADA (elimina duplicados del bloque extra) ==========
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
@@ -471,15 +472,11 @@ function openModal(movie) {
     if (showExtra) {
         const extraDiv = document.createElement('div');
         extraDiv.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000;';
+        // Campos técnicos NO DUPLICADOS con la información básica:
         const fields = [
             { label: 'ID del video', value: movie.id },
-            { label: 'Título', value: movie.title },
             { label: 'Canal', value: movie.channel },
             { label: 'URL', value: movie.url },
-            { label: 'Fecha de publicación (API)', value: movie.publishedAt ? new Date(movie.publishedAt).toLocaleString() : null },
-            { label: 'Fecha de guardado', value: movie.date ? new Date(movie.date).toLocaleString() : null },
-            { label: 'Término de búsqueda', value: movie.searchTerm },
-            { label: 'Descripción (primeros 200 caracteres)', value: movie.description ? movie.description.substring(0, 200) + (movie.description.length > 200 ? '…' : '') : null },
             { label: 'URL de miniatura (medium)', value: movie.imageUrl },
         ];
         let html = '<ul style="margin: 0; padding-left: 16px;">';
