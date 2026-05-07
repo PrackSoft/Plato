@@ -452,7 +452,7 @@ function init() {
 }
 init();
 
-// ========== FUNCIÓN openModal MODIFICADA (elimina duplicados del bloque extra) ==========
+// ========== FUNCIÓN openModal MODIFICADA (descripción con scroll vertical) ==========
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
@@ -463,7 +463,7 @@ function openModal(movie) {
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
-        <div style="white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
+        <div style="white-space: normal; word-wrap: break-word; max-height: 300px; overflow-y: auto;">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
@@ -472,7 +472,6 @@ function openModal(movie) {
     if (showExtra) {
         const extraDiv = document.createElement('div');
         extraDiv.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000;';
-        // Campos técnicos NO DUPLICADOS con la información básica:
         const fields = [
             { label: 'ID del video', value: movie.id },
             { label: 'Canal', value: movie.channel },
