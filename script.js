@@ -1,9 +1,8 @@
-// script.js completo con iconos dinámicos para el botón de ajustes
+// script.js - Modos independientes: cada modo tiene sus propios tags generados desde su bolsa
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
-const STORAGE_KEY = 'plato_search_history';
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 
@@ -272,16 +271,20 @@ function saveSearchResults(searchTerm, rawItems) {
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
+// Genera los tags a partir del bucket del modo actual (sin STORAGE_KEY)
 function refreshTopBar() {
-    const history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const currentBucket = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    const searches = JSON.parse(localStorage.getItem(currentBucket) || '[]');
+    // Extraer términos únicos ordenados por fecha del último guardado (opcional)
+    const terms = searches.map(entry => entry.searchTerm).filter((v,i,a)=>a.indexOf(v)===i);
     const filterIcon = (currentViewMode === 'filtered') ? 'filter_alt' : 'video_search';
     const filterTitle = (currentViewMode === 'filtered') ? 'Show all Free Movies' : 'Show all Excluded Results';
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
-    if (history.length === 0) {
-        html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches.</div>';
+    if (terms.length === 0) {
+        html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
         fullSearchDiv.innerHTML = html;
     } else {
-        html += history.map(term => `
+        html += terms.map(term => `
             <button class="full-search-btn tag-btn" data-term="${term}">
                 ${term}
                 <span class="history-delete" data-term="${term}">✖</span>
@@ -289,6 +292,7 @@ function refreshTopBar() {
         `).join('');
         fullSearchDiv.innerHTML = html;
     }
+
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
@@ -307,28 +311,25 @@ function refreshTopBar() {
         };
     });
 
-    // ========== CORRECCIÓN DE LA «X»: borra solo del modo actual ==========
+    // X: elimina el término del bucket actual y refresca tags
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             const term = btn.dataset.term;
-            const bucketToDelete = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
-            let searches = JSON.parse(localStorage.getItem(bucketToDelete) || '[]');
+            const bucketToUpdate = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+            let searches = JSON.parse(localStorage.getItem(bucketToUpdate) || '[]');
             searches = searches.filter(entry => entry.searchTerm !== term);
-            localStorage.setItem(bucketToDelete, JSON.stringify(searches));
-            // Si la vista actual estaba mostrando este término, reiniciamos a la unión
+            localStorage.setItem(bucketToUpdate, JSON.stringify(searches));
             if (currentTermForView === term) {
                 currentTermForView = null;
                 currentSort = 'date';
                 updateView();
+            } else {
+                updateView();
             }
-            // Si el término ya no tiene datos en ningún bucket, podríamos eliminarlo del historial de términos (opcional).
-            // Lo dejamos porque el usuario puede querer mantener el tag; si quiere borrarlo permanentemente,
-            // existe el botón de borrar todo. Por ahora, el tag permanece.
-            refreshTopBar(); // para refrescar los eventos (aunque el tag sigue ahí)
+            refreshTopBar(); // actualiza los tags (el termino desaparece)
         };
     });
-    // ========== FIN DE LA CORRECCIÓN ==========
 }
 
 function configureTrashButton() {
@@ -336,15 +337,11 @@ function configureTrashButton() {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Free Movies data? (This will erase all filtered results from "YouTube Movies" channel)')) {
                 localStorage.removeItem(FILTERED_SEARCH_KEY);
-                if (!isSettingsView) {
-                    refreshTopBar();
-                    if (currentViewMode === 'filtered') {
-                        currentTermForView = null;
-                        currentSort = 'date';
-                        updateView();
-                    }
-                } else {
-                    refreshTopBar();
+                refreshTopBar();
+                if (currentViewMode === 'filtered') {
+                    currentTermForView = null;
+                    currentSort = 'date';
+                    updateView();
                 }
                 alert('All Free Movies data cleared.');
             }
@@ -354,15 +351,11 @@ function configureTrashButton() {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Excluded data? (This will erase all results that are not from "YouTube Movies" channel)')) {
                 localStorage.removeItem(EXCLUDED_SEARCH_KEY);
-                if (!isSettingsView) {
-                    refreshTopBar();
-                    if (currentViewMode === 'excluded') {
-                        currentTermForView = null;
-                        currentSort = 'date';
-                        updateView();
-                    }
-                } else {
-                    refreshTopBar();
+                refreshTopBar();
+                if (currentViewMode === 'excluded') {
+                    currentTermForView = null;
+                    currentSort = 'date';
+                    updateView();
                 }
                 alert('All Excluded data cleared.');
             }
@@ -392,17 +385,8 @@ async function performSearch(query) {
             currentTermForView = currentSearchTerm;
             currentSort = 'date';
             if (!isSettingsView) updateView();
-            let history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            if (!history.includes(currentSearchTerm)) {
-                history.unshift(currentSearchTerm);
-                history = history.slice(0, 10);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-                refreshTopBar();
-            } else {
-                history = [currentSearchTerm, ...history.filter(t => t !== currentSearchTerm)];
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-                refreshTopBar();
-            }
+            // No hay STORAGE_KEY, solo refrescamos la barra del modo actual
+            refreshTopBar();
             if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
             if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
             currentViewMode = 'filtered';
