@@ -463,7 +463,7 @@ function openModal(movie) {
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
-        <div style="white-space: normal; word-wrap: break-word; max-height: 300px; overflow-y: auto;">${escapeHtml(movie.description || 'No Description')}</div>
+        <div style="white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
