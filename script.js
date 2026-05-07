@@ -248,7 +248,7 @@ function saveSearchResults(searchTerm, rawItems) {
             date: new Date().toISOString()
         };
         //if (item.snippet.channelTitle === TARGET_CHANNEL) 
-        item.snippet.channelId === TARGET_CHANNEL_ID {
+        if (item.snippet.channelId === TARGET_CHANNEL_ID) {
             filteredItems.push(movie);
         } else {
             excludedItems.push(movie);
