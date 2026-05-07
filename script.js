@@ -1,7 +1,7 @@
 // script.js - Modos independientes: cada modo tiene sus propios tags generados desde su bolsa
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
-const SEARCH_MODE = 'channel'; // 'keywords' (original) o 'channel' (búsqueda exclusiva en el canal)
+const SEARCH_MODE = 'channel';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
@@ -37,7 +37,7 @@ let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
 
-// ========== Funciones auxiliares (sin cambios) ==========
+// ========== Funciones auxiliares ==========
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -273,7 +273,6 @@ function saveSearchResults(searchTerm, rawItems) {
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
-// Genera los tags a partir del bucket del modo actual (sin STORAGE_KEY)
 function refreshTopBar() {
     const currentBucket = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     const searches = JSON.parse(localStorage.getItem(currentBucket) || '[]');
@@ -373,16 +372,13 @@ settingsBtn.onclick = () => {
     }
 };
 
-// ========== FUNCIÓN DE BÚSQUEDA MODIFICADA (con constante SEARCH_MODE) ==========
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
         let url;
         if (SEARCH_MODE === 'channel') {
-            // Búsqueda exclusiva en el canal TARGET_CHANNEL_ID
             url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`;
         } else {
-            // Modo original: palabras clave adicionales
             const keywords = query + ' Películas Gratis YouTube Películas y TV de YouTube';
             url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(keywords)}&key=${API_KEY}`;
         }
@@ -412,7 +408,6 @@ async function performSearch(query) {
     }
 }
 
-// El resto del código (searchBtn.onclick, toggleMode, init, openModal) se mantiene igual
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
@@ -452,18 +447,18 @@ function init() {
 }
 init();
 
-// ========== FUNCIÓN openModal MODIFICADA (descripción con scroll vertical) ==========
+// ========== NUEVA FUNCIÓN openModal SIN ESTILOS INLINE ==========
 function openModal(movie) {
     if (!modal) return;
     modalBody.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <span class="delete-movie-btn material-symbols-outlined" style="cursor:pointer;">delete_forever</span>
-            <h2 style="margin: 0; text-align: center;">${escapeHtml(movie.title)}</h2>
+        <div class="modal-header">
+            <span class="material-symbols-outlined modal-delete-btn">delete_forever</span>
+            <h2>${escapeHtml(movie.title)}</h2>
             <div style="width: 20px;"></div>
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
-        <div style="white-space: normal; word-wrap: break-word;">${escapeHtml(movie.description || 'No Description')}</div>
+        <div class="modal-description">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
@@ -471,25 +466,13 @@ function openModal(movie) {
     const showExtra = localStorage.getItem(prefKey) === 'true';
     if (showExtra) {
         const extraDiv = document.createElement('div');
-        extraDiv.style.cssText = 'margin-top: 12px; padding: 8px; background: #1e1e1e; border-radius: 8px; font-size: 12px; border-left: 3px solid #ff0000;';
-        const fields = [
-            { label: 'ID del video', value: movie.id },
-            { label: 'Canal', value: movie.channel },
-            { label: 'URL', value: movie.url },
-            { label: 'URL de miniatura (medium)', value: movie.imageUrl },
-        ];
-        let html = '<ul style="margin: 0; padding-left: 16px;">';
-        fields.forEach(f => {
-            const displayValue = f.value ? escapeHtml(String(f.value)) : '<span style="color: #ff9999;">missing</span>';
-            html += `<li><strong>${f.label}:</strong> ${displayValue}</li>`;
-        });
-        html += '</ul>';
-        extraDiv.innerHTML = html;
+        extraDiv.className = 'modal-extra-info';
+        extraDiv.innerHTML = `<ul><li><strong>ID del video:</strong> ${escapeHtml(movie.id)}</li><li><strong>Canal:</strong> ${escapeHtml(movie.channel)}</li><li><strong>URL:</strong> ${escapeHtml(movie.url)}</li><li><strong>URL de miniatura (medium):</strong> ${escapeHtml(movie.imageUrl)}</li></ul>`;
         modalBody.appendChild(extraDiv);
     }
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
-    const deleteBtn = modalBody.querySelector('.delete-movie-btn');
+    const deleteBtn = modalBody.querySelector('.modal-delete-btn');
     if (deleteBtn) deleteBtn.onclick = () => {
         let filtered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
         let excluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');

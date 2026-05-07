@@ -64,7 +64,6 @@ body {
     transition: all 0.2s ease;
 }
 
-/* Modo excluido: fondo blanco, icono rojo */
 .logo .excluded-mode {
     background: white !important;
     color: #ff0000 !important;
@@ -229,7 +228,6 @@ button:hover {
     line-height: 1;
 }
 
-/* Estilo para checkbox en la vista de configuración */
 #resultsGrid input[type="checkbox"] {
     appearance: none;
     -webkit-appearance: none;
@@ -276,11 +274,11 @@ button:hover {
     color: white;
 }
 
-/* Modo excluido: hover de los botones de control (tags, union, trash) con fondo blanco y texto rojo */
 body.excluded-mode .full-search-btn:hover {
     background: white;
     color: #ff0000;
 }
+
 body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     color: #ff0000;
 }
@@ -304,7 +302,7 @@ body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     gap: 24px;
 }
 
-/* Modal: alineado arriba, gran altura, scroll interno */
+/* ========== MODAL MEJORADO (sin estilos inline) ========== */
 .modal {
     position: fixed;
     top: 0;
@@ -316,7 +314,7 @@ body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     align-items: flex-start;
     justify-content: center;
     z-index: 1000;
-    padding-top: 10vh;
+    padding-top: 5vh;
 }
 
 .modal-content {
@@ -325,9 +323,51 @@ body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     border-radius: 12px;
     width: 90%;
     max-width: 700px;
-    max-height: 80vh;
+    max-height: 85vh;
     overflow-y: auto;
     position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.modal-delete-btn {
+    cursor: pointer;
+    color: #ff0000;
+    font-size: 20px;
+}
+
+.modal-delete-btn:hover {
+    color: white;
+}
+
+.modal-description {
+    white-space: normal;
+    word-wrap: break-word;
+    margin: 10px 0;
+    /* Sin límite de altura ni overflow oculto */
+}
+
+.modal-extra-info {
+    margin-top: 12px;
+    padding: 8px;
+    background: #1e1e1e;
+    border-radius: 8px;
+    font-size: 12px;
+    border-left: 3px solid #ff0000;
+}
+
+.modal-extra-info ul {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.modal-extra-info li {
+    margin-bottom: 4px;
 }
 
 .close-modal {
