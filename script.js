@@ -385,6 +385,7 @@ async function performSearch(query) {
         const response = await fetch(url);
         const data = await response.json();
         if (data.items) {
+            console.log('Descripción cruda de la API:', data.items[0]?.snippet.description);
             saveSearchResults(currentSearchTerm, data.items);
             currentViewMode = 'filtered';
             currentTermForView = currentSearchTerm;
@@ -458,7 +459,8 @@ function openModal(movie) {
         </div>
         <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
-        <div class="modal-description">${escapeHtml('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')}</div>        <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
+        <div class="modal-description">${escapeHtml(movie.description || 'No Description')}</div>
+        <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
     `;
     const prefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
