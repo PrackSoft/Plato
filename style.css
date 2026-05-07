@@ -1,4 +1,4 @@
-/* style.css completo */
+/* style.css - completo con modal ajustado */
 * {
     margin: 0;
     padding: 0;
@@ -305,6 +305,7 @@ body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     gap: 24px;
 }
 
+/* Modal corregido: ocupa 90% de altura, centrado, scroll general */
 .modal {
     position: fixed;
     top: 0;
@@ -313,18 +314,17 @@ body.excluded-mode .full-search-btn:hover .material-symbols-outlined {
     height: 100%;
     background: rgba(0,0,0,0.8);
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: center;
     z-index: 1000;
-    padding-top: 10vh;
 }
 
 .modal-content {
     background: #1a1a1a;
     padding: 20px;
     border-radius: 12px;
-    max-width: 600px;
     width: 90%;
+    max-width: 700px;
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
