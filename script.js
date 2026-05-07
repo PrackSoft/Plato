@@ -1,6 +1,7 @@
 // script.js completo con iconos dinámicos para el botón de ajustes
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
-const TARGET_CHANNEL = 'YouTube Movies';
+//const TARGET_CHANNEL = 'YouTube Movies';
+const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
 const STORAGE_KEY = 'plato_search_history';
@@ -246,7 +247,8 @@ function saveSearchResults(searchTerm, rawItems) {
             searchTerm: searchTerm,
             date: new Date().toISOString()
         };
-        if (item.snippet.channelTitle === TARGET_CHANNEL) {
+        //if (item.snippet.channelTitle === TARGET_CHANNEL) 
+        item.snippet.channelId === TARGET_CHANNEL_ID {
             filteredItems.push(movie);
         } else {
             excludedItems.push(movie);
