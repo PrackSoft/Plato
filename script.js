@@ -1,6 +1,7 @@
 // script.js - Modos independientes: cada modo tiene sus propios tags generados desde su bolsa
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
+const SEARCH_MODE = 'channel'; // 'keywords' (original) o 'channel' (búsqueda exclusiva en el canal)
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
@@ -36,6 +37,7 @@ let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
 
+// ========== Funciones auxiliares (sin cambios) ==========
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -275,7 +277,6 @@ function saveSearchResults(searchTerm, rawItems) {
 function refreshTopBar() {
     const currentBucket = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     const searches = JSON.parse(localStorage.getItem(currentBucket) || '[]');
-    // Extraer términos únicos ordenados por fecha del último guardado (opcional)
     const terms = searches.map(entry => entry.searchTerm).filter((v,i,a)=>a.indexOf(v)===i);
     const filterIcon = (currentViewMode === 'filtered') ? 'filter_alt' : 'video_search';
     const filterTitle = (currentViewMode === 'filtered') ? 'Show all Free Movies' : 'Show all Excluded Results';
@@ -311,7 +312,6 @@ function refreshTopBar() {
         };
     });
 
-    // X: elimina el término del bucket actual y refresca tags
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
@@ -327,7 +327,7 @@ function refreshTopBar() {
             } else {
                 updateView();
             }
-            refreshTopBar(); // actualiza los tags (el termino desaparece)
+            refreshTopBar();
         };
     });
 }
@@ -373,10 +373,19 @@ settingsBtn.onclick = () => {
     }
 };
 
+// ========== FUNCIÓN DE BÚSQUEDA MODIFICADA (con constante SEARCH_MODE) ==========
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
-        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query + ' Películas Gratis YouTube Películas y TV de YouTube')}&key=${API_KEY}`;
+        let url;
+        if (SEARCH_MODE === 'channel') {
+            // Búsqueda exclusiva en el canal TARGET_CHANNEL_ID
+            url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`;
+        } else {
+            // Modo original: palabras clave adicionales
+            const keywords = query + ' Películas Gratis YouTube Películas y TV de YouTube';
+            url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(keywords)}&key=${API_KEY}`;
+        }
         const response = await fetch(url);
         const data = await response.json();
         if (data.items) {
@@ -385,7 +394,6 @@ async function performSearch(query) {
             currentTermForView = currentSearchTerm;
             currentSort = 'date';
             if (!isSettingsView) updateView();
-            // No hay STORAGE_KEY, solo refrescamos la barra del modo actual
             refreshTopBar();
             if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
             if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
@@ -404,6 +412,7 @@ async function performSearch(query) {
     }
 }
 
+// El resto del código (searchBtn.onclick, toggleMode, init, openModal) se mantiene igual
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
