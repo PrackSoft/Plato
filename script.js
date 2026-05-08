@@ -1,4 +1,4 @@
-// script.js - Con papelera, sin botón de atrás en settings (se cierra con el mismo botón settings)
+// script.js - Con papelera y cierre automático de Settings al interactuar con otros elementos
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -189,6 +189,34 @@ function updateSettingsIcon() {
     }
 }
 
+function closeSettingsAndRestore() {
+    if (!isSettingsView) return;
+    isSettingsView = false;
+    if (previousViewState) {
+        currentViewMode = previousViewState.viewMode;
+        currentTermForView = previousViewState.termForView;
+        currentSort = previousViewState.sort;
+        previousViewState = null;
+    } else {
+        // fallback si no hay estado (no debería ocurrir)
+        if (currentViewMode === 'filtered_trash') currentViewMode = 'filtered';
+        else if (currentViewMode === 'excluded_trash') currentViewMode = 'excluded';
+        currentTermForView = null;
+        currentSort = 'date';
+    }
+    updateView();
+    refreshTopBar();
+    configureTrashButton();
+    updateSettingsIcon();
+    if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
+        modeToggle.classList.add('excluded-mode');
+        document.body.classList.add('excluded-mode');
+    } else {
+        modeToggle.classList.remove('excluded-mode');
+        document.body.classList.remove('excluded-mode');
+    }
+}
+
 function showSettings() {
     previousViewState = {
         viewMode: currentViewMode,
@@ -220,12 +248,11 @@ function showSettings() {
     const goToTrashBtn = document.getElementById('goToTrashBtn');
     if (goToTrashBtn) {
         goToTrashBtn.onclick = () => {
-            isSettingsView = false;
-            if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
-                currentViewMode = 'filtered_trash';
-            } else {
-                currentViewMode = 'excluded_trash';
-            }
+            // Salir de settings antes de ir a trash
+            closeSettingsAndRestore();
+            // Ahora ir a trash
+            if (currentViewMode === 'filtered') currentViewMode = 'filtered_trash';
+            else if (currentViewMode === 'excluded') currentViewMode = 'excluded_trash';
             currentTermForView = null;
             currentSort = 'date';
             updateView();
@@ -450,14 +477,19 @@ function refreshTopBar() {
     }
 
     const unionIcon = document.getElementById('unionIcon');
-    if (unionIcon) unionIcon.onclick = () => {
-        if (isSettingsView) return;
-        currentTermForView = null;
-        currentSort = 'date';
-        updateView();
-    };
+    if (unionIcon) {
+        unionIcon.onclick = () => {
+            // Cerrar settings si está abierto
+            if (isSettingsView) closeSettingsAndRestore();
+            if (isSettingsView) return; // ya se cerró
+            currentTermForView = null;
+            currentSort = 'date';
+            updateView();
+        };
+    }
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
             if (isSettingsView) return;
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
@@ -468,6 +500,8 @@ function refreshTopBar() {
         btn.onclick = (e) => {
             e.stopPropagation();
             const term = btn.dataset.term;
+            if (isSettingsView) closeSettingsAndRestore();
+            // No regresar si sigue abierto
             if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
                 moveTermToTrash(term, currentViewMode);
             } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
@@ -486,6 +520,7 @@ function refreshTopBar() {
 function configureTrashButton() {
     if (currentViewMode === 'filtered') {
         clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
             if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
                 let main = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
                 for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'filtered');
@@ -496,6 +531,7 @@ function configureTrashButton() {
         clearStorageBtn.title = 'Move all Free Movies to trash';
     } else if (currentViewMode === 'excluded') {
         clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
             if (confirm('Delete ALL Excluded data? (This will move them to trash)')) {
                 let main = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
                 for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'excluded');
@@ -506,11 +542,13 @@ function configureTrashButton() {
         clearStorageBtn.title = 'Move all Excluded data to trash';
     } else if (currentViewMode === 'filtered_trash') {
         clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
             if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) emptyTrash('filtered');
         };
         clearStorageBtn.title = 'Empty Free Movies trash';
     } else if (currentViewMode === 'excluded_trash') {
         clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
             if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) emptyTrash('excluded');
         };
         clearStorageBtn.title = 'Empty Excluded Results trash';
@@ -519,6 +557,9 @@ function configureTrashButton() {
 
 // ========== BÚSQUEDA PRINCIPAL ==========
 async function performSearch(query) {
+    // Cerrar settings si está abierto
+    if (isSettingsView) closeSettingsAndRestore();
+
     loadingDiv.style.display = 'flex';
     try {
         let url = SEARCH_MODE === 'channel'
@@ -582,12 +623,6 @@ async function performSearch(query) {
         if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
         configureTrashButton();
         updateSettingsIcon();
-        if (isSettingsView) {
-            // No hay back button, simplemente salimos de settings si estaba abierto? En realidad showSettings lo abre, y al hacer nueva búsqueda debería cerrarlo.
-            // Llamamos a settingsBtn.click() para cerrar settings? No, mejor forzar cierre.
-            isSettingsView = false;
-            previousViewState = null;
-        }
     } catch (error) {
         resultsGrid.innerHTML = `<p class="stats">Error: ${error.message}</p>`;
     } finally {
@@ -604,7 +639,7 @@ searchBtn.onclick = async () => {
 };
 
 function toggleMode() {
-    if (isSettingsView) return;
+    if (isSettingsView) closeSettingsAndRestore();
     if (currentViewMode === 'filtered') currentViewMode = 'excluded';
     else if (currentViewMode === 'excluded') currentViewMode = 'filtered';
     else if (currentViewMode === 'filtered_trash') currentViewMode = 'excluded_trash';
@@ -634,34 +669,12 @@ function init() {
     isSettingsView = false;
     updateView();
     updateSettingsIcon();
-    // Configurar evento del botón de ajustes
+    // Configurar evento del botón de ajustes (abre/cierra sin cerrar con otros)
     settingsBtn.onclick = () => {
         if (!isSettingsView) {
             showSettings();
         } else {
-            // Cerrar settings y restaurar vista anterior
-            isSettingsView = false;
-            if (previousViewState) {
-                currentViewMode = previousViewState.viewMode;
-                currentTermForView = previousViewState.termForView;
-                currentSort = previousViewState.sort;
-                previousViewState = null;
-            } else {
-                // Si no hay estado guardado, volver a la vista principal según modo actual
-                if (currentViewMode === 'filtered_trash') currentViewMode = 'filtered';
-                else if (currentViewMode === 'excluded_trash') currentViewMode = 'excluded';
-            }
-            updateView();
-            refreshTopBar();
-            configureTrashButton();
-            updateSettingsIcon();
-            if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
-                modeToggle.classList.add('excluded-mode');
-                document.body.classList.add('excluded-mode');
-            } else {
-                modeToggle.classList.remove('excluded-mode');
-                document.body.classList.remove('excluded-mode');
-            }
+            closeSettingsAndRestore();
         }
     };
 }
@@ -745,26 +758,30 @@ function openModal(movie, sourceMode) {
 
     if (isInTrash) {
         const restoreBtn = document.getElementById('restoreBtn');
-        if (restoreBtn) restoreBtn.onclick = () => {
-            restoreMovieFromTrash(movie, mode);
-            modal.style.display = 'none';
-            if (currentViewMode === (mode + '_trash')) updateView();
-            refreshTopBar();
-        };
+        if (restoreBtn) {
+            restoreBtn.onclick = () => {
+                restoreMovieFromTrash(movie, mode);
+                modal.style.display = 'none';
+                if (currentViewMode === (mode + '_trash')) updateView();
+                refreshTopBar();
+            };
+        }
         const permanentDeleteBtn = document.getElementById('permanentDeleteBtn');
-        if (permanentDeleteBtn) permanentDeleteBtn.onclick = () => {
-            const trashKey = getTrashKey(mode);
-            let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
-            let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
-            if (termEntry) {
-                termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
-                if (termEntry.results.length === 0) trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
-                localStorage.setItem(trashKey, JSON.stringify(trash));
-            }
-            modal.style.display = 'none';
-            if (currentViewMode === (mode + '_trash')) updateView();
-            refreshTopBar();
-        };
+        if (permanentDeleteBtn) {
+            permanentDeleteBtn.onclick = () => {
+                const trashKey = getTrashKey(mode);
+                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+                let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
+                if (termEntry) {
+                    termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
+                    if (termEntry.results.length === 0) trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
+                    localStorage.setItem(trashKey, JSON.stringify(trash));
+                }
+                modal.style.display = 'none';
+                if (currentViewMode === (mode + '_trash')) updateView();
+                refreshTopBar();
+            };
+        }
     }
 }
 
