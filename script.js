@@ -1,4 +1,4 @@
-// script.js - Con papelera, botón de ajustes funcional y modal operativo
+// script.js - Con papelera, sin botón de atrás en settings (se cierra con el mismo botón settings)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -180,7 +180,6 @@ function updateView() {
 }
 
 function updateSettingsIcon() {
-    // Solo cambiar texto, nunca innerHTML
     if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
         settingsBtn.textContent = 'settings_heart';
         settingsBtn.title = 'Settings for Free Movies';
@@ -208,9 +207,6 @@ function showSettings() {
                 <input type="checkbox" id="showExtraInfoCheckbox" ${currentPrefValue ? 'checked' : ''}>
                 <span>Show technical information in movie modal (ID, dates, etc.)</span>
             </label>
-            <div style="margin-top: 30px;">
-                <button id="backFromSettingsBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px;">← Back</button>
-            </div>
             ${trashLink}
         </div>
     `;
@@ -219,29 +215,6 @@ function showSettings() {
     if (checkbox) {
         checkbox.onchange = () => {
             localStorage.setItem(currentPrefKey, checkbox.checked);
-        };
-    }
-    const backBtn = document.getElementById('backFromSettingsBtn');
-    if (backBtn) {
-        backBtn.onclick = () => {
-            isSettingsView = false;
-            if (previousViewState) {
-                currentViewMode = previousViewState.viewMode;
-                currentTermForView = previousViewState.termForView;
-                currentSort = previousViewState.sort;
-                previousViewState = null;
-            }
-            updateView();
-            refreshTopBar();
-            configureTrashButton();
-            updateSettingsIcon();
-            if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
-                modeToggle.classList.add('excluded-mode');
-                document.body.classList.add('excluded-mode');
-            } else {
-                modeToggle.classList.remove('excluded-mode');
-                document.body.classList.remove('excluded-mode');
-            }
         };
     }
     const goToTrashBtn = document.getElementById('goToTrashBtn');
@@ -610,8 +583,10 @@ async function performSearch(query) {
         configureTrashButton();
         updateSettingsIcon();
         if (isSettingsView) {
-            const backBtn = document.getElementById('backFromSettingsBtn');
-            if (backBtn) backBtn.click();
+            // No hay back button, simplemente salimos de settings si estaba abierto? En realidad showSettings lo abre, y al hacer nueva búsqueda debería cerrarlo.
+            // Llamamos a settingsBtn.click() para cerrar settings? No, mejor forzar cierre.
+            isSettingsView = false;
+            previousViewState = null;
         }
     } catch (error) {
         resultsGrid.innerHTML = `<p class="stats">Error: ${error.message}</p>`;
@@ -659,12 +634,34 @@ function init() {
     isSettingsView = false;
     updateView();
     updateSettingsIcon();
-    // Asegurar evento del botón de ajustes
+    // Configurar evento del botón de ajustes
     settingsBtn.onclick = () => {
-        if (!isSettingsView) showSettings();
-        else {
-            const backBtn = document.getElementById('backFromSettingsBtn');
-            if (backBtn) backBtn.click();
+        if (!isSettingsView) {
+            showSettings();
+        } else {
+            // Cerrar settings y restaurar vista anterior
+            isSettingsView = false;
+            if (previousViewState) {
+                currentViewMode = previousViewState.viewMode;
+                currentTermForView = previousViewState.termForView;
+                currentSort = previousViewState.sort;
+                previousViewState = null;
+            } else {
+                // Si no hay estado guardado, volver a la vista principal según modo actual
+                if (currentViewMode === 'filtered_trash') currentViewMode = 'filtered';
+                else if (currentViewMode === 'excluded_trash') currentViewMode = 'excluded';
+            }
+            updateView();
+            refreshTopBar();
+            configureTrashButton();
+            updateSettingsIcon();
+            if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
+                modeToggle.classList.add('excluded-mode');
+                document.body.classList.add('excluded-mode');
+            } else {
+                modeToggle.classList.remove('excluded-mode');
+                document.body.classList.remove('excluded-mode');
+            }
         }
     };
 }
