@@ -467,6 +467,7 @@ function refreshTopBar() {
     let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
 
+    // Siempre generar el botón de unión (incluso si no hay términos)
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
@@ -480,10 +481,13 @@ function refreshTopBar() {
     }
     fullSearchDiv.innerHTML = html;
 
-    // Asignar eventos
+    // Asignar eventos (evitar duplicados usando removeEventListener si es necesario, pero aquí sobrescribimos)
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
-        unionIcon.onclick = () => {
+        // Reemplazar cualquier evento anterior con uno nuevo
+        unionIcon.replaceWith(unionIcon.cloneNode(true)); // elimina eventos previos
+        const newUnionIcon = document.getElementById('unionIcon');
+        newUnionIcon.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
             currentTermForView = null;
             currentSort = 'date';
@@ -513,7 +517,7 @@ function refreshTopBar() {
                 localStorage.setItem(trashKey, JSON.stringify(trash));
                 if (currentTermForView === term) currentTermForView = null;
                 updateView();
-                refreshTopBar(); // actualizar tags de la papelera
+                refreshTopBar(); // refrescar para que desaparezca el tag
             }
         };
     });
