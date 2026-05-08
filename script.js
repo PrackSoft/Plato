@@ -1,10 +1,10 @@
-// script.js - Con papeleras (trash) independientes por modo
+// script.js - Con papelera (trash) sin romper el botón de ajustes
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
-const MAX_TRASH_PER_TERM = 200; // Límite de películas por término en la papelera
+const MAX_TRASH_PER_TERM = 200; // Límite por término en la papelera
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 const FILTERED_TRASH_KEY = 'plato_filtered_trash';
@@ -40,7 +40,7 @@ let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
 
-// ========== Funciones auxiliares (sin cambios) ==========
+// ========== Funciones auxiliares ==========
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -71,7 +71,6 @@ function sortMovies(movies, primarySort) {
     return sorted;
 }
 
-// Renderizado común (usa resultsGrid, resultsStats, resultsTitle)
 function renderMovies(movies, sortBy, titlePrefix) {
     const sorted = sortMovies(movies, sortBy);
     const isDateSort = (sortBy === 'date');
@@ -105,7 +104,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
             }
             html += `<div class="date-group"><div class="group-date">${label}</div><div class="results-group">`;
             html += movieList.map(movie => `
-                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, ${currentViewMode})'>
+                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${currentViewMode}")'>
                     <img src="${movie.imageUrl}" alt="${movie.title}">
                     <div class="info">
                         <h3>${escapeHtml(movie.title)}</h3>
@@ -119,7 +118,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
         resultsGrid.style.display = 'block';
     } else {
         resultsGrid.innerHTML = sorted.map(movie => `
-            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, ${currentViewMode})'>
+            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${currentViewMode}")'>
                 <img src="${movie.imageUrl}" alt="${movie.title}">
                 <div class="info">
                     <h3>${escapeHtml(movie.title)}</h3>
@@ -141,11 +140,9 @@ function renderMovies(movies, sortBy, titlePrefix) {
     });
 }
 
-// Actualiza la vista según currentViewMode, currentTermForView, currentSort
 function updateView() {
     if (isSettingsView) return;
     let storageKey, titlePrefixBase;
-    const isTrash = currentViewMode.includes('trash');
     if (currentViewMode === 'filtered') {
         storageKey = FILTERED_SEARCH_KEY;
         titlePrefixBase = 'Saved Free Movies';
@@ -158,7 +155,7 @@ function updateView() {
     } else if (currentViewMode === 'excluded_trash') {
         storageKey = EXCLUDED_TRASH_KEY;
         titlePrefixBase = 'Trash – Excluded Results';
-    }
+    } else return;
 
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     let movies = [];
@@ -184,16 +181,16 @@ function updateView() {
 }
 
 function updateSettingsIcon() {
+    // Usamos textContent, no innerHTML, para no eliminar el evento onclick
     if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
-        settingsBtn.innerHTML = 'settings_heart';
+        settingsBtn.textContent = 'settings_heart';
         settingsBtn.title = 'Settings for Free Movies';
     } else {
-        settingsBtn.innerHTML = 'video_settings';
+        settingsBtn.textContent = 'video_settings';
         settingsBtn.title = 'Settings for Excluded Results';
     }
 }
 
-// Muestra la vista de ajustes (ya existente)
 function showSettings() {
     previousViewState = {
         viewMode: currentViewMode,
@@ -204,7 +201,7 @@ function showSettings() {
     resultsTitle.innerText = 'Settings';
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
-    // Añadir botón para ir a la papelera (si no estamos ya en ella)
+    // Añadimos botón para ir a la papelera
     const trashLink = `<button id="goToTrashBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px; margin-top: 20px;">🗑️ Go to Trash</button>`;
     resultsGrid.innerHTML = `
         <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
@@ -261,8 +258,8 @@ function showSettings() {
             currentTermForView = null;
             currentSort = 'date';
             updateView();
-            refreshTopBar();        // refrescará la barra con los tags de la papelera (si los hubiera)
-            configureTrashButton(); // el botón de borrar todo ahora vaciará la papelera
+            refreshTopBar();
+            configureTrashButton();
             updateSettingsIcon();
             if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
                 modeToggle.classList.add('excluded-mode');
@@ -275,7 +272,6 @@ function showSettings() {
     }
 }
 
-// Guardar resultados enriquecidos (sin cambios, ya guarda en las claves principales)
 function saveSearchResults(searchTerm, enrichedItems) {
     const filteredItems = [];
     const excludedItems = [];
@@ -328,7 +324,6 @@ function getTrashKey(mode) {
     return (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_TRASH_KEY : EXCLUDED_TRASH_KEY;
 }
 
-// Mover una película individual a la papelera
 function moveMovieToTrash(movie, mode) {
     const trashKey = getTrashKey(mode);
     let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
@@ -338,20 +333,17 @@ function moveMovieToTrash(movie, mode) {
         termEntry = { searchTerm: term, date: new Date().toISOString(), results: [] };
         trash.unshift(termEntry);
     }
-    // Añadir la película con deletedAt
     const movieWithDeleted = { ...movie, deletedAt: new Date().toISOString() };
-    // Evitar duplicados (si ya existe en la papelera, no añadir de nuevo)
     const exists = termEntry.results.some(m => m.id === movie.id);
     if (!exists) {
         termEntry.results.push(movieWithDeleted);
-        // Ordenar por deletedAt descendente (más reciente primero) y truncar a MAX_TRASH_PER_TERM
         termEntry.results.sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
         termEntry.results = termEntry.results.slice(0, MAX_TRASH_PER_TERM);
-        termEntry.date = new Date().toISOString(); // actualizar fecha del término
+        termEntry.date = new Date().toISOString();
     }
-    // Guardar papelera
     localStorage.setItem(trashKey, JSON.stringify(trash));
-    // Eliminar la película de la bolsa principal
+
+    // Eliminar de la bolsa principal
     let mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     let termMain = main.find(entry => entry.searchTerm === term);
@@ -360,33 +352,26 @@ function moveMovieToTrash(movie, mode) {
         if (termMain.results.length === 0) {
             main = main.filter(entry => entry.searchTerm !== term);
         } else {
-            // actualizar fecha del término (por si acaso)
             termMain.date = new Date().toISOString();
         }
         localStorage.setItem(mainKey, JSON.stringify(main));
     }
-    // Actualizar la vista si es necesario
-    if (currentViewMode === mode && currentTermForView === term) {
-        updateView();
-    } else if (currentViewMode === mode && currentTermForView === null) {
+    if (currentViewMode === mode && (currentTermForView === term || currentTermForView === null)) {
         updateView();
     }
-    refreshTopBar(); // actualiza los tags de la vista principal (puede desaparecer el tag si se vació)
+    refreshTopBar();
 }
 
-// Mover un término completo a la papelera
 function moveTermToTrash(term, mode) {
     const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     const termEntry = main.find(entry => entry.searchTerm === term);
     if (!termEntry) return;
-    // Copiar todas las películas del término a la papelera, añadiendo deletedAt
     const moviesWithDeleted = termEntry.results.map(movie => ({ ...movie, deletedAt: new Date().toISOString() }));
     const trashKey = getTrashKey(mode);
     let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
     let trashTermEntry = trash.find(entry => entry.searchTerm === term);
     if (trashTermEntry) {
-        // Fusionar, evitando duplicados por id
         const existingIds = new Set(trashTermEntry.results.map(m => m.id));
         const newMovies = moviesWithDeleted.filter(m => !existingIds.has(m.id));
         trashTermEntry.results.push(...newMovies);
@@ -401,19 +386,15 @@ function moveTermToTrash(term, mode) {
         });
     }
     localStorage.setItem(trashKey, JSON.stringify(trash));
-    // Eliminar el término de la bolsa principal
     main = main.filter(entry => entry.searchTerm !== term);
     localStorage.setItem(mainKey, JSON.stringify(main));
-    // Actualizar vista
     if (currentViewMode === mode && (currentTermForView === term || currentTermForView === null)) {
         currentTermForView = null;
-        currentSort = 'date';
         updateView();
     }
     refreshTopBar();
 }
 
-// Restaurar una película desde la papelera
 function restoreMovieFromTrash(movie, mode) {
     const trashKey = getTrashKey(mode);
     let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
@@ -421,7 +402,6 @@ function restoreMovieFromTrash(movie, mode) {
     const termIndex = trash.findIndex(entry => entry.searchTerm === term);
     if (termIndex === -1) return;
     const termEntry = trash[termIndex];
-    // Eliminar la película de la papelera
     const newResults = termEntry.results.filter(m => m.id !== movie.id);
     if (newResults.length === 0) {
         trash.splice(termIndex, 1);
@@ -430,7 +410,6 @@ function restoreMovieFromTrash(movie, mode) {
         termEntry.date = new Date().toISOString();
     }
     localStorage.setItem(trashKey, JSON.stringify(trash));
-    // Añadir la película a la bolsa principal (sin el campo deletedAt)
     const { deletedAt, ...movieClean } = movie;
     const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
@@ -444,30 +423,22 @@ function restoreMovieFromTrash(movie, mode) {
             mainTermEntry.date = new Date().toISOString();
         }
     } else {
-        main.unshift({
-            searchTerm: term,
-            date: new Date().toISOString(),
-            results: [movieClean]
-        });
+        main.unshift({ searchTerm: term, date: new Date().toISOString(), results: [movieClean] });
     }
     localStorage.setItem(mainKey, JSON.stringify(main));
-    // Actualizar vista si estamos en la papelera o en principal
     if (currentViewMode === mode || currentViewMode === (mode + '_trash')) {
         updateView();
         refreshTopBar();
     }
 }
 
-// Restaurar un término completo desde la papelera
 function restoreTermFromTrash(term, mode) {
     const trashKey = getTrashKey(mode);
     let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
     const trashTermIndex = trash.findIndex(entry => entry.searchTerm === term);
     if (trashTermIndex === -1) return;
     const trashTermEntry = trash[trashTermIndex];
-    // Eliminar el campo deletedAt de cada película
     const cleanedMovies = trashTermEntry.results.map(({ deletedAt, ...movie }) => movie);
-    // Añadir a la bolsa principal
     const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     let mainTermEntry = main.find(entry => entry.searchTerm === term);
@@ -479,24 +450,17 @@ function restoreTermFromTrash(term, mode) {
         mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
         mainTermEntry.date = new Date().toISOString();
     } else {
-        main.unshift({
-            searchTerm: term,
-            date: new Date().toISOString(),
-            results: cleanedMovies.slice(0, MAX_RESULTS_PER_TERM)
-        });
+        main.unshift({ searchTerm: term, date: new Date().toISOString(), results: cleanedMovies.slice(0, MAX_RESULTS_PER_TERM) });
     }
     localStorage.setItem(mainKey, JSON.stringify(main));
-    // Eliminar el término de la papelera
     trash.splice(trashTermIndex, 1);
     localStorage.setItem(trashKey, JSON.stringify(trash));
-    // Actualizar vista
     if (currentViewMode === mode || currentViewMode === (mode + '_trash')) {
         updateView();
         refreshTopBar();
     }
 }
 
-// Vaciar toda la papelera (modo actual)
 function emptyTrash(mode) {
     const trashKey = getTrashKey(mode);
     localStorage.setItem(trashKey, JSON.stringify([]));
@@ -507,9 +471,8 @@ function emptyTrash(mode) {
     }
 }
 
-// ========== BARRA SUPERIOR (tags) ==========
+// ========== BARRA SUPERIOR ==========
 function refreshTopBar() {
-    // Los tags se muestran según la vista actual (principal o papelera)
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
     else if (currentViewMode === 'excluded') storageKey = EXCLUDED_SEARCH_KEY;
@@ -558,50 +521,42 @@ function refreshTopBar() {
             updateView();
         };
     });
-    // La X ahora mueve el término completo a la papelera (si estamos en vista principal) o lo elimina definitivamente si estamos en papelera?
-    // Decidido: en vista principal, mover a papelera; en papelera, eliminar definitivamente.
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             const term = btn.dataset.term;
             if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
-                // Mover a papelera
                 moveTermToTrash(term, currentViewMode);
             } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
-                // Eliminar definitivamente de la papelera
                 const trashKey = getTrashKey(currentViewMode);
                 let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
                 trash = trash.filter(entry => entry.searchTerm !== term);
                 localStorage.setItem(trashKey, JSON.stringify(trash));
                 if (currentTermForView === term) {
                     currentTermForView = null;
-                    currentSort = 'date';
                     updateView();
                 } else {
                     updateView();
                 }
-                refreshTopBar(); // actualizar tags de la papelera
+                refreshTopBar();
             }
         };
     });
 }
 
-// ========== BOTÓN DE BORRAR (según modo) ==========
+// ========== BOTÓN DE BORRAR ==========
 function configureTrashButton() {
     if (currentViewMode === 'filtered') {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
-                // Mover todas las películas a la papelera (término a término)
                 const mainKey = FILTERED_SEARCH_KEY;
                 let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
                 for (const termEntry of main) {
                     moveTermToTrash(termEntry.searchTerm, 'filtered');
                 }
-                // Después de mover, actualizar vista
                 refreshTopBar();
                 if (currentViewMode === 'filtered') {
                     currentTermForView = null;
-                    currentSort = 'date';
                     updateView();
                 }
             }
@@ -618,7 +573,6 @@ function configureTrashButton() {
                 refreshTopBar();
                 if (currentViewMode === 'excluded') {
                     currentTermForView = null;
-                    currentSort = 'date';
                     updateView();
                 }
             }
@@ -765,13 +719,13 @@ function init() {
     isSettingsView = false;
     updateView();
     updateSettingsIcon();
+    // Asegurar que el botón de ajustes tenga su evento (ya definido después)
 }
 init();
 
 // ========== MODAL CON OPCIONES DE PAPELERA ==========
 function openModal(movie, sourceMode) {
     if (!modal) return;
-    // Formatear duración
     let formattedDuration = 'Unknown';
     if (movie.duration && movie.duration !== 'N/A') {
         const match = movie.duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
@@ -781,7 +735,6 @@ function openModal(movie, sourceMode) {
         formattedDuration = `${hours ? hours+':' : ''}${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
     }
 
-    // Determinar si estamos en papelera (sourceMode contiene 'trash')
     const isInTrash = sourceMode.includes('trash');
     const mode = sourceMode.includes('filtered') ? 'filtered' : 'excluded';
 
@@ -831,7 +784,6 @@ function openModal(movie, sourceMode) {
     if (deleteBtn) {
         deleteBtn.onclick = () => {
             if (isInTrash) {
-                // Eliminar permanentemente de la papelera
                 const trashKey = getTrashKey(mode);
                 let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
                 let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
@@ -846,7 +798,6 @@ function openModal(movie, sourceMode) {
                 if (currentViewMode === (mode + '_trash')) updateView();
                 refreshTopBar();
             } else {
-                // Mover a papelera
                 moveMovieToTrash(movie, mode);
                 modal.style.display = 'none';
                 if (currentViewMode === mode) updateView();
@@ -889,3 +840,13 @@ function openModal(movie, sourceMode) {
 if (closeModal) closeModal.onclick = () => { modal.style.display = 'none'; };
 if (watchBtn) watchBtn.onclick = () => window.open(currentMovieUrl);
 window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+// Asegurar evento del botón de ajustes (no se pierde)
+settingsBtn.onclick = () => {
+    if (!isSettingsView) {
+        showSettings();
+    } else {
+        const backBtn = document.getElementById('backFromSettingsBtn');
+        if (backBtn) backBtn.click();
+    }
+};
