@@ -1,4 +1,4 @@
-// script.js - Con papelera y cierre automático de Settings al interactuar con otros elementos
+// script.js - Con papelera y vista de Settings integrada (título dinámico, secciones Display y Delete)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -217,6 +217,7 @@ function closeSettingsAndRestore() {
     }
 }
 
+// Nueva vista de Settings integrada (sin recuadro modal, con estructura de lista)
 function showSettings() {
     previousViewState = {
         viewMode: currentViewMode,
@@ -224,21 +225,30 @@ function showSettings() {
         sort: currentSort
     };
     isSettingsView = true;
-    resultsTitle.innerText = 'Settings';
+    const modeName = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Filtered Search (Free Movies)' : 'Excluded Search (Non‑Free)';
+    resultsTitle.innerText = `Settings – ${modeName}`;
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
-    const trashLink = `<button id="goToTrashBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px; margin-top: 20px;">🗑️ Go to Trash</button>`;
+    // Generamos el contenido de configuración en el mismo contenedor resultsGrid
     resultsGrid.innerHTML = `
-        <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
-            <h3 style="margin-bottom: 20px;">Display options for ${(currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Free Movies' : 'Excluded Results'}</h3>
-            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
-                <input type="checkbox" id="showExtraInfoCheckbox" ${currentPrefValue ? 'checked' : ''}>
-                <span>Show technical information in movie modal (ID, dates, etc.)</span>
-            </label>
-            ${trashLink}
+        <div class="settings-section">
+            <h3 class="settings-section-title">Display</h3>
+            <div class="settings-option">
+                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                    <input type="checkbox" id="showExtraInfoCheckbox" ${currentPrefValue ? 'checked' : ''}>
+                    <span>Show technical information in movie modal (ID, dates, etc.)</span>
+                </label>
+            </div>
+        </div>
+        <div class="settings-section">
+            <h3 class="settings-section-title">Delete</h3>
+            <div class="settings-option">
+                <button id="goToTrashBtn" class="full-search-btn" style="background: #2a2a2a; padding: 6px 18px;">🗑️ Go to Trash</button>
+            </div>
         </div>
     `;
-    resultsStats.innerHTML = '';
+    resultsStats.innerHTML = ''; // Ocultamos los controles de ordenamiento (no aplican en Settings)
+    // Agregamos eventos a los elementos dinámicos
     const checkbox = document.getElementById('showExtraInfoCheckbox');
     if (checkbox) {
         checkbox.onchange = () => {
@@ -479,9 +489,8 @@ function refreshTopBar() {
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
-            // Cerrar settings si está abierto
             if (isSettingsView) closeSettingsAndRestore();
-            if (isSettingsView) return; // ya se cerró
+            if (isSettingsView) return;
             currentTermForView = null;
             currentSort = 'date';
             updateView();
@@ -501,7 +510,6 @@ function refreshTopBar() {
             e.stopPropagation();
             const term = btn.dataset.term;
             if (isSettingsView) closeSettingsAndRestore();
-            // No regresar si sigue abierto
             if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
                 moveTermToTrash(term, currentViewMode);
             } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
@@ -557,7 +565,6 @@ function configureTrashButton() {
 
 // ========== BÚSQUEDA PRINCIPAL ==========
 async function performSearch(query) {
-    // Cerrar settings si está abierto
     if (isSettingsView) closeSettingsAndRestore();
 
     loadingDiv.style.display = 'flex';
@@ -669,7 +676,6 @@ function init() {
     isSettingsView = false;
     updateView();
     updateSettingsIcon();
-    // Configurar evento del botón de ajustes (abre/cierra sin cerrar con otros)
     settingsBtn.onclick = () => {
         if (!isSettingsView) {
             showSettings();
