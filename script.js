@@ -1,10 +1,10 @@
-// script.js - Con papelera (trash) sin romper el botón de ajustes
+// script.js - Con papelera, botón de ajustes funcional y modal operativo
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
-const MAX_TRASH_PER_TERM = 200; // Límite por término en la papelera
+const MAX_TRASH_PER_TERM = 200;
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
 const FILTERED_TRASH_KEY = 'plato_filtered_trash';
@@ -33,10 +33,9 @@ let nextPageToken = null;
 let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
-let currentViewMode = 'filtered'; // 'filtered', 'excluded', 'filtered_trash', 'excluded_trash'
+let currentViewMode = 'filtered';
 let currentSort = 'date';
 let currentTermForView = null;
-
 let previousViewState = null;
 let isSettingsView = false;
 
@@ -71,7 +70,7 @@ function sortMovies(movies, primarySort) {
     return sorted;
 }
 
-function renderMovies(movies, sortBy, titlePrefix) {
+function renderMovies(movies, sortBy, titlePrefix, viewMode) {
     const sorted = sortMovies(movies, sortBy);
     const isDateSort = (sortBy === 'date');
     if (sorted.length === 0) {
@@ -104,7 +103,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
             }
             html += `<div class="date-group"><div class="group-date">${label}</div><div class="results-group">`;
             html += movieList.map(movie => `
-                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${currentViewMode}")'>
+                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${viewMode}")'>
                     <img src="${movie.imageUrl}" alt="${movie.title}">
                     <div class="info">
                         <h3>${escapeHtml(movie.title)}</h3>
@@ -118,7 +117,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
         resultsGrid.style.display = 'block';
     } else {
         resultsGrid.innerHTML = sorted.map(movie => `
-            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${currentViewMode}")'>
+            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${viewMode}")'>
                 <img src="${movie.imageUrl}" alt="${movie.title}">
                 <div class="info">
                     <h3>${escapeHtml(movie.title)}</h3>
@@ -177,11 +176,11 @@ function updateView() {
     }
     const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : 'by channel');
     const titlePrefix = currentTermForView ? `${titlePrefixBase}: "${currentTermForView}" (${sortLabel})` : `${titlePrefixBase} (${sortLabel})`;
-    renderMovies(movies, currentSort, titlePrefix);
+    renderMovies(movies, currentSort, titlePrefix, currentViewMode);
 }
 
 function updateSettingsIcon() {
-    // Usamos textContent, no innerHTML, para no eliminar el evento onclick
+    // Solo cambiar texto, nunca innerHTML
     if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
         settingsBtn.textContent = 'settings_heart';
         settingsBtn.title = 'Settings for Free Movies';
@@ -201,7 +200,6 @@ function showSettings() {
     resultsTitle.innerText = 'Settings';
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
-    // Añadimos botón para ir a la papelera
     const trashLink = `<button id="goToTrashBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px; margin-top: 20px;">🗑️ Go to Trash</button>`;
     resultsGrid.innerHTML = `
         <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
@@ -292,11 +290,8 @@ function saveSearchResults(searchTerm, enrichedItems) {
             commentCount: item.commentCount,
             tags: item.tags
         };
-        if (item.channelId === TARGET_CHANNEL_ID) {
-            filteredItems.push(movie);
-        } else {
-            excludedItems.push(movie);
-        }
+        if (item.channelId === TARGET_CHANNEL_ID) filteredItems.push(movie);
+        else excludedItems.push(movie);
     });
 
     function updateBucket(storageKey, newItems) {
@@ -314,7 +309,6 @@ function saveSearchResults(searchTerm, enrichedItems) {
         searches = searches.slice(0, 20);
         localStorage.setItem(storageKey, JSON.stringify(searches));
     }
-
     updateBucket(FILTERED_SEARCH_KEY, filteredItems);
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
@@ -334,31 +328,23 @@ function moveMovieToTrash(movie, mode) {
         trash.unshift(termEntry);
     }
     const movieWithDeleted = { ...movie, deletedAt: new Date().toISOString() };
-    const exists = termEntry.results.some(m => m.id === movie.id);
-    if (!exists) {
+    if (!termEntry.results.some(m => m.id === movie.id)) {
         termEntry.results.push(movieWithDeleted);
         termEntry.results.sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
         termEntry.results = termEntry.results.slice(0, MAX_TRASH_PER_TERM);
         termEntry.date = new Date().toISOString();
+        localStorage.setItem(trashKey, JSON.stringify(trash));
     }
-    localStorage.setItem(trashKey, JSON.stringify(trash));
-
-    // Eliminar de la bolsa principal
     let mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     let termMain = main.find(entry => entry.searchTerm === term);
     if (termMain) {
         termMain.results = termMain.results.filter(m => m.id !== movie.id);
-        if (termMain.results.length === 0) {
-            main = main.filter(entry => entry.searchTerm !== term);
-        } else {
-            termMain.date = new Date().toISOString();
-        }
+        if (termMain.results.length === 0) main = main.filter(entry => entry.searchTerm !== term);
+        else termMain.date = new Date().toISOString();
         localStorage.setItem(mainKey, JSON.stringify(main));
     }
-    if (currentViewMode === mode && (currentTermForView === term || currentTermForView === null)) {
-        updateView();
-    }
+    if (currentViewMode === mode && (currentTermForView === term || currentTermForView === null)) updateView();
     refreshTopBar();
 }
 
@@ -379,11 +365,7 @@ function moveTermToTrash(term, mode) {
         trashTermEntry.results = trashTermEntry.results.slice(0, MAX_TRASH_PER_TERM);
         trashTermEntry.date = new Date().toISOString();
     } else {
-        trash.unshift({
-            searchTerm: term,
-            date: new Date().toISOString(),
-            results: moviesWithDeleted.slice(0, MAX_TRASH_PER_TERM)
-        });
+        trash.unshift({ searchTerm: term, date: new Date().toISOString(), results: moviesWithDeleted.slice(0, MAX_TRASH_PER_TERM) });
     }
     localStorage.setItem(trashKey, JSON.stringify(trash));
     main = main.filter(entry => entry.searchTerm !== term);
@@ -402,21 +384,16 @@ function restoreMovieFromTrash(movie, mode) {
     const termIndex = trash.findIndex(entry => entry.searchTerm === term);
     if (termIndex === -1) return;
     const termEntry = trash[termIndex];
-    const newResults = termEntry.results.filter(m => m.id !== movie.id);
-    if (newResults.length === 0) {
-        trash.splice(termIndex, 1);
-    } else {
-        termEntry.results = newResults;
-        termEntry.date = new Date().toISOString();
-    }
+    termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
+    if (termEntry.results.length === 0) trash.splice(termIndex, 1);
+    else termEntry.date = new Date().toISOString();
     localStorage.setItem(trashKey, JSON.stringify(trash));
     const { deletedAt, ...movieClean } = movie;
     const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     let mainTermEntry = main.find(entry => entry.searchTerm === term);
     if (mainTermEntry) {
-        const exists = mainTermEntry.results.some(m => m.id === movieClean.id);
-        if (!exists) {
+        if (!mainTermEntry.results.some(m => m.id === movieClean.id)) {
             mainTermEntry.results.push(movieClean);
             mainTermEntry.results.sort((a,b) => new Date(b.date) - new Date(a.date));
             mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
@@ -437,18 +414,19 @@ function restoreTermFromTrash(term, mode) {
     let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
     const trashTermIndex = trash.findIndex(entry => entry.searchTerm === term);
     if (trashTermIndex === -1) return;
-    const trashTermEntry = trash[trashTermIndex];
-    const cleanedMovies = trashTermEntry.results.map(({ deletedAt, ...movie }) => movie);
+    const cleanedMovies = trash[trashTermIndex].results.map(({ deletedAt, ...movie }) => movie);
     const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
     let mainTermEntry = main.find(entry => entry.searchTerm === term);
     if (mainTermEntry) {
         const existingIds = new Set(mainTermEntry.results.map(m => m.id));
         const newMovies = cleanedMovies.filter(m => !existingIds.has(m.id));
-        mainTermEntry.results.push(...newMovies);
-        mainTermEntry.results.sort((a,b) => new Date(b.date) - new Date(a.date));
-        mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
-        mainTermEntry.date = new Date().toISOString();
+        if (newMovies.length) {
+            mainTermEntry.results.push(...newMovies);
+            mainTermEntry.results.sort((a,b) => new Date(b.date) - new Date(a.date));
+            mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
+            mainTermEntry.date = new Date().toISOString();
+        }
     } else {
         main.unshift({ searchTerm: term, date: new Date().toISOString(), results: cleanedMovies.slice(0, MAX_RESULTS_PER_TERM) });
     }
@@ -482,14 +460,8 @@ function refreshTopBar() {
 
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     const terms = searches.map(entry => entry.searchTerm).filter((v,i,a)=>a.indexOf(v)===i);
-    let filterIcon, filterTitle;
-    if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
-        filterIcon = 'filter_alt';
-        filterTitle = 'Show all Free Movies';
-    } else {
-        filterIcon = 'video_search';
-        filterTitle = 'Show all Excluded Results';
-    }
+    let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
+    let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
@@ -505,14 +477,12 @@ function refreshTopBar() {
     }
 
     const unionIcon = document.getElementById('unionIcon');
-    if (unionIcon) {
-        unionIcon.onclick = () => {
-            if (isSettingsView) return;
-            currentTermForView = null;
-            currentSort = 'date';
-            updateView();
-        };
-    }
+    if (unionIcon) unionIcon.onclick = () => {
+        if (isSettingsView) return;
+        currentTermForView = null;
+        currentSort = 'date';
+        updateView();
+    };
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             if (isSettingsView) return;
@@ -532,64 +502,43 @@ function refreshTopBar() {
                 let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
                 trash = trash.filter(entry => entry.searchTerm !== term);
                 localStorage.setItem(trashKey, JSON.stringify(trash));
-                if (currentTermForView === term) {
-                    currentTermForView = null;
-                    updateView();
-                } else {
-                    updateView();
-                }
+                if (currentTermForView === term) currentTermForView = null;
+                updateView();
                 refreshTopBar();
             }
         };
     });
 }
 
-// ========== BOTÓN DE BORRAR ==========
 function configureTrashButton() {
     if (currentViewMode === 'filtered') {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
-                const mainKey = FILTERED_SEARCH_KEY;
-                let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
-                for (const termEntry of main) {
-                    moveTermToTrash(termEntry.searchTerm, 'filtered');
-                }
+                let main = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
+                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'filtered');
                 refreshTopBar();
-                if (currentViewMode === 'filtered') {
-                    currentTermForView = null;
-                    updateView();
-                }
+                if (currentViewMode === 'filtered') { currentTermForView = null; updateView(); }
             }
         };
         clearStorageBtn.title = 'Move all Free Movies to trash';
     } else if (currentViewMode === 'excluded') {
         clearStorageBtn.onclick = () => {
             if (confirm('Delete ALL Excluded data? (This will move them to trash)')) {
-                const mainKey = EXCLUDED_SEARCH_KEY;
-                let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
-                for (const termEntry of main) {
-                    moveTermToTrash(termEntry.searchTerm, 'excluded');
-                }
+                let main = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
+                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'excluded');
                 refreshTopBar();
-                if (currentViewMode === 'excluded') {
-                    currentTermForView = null;
-                    updateView();
-                }
+                if (currentViewMode === 'excluded') { currentTermForView = null; updateView(); }
             }
         };
         clearStorageBtn.title = 'Move all Excluded data to trash';
     } else if (currentViewMode === 'filtered_trash') {
         clearStorageBtn.onclick = () => {
-            if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) {
-                emptyTrash('filtered');
-            }
+            if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) emptyTrash('filtered');
         };
         clearStorageBtn.title = 'Empty Free Movies trash';
     } else if (currentViewMode === 'excluded_trash') {
         clearStorageBtn.onclick = () => {
-            if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) {
-                emptyTrash('excluded');
-            }
+            if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) emptyTrash('excluded');
         };
         clearStorageBtn.title = 'Empty Excluded Results trash';
     }
@@ -599,37 +548,30 @@ function configureTrashButton() {
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
-        let url;
-        if (SEARCH_MODE === 'channel') {
-            url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`;
-        } else {
-            const keywords = query + ' Películas Gratis YouTube Películas y TV de YouTube';
-            url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(keywords)}&key=${API_KEY}`;
-        }
+        let url = SEARCH_MODE === 'channel'
+            ? `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`
+            : `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query + ' Películas Gratis YouTube Películas y TV de YouTube')}&key=${API_KEY}`;
         const searchResponse = await fetch(url);
         const searchData = await searchResponse.json();
         if (!searchData.items) return;
-
         const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
         if (videoIds.length === 0) return;
-
         const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
         const videosResponse = await fetch(videosUrl);
         const videosData = await videosResponse.json();
-
         const detailsMap = new Map();
         if (videosData.items) {
             videosData.items.forEach(video => {
                 const snippet = video.snippet;
-                const statistics = video.statistics || {};
-                const contentDetails = video.contentDetails || {};
+                const stats = video.statistics || {};
+                const cd = video.contentDetails || {};
                 detailsMap.set(video.id, {
                     fullDescription: snippet.description,
                     tags: snippet.tags || [],
-                    viewCount: statistics.viewCount || 'N/A',
-                    likeCount: statistics.likeCount || 'N/A',
-                    commentCount: statistics.commentCount || 'N/A',
-                    duration: contentDetails.duration || 'N/A',
+                    viewCount: stats.viewCount || 'N/A',
+                    likeCount: stats.likeCount || 'N/A',
+                    commentCount: stats.commentCount || 'N/A',
+                    duration: cd.duration || 'N/A',
                     channelId: snippet.channelId,
                     channelTitle: snippet.channelTitle,
                     title: snippet.title,
@@ -638,7 +580,6 @@ async function performSearch(query) {
                 });
             });
         }
-
         const enrichedItems = searchData.items.map(item => {
             const videoId = item.id.videoId;
             const extra = detailsMap.get(videoId) || {};
@@ -658,7 +599,6 @@ async function performSearch(query) {
                 tags: extra.tags
             };
         });
-
         saveSearchResults(currentSearchTerm, enrichedItems);
         currentViewMode = 'filtered';
         currentTermForView = currentSearchTerm;
@@ -719,11 +659,18 @@ function init() {
     isSettingsView = false;
     updateView();
     updateSettingsIcon();
-    // Asegurar que el botón de ajustes tenga su evento (ya definido después)
+    // Asegurar evento del botón de ajustes
+    settingsBtn.onclick = () => {
+        if (!isSettingsView) showSettings();
+        else {
+            const backBtn = document.getElementById('backFromSettingsBtn');
+            if (backBtn) backBtn.click();
+        }
+    };
 }
 init();
 
-// ========== MODAL CON OPCIONES DE PAPELERA ==========
+// ========== MODAL ==========
 function openModal(movie, sourceMode) {
     if (!modal) return;
     let formattedDuration = 'Unknown';
@@ -734,10 +681,8 @@ function openModal(movie, sourceMode) {
         const seconds = (match[3] ? match[3].slice(0,-1) : 0);
         formattedDuration = `${hours ? hours+':' : ''}${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
     }
-
     const isInTrash = sourceMode.includes('trash');
     const mode = sourceMode.includes('filtered') ? 'filtered' : 'excluded';
-
     modalBody.innerHTML = `
         <div class="modal-header">
             <span class="material-symbols-outlined modal-delete-btn">delete_forever</span>
@@ -762,10 +707,7 @@ function openModal(movie, sourceMode) {
     if (showExtra) {
         const extraDiv = document.createElement('div');
         extraDiv.className = 'modal-extra-info';
-        let tagsHtml = '';
-        if (movie.tags && movie.tags.length) {
-            tagsHtml = `<li><strong>Tags:</strong> ${escapeHtml(movie.tags.join(', '))}</li>`;
-        }
+        let tagsHtml = movie.tags && movie.tags.length ? `<li><strong>Tags:</strong> ${escapeHtml(movie.tags.join(', '))}</li>` : '';
         extraDiv.innerHTML = `<ul>
             <li><strong>ID del video:</strong> ${escapeHtml(movie.id)}</li>
             <li><strong>Canal:</strong> ${escapeHtml(movie.channel)}</li>
@@ -789,9 +731,7 @@ function openModal(movie, sourceMode) {
                 let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
                 if (termEntry) {
                     termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
-                    if (termEntry.results.length === 0) {
-                        trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
-                    }
+                    if (termEntry.results.length === 0) trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
                     localStorage.setItem(trashKey, JSON.stringify(trash));
                 }
                 modal.style.display = 'none';
@@ -808,45 +748,29 @@ function openModal(movie, sourceMode) {
 
     if (isInTrash) {
         const restoreBtn = document.getElementById('restoreBtn');
-        if (restoreBtn) {
-            restoreBtn.onclick = () => {
-                restoreMovieFromTrash(movie, mode);
-                modal.style.display = 'none';
-                if (currentViewMode === (mode + '_trash')) updateView();
-                refreshTopBar();
-            };
-        }
+        if (restoreBtn) restoreBtn.onclick = () => {
+            restoreMovieFromTrash(movie, mode);
+            modal.style.display = 'none';
+            if (currentViewMode === (mode + '_trash')) updateView();
+            refreshTopBar();
+        };
         const permanentDeleteBtn = document.getElementById('permanentDeleteBtn');
-        if (permanentDeleteBtn) {
-            permanentDeleteBtn.onclick = () => {
-                const trashKey = getTrashKey(mode);
-                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
-                let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
-                if (termEntry) {
-                    termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
-                    if (termEntry.results.length === 0) {
-                        trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
-                    }
-                    localStorage.setItem(trashKey, JSON.stringify(trash));
-                }
-                modal.style.display = 'none';
-                if (currentViewMode === (mode + '_trash')) updateView();
-                refreshTopBar();
-            };
-        }
+        if (permanentDeleteBtn) permanentDeleteBtn.onclick = () => {
+            const trashKey = getTrashKey(mode);
+            let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+            let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
+            if (termEntry) {
+                termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
+                if (termEntry.results.length === 0) trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
+                localStorage.setItem(trashKey, JSON.stringify(trash));
+            }
+            modal.style.display = 'none';
+            if (currentViewMode === (mode + '_trash')) updateView();
+            refreshTopBar();
+        };
     }
 }
 
 if (closeModal) closeModal.onclick = () => { modal.style.display = 'none'; };
 if (watchBtn) watchBtn.onclick = () => window.open(currentMovieUrl);
 window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-
-// Asegurar evento del botón de ajustes (no se pierde)
-settingsBtn.onclick = () => {
-    if (!isSettingsView) {
-        showSettings();
-    } else {
-        const backBtn = document.getElementById('backFromSettingsBtn');
-        if (backBtn) backBtn.click();
-    }
-};
