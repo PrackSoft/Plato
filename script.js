@@ -1,4 +1,4 @@
-// script.js - Con papelera y vista de Settings integrada (corregido refreshTopBar para papelera)
+// script.js - Con papelera y vista de Settings integrada (corregido: botón Show all results funciona en trash)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -453,7 +453,35 @@ function emptyTrash(mode) {
     }
 }
 
-// ========== BARRA SUPERIOR (corregida) ==========
+// ========== FUNCIÓN PARA SALIR DE PAPELERA ==========
+function exitTrashAndShowAll() {
+    if (currentViewMode === 'filtered_trash') {
+        currentViewMode = 'filtered';
+    } else if (currentViewMode === 'excluded_trash') {
+        currentViewMode = 'excluded';
+    } else {
+        // Si no está en trash, solo mostrar todos los términos
+        currentTermForView = null;
+        currentSort = 'date';
+        updateView();
+        return;
+    }
+    currentTermForView = null;
+    currentSort = 'date';
+    updateView();
+    refreshTopBar();
+    configureTrashButton();
+    updateSettingsIcon();
+    if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
+        modeToggle.classList.add('excluded-mode');
+        document.body.classList.add('excluded-mode');
+    } else {
+        modeToggle.classList.remove('excluded-mode');
+        document.body.classList.remove('excluded-mode');
+    }
+}
+
+// ========== BARRA SUPERIOR (corregida, sin cloneNode) ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
@@ -467,7 +495,6 @@ function refreshTopBar() {
     let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
 
-    // Siempre generar el botón de unión (incluso si no hay términos)
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
@@ -481,17 +508,12 @@ function refreshTopBar() {
     }
     fullSearchDiv.innerHTML = html;
 
-    // Asignar eventos (evitar duplicados usando removeEventListener si es necesario, pero aquí sobrescribimos)
+    // Asignar eventos sin clonar
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
-        // Reemplazar cualquier evento anterior con uno nuevo
-        unionIcon.replaceWith(unionIcon.cloneNode(true)); // elimina eventos previos
-        const newUnionIcon = document.getElementById('unionIcon');
-        newUnionIcon.onclick = () => {
+        unionIcon.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
-            currentTermForView = null;
-            currentSort = 'date';
-            updateView();
+            exitTrashAndShowAll();
         };
     }
     document.querySelectorAll('.tag-btn').forEach(btn => {
@@ -517,7 +539,7 @@ function refreshTopBar() {
                 localStorage.setItem(trashKey, JSON.stringify(trash));
                 if (currentTermForView === term) currentTermForView = null;
                 updateView();
-                refreshTopBar(); // refrescar para que desaparezca el tag
+                refreshTopBar();
             }
         };
     });
