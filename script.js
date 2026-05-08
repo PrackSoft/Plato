@@ -1,4 +1,4 @@
-// script.js - Con papelera y vista de Settings integrada (título dinámico, secciones Display y Delete)
+// script.js - Con papelera y vista de Settings integrada (corregido refreshTopBar para papelera)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -198,7 +198,6 @@ function closeSettingsAndRestore() {
         currentSort = previousViewState.sort;
         previousViewState = null;
     } else {
-        // fallback si no hay estado (no debería ocurrir)
         if (currentViewMode === 'filtered_trash') currentViewMode = 'filtered';
         else if (currentViewMode === 'excluded_trash') currentViewMode = 'excluded';
         currentTermForView = null;
@@ -217,7 +216,6 @@ function closeSettingsAndRestore() {
     }
 }
 
-// Nueva vista de Settings integrada (sin recuadro modal, con estructura de lista)
 function showSettings() {
     previousViewState = {
         viewMode: currentViewMode,
@@ -229,7 +227,6 @@ function showSettings() {
     resultsTitle.innerText = `Settings – ${modeName}`;
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
-    // Generamos el contenido de configuración en el mismo contenedor resultsGrid
     resultsGrid.innerHTML = `
         <div class="settings-section">
             <h3 class="settings-section-title">Display</h3>
@@ -247,8 +244,7 @@ function showSettings() {
             </div>
         </div>
     `;
-    resultsStats.innerHTML = ''; // Ocultamos los controles de ordenamiento (no aplican en Settings)
-    // Agregamos eventos a los elementos dinámicos
+    resultsStats.innerHTML = '';
     const checkbox = document.getElementById('showExtraInfoCheckbox');
     if (checkbox) {
         checkbox.onchange = () => {
@@ -258,9 +254,7 @@ function showSettings() {
     const goToTrashBtn = document.getElementById('goToTrashBtn');
     if (goToTrashBtn) {
         goToTrashBtn.onclick = () => {
-            // Salir de settings antes de ir a trash
             closeSettingsAndRestore();
-            // Ahora ir a trash
             if (currentViewMode === 'filtered') currentViewMode = 'filtered_trash';
             else if (currentViewMode === 'excluded') currentViewMode = 'excluded_trash';
             currentTermForView = null;
@@ -459,7 +453,7 @@ function emptyTrash(mode) {
     }
 }
 
-// ========== BARRA SUPERIOR ==========
+// ========== BARRA SUPERIOR (corregida) ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
@@ -469,13 +463,13 @@ function refreshTopBar() {
     else return;
 
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const terms = searches.map(entry => entry.searchTerm).filter((v,i,a)=>a.indexOf(v)===i);
+    const terms = searches.map(entry => entry.searchTerm).filter((v, i, a) => a.indexOf(v) === i);
     let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
+
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
-        fullSearchDiv.innerHTML = html;
     } else {
         html += terms.map(term => `
             <button class="full-search-btn tag-btn" data-term="${term}">
@@ -483,14 +477,14 @@ function refreshTopBar() {
                 <span class="history-delete" data-term="${term}">✖</span>
             </button>
         `).join('');
-        fullSearchDiv.innerHTML = html;
     }
+    fullSearchDiv.innerHTML = html;
 
+    // Asignar eventos
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
-            if (isSettingsView) return;
             currentTermForView = null;
             currentSort = 'date';
             updateView();
@@ -499,7 +493,6 @@ function refreshTopBar() {
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
-            if (isSettingsView) return;
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
             updateView();
@@ -510,6 +503,7 @@ function refreshTopBar() {
             e.stopPropagation();
             const term = btn.dataset.term;
             if (isSettingsView) closeSettingsAndRestore();
+
             if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
                 moveTermToTrash(term, currentViewMode);
             } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
@@ -519,7 +513,7 @@ function refreshTopBar() {
                 localStorage.setItem(trashKey, JSON.stringify(trash));
                 if (currentTermForView === term) currentTermForView = null;
                 updateView();
-                refreshTopBar();
+                refreshTopBar(); // actualizar tags de la papelera
             }
         };
     });
