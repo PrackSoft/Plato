@@ -1,11 +1,14 @@
-// script.js - Modos independientes con enriquecimiento de datos (videos.list)
+// script.js - Con papeleras (trash) independientes por modo
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
 const MAX_RESULTS_PER_PAGE = 50;
 const MAX_RESULTS_PER_TERM = 500;
+const MAX_TRASH_PER_TERM = 200; // Límite de películas por término en la papelera
 const FILTERED_SEARCH_KEY = 'plato_filtered_searches';
 const EXCLUDED_SEARCH_KEY = 'plato_excluded_searches';
+const FILTERED_TRASH_KEY = 'plato_filtered_trash';
+const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
@@ -30,14 +33,14 @@ let nextPageToken = null;
 let currentQuery = '';
 let allResults = [];
 let currentSearchTerm = '';
-let currentViewMode = 'filtered';
+let currentViewMode = 'filtered'; // 'filtered', 'excluded', 'filtered_trash', 'excluded_trash'
 let currentSort = 'date';
 let currentTermForView = null;
 
 let previousViewState = null;
 let isSettingsView = false;
 
-// ========== Funciones auxiliares ==========
+// ========== Funciones auxiliares (sin cambios) ==========
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -68,6 +71,7 @@ function sortMovies(movies, primarySort) {
     return sorted;
 }
 
+// Renderizado común (usa resultsGrid, resultsStats, resultsTitle)
 function renderMovies(movies, sortBy, titlePrefix) {
     const sorted = sortMovies(movies, sortBy);
     const isDateSort = (sortBy === 'date');
@@ -101,7 +105,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
             }
             html += `<div class="date-group"><div class="group-date">${label}</div><div class="results-group">`;
             html += movieList.map(movie => `
-                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, ${currentViewMode})'>
                     <img src="${movie.imageUrl}" alt="${movie.title}">
                     <div class="info">
                         <h3>${escapeHtml(movie.title)}</h3>
@@ -115,7 +119,7 @@ function renderMovies(movies, sortBy, titlePrefix) {
         resultsGrid.style.display = 'block';
     } else {
         resultsGrid.innerHTML = sorted.map(movie => `
-            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")})'>
+            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, ${currentViewMode})'>
                 <img src="${movie.imageUrl}" alt="${movie.title}">
                 <div class="info">
                     <h3>${escapeHtml(movie.title)}</h3>
@@ -132,14 +136,30 @@ function renderMovies(movies, sortBy, titlePrefix) {
     buttons.forEach(btn => {
         btn.onclick = () => {
             currentSort = btn.dataset.sort;
-            if (!isSettingsView) updateView();
+            updateView();
         };
     });
 }
 
+// Actualiza la vista según currentViewMode, currentTermForView, currentSort
 function updateView() {
     if (isSettingsView) return;
-    const storageKey = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let storageKey, titlePrefixBase;
+    const isTrash = currentViewMode.includes('trash');
+    if (currentViewMode === 'filtered') {
+        storageKey = FILTERED_SEARCH_KEY;
+        titlePrefixBase = 'Saved Free Movies';
+    } else if (currentViewMode === 'excluded') {
+        storageKey = EXCLUDED_SEARCH_KEY;
+        titlePrefixBase = 'All Excluded Results';
+    } else if (currentViewMode === 'filtered_trash') {
+        storageKey = FILTERED_TRASH_KEY;
+        titlePrefixBase = 'Trash – Free Movies';
+    } else if (currentViewMode === 'excluded_trash') {
+        storageKey = EXCLUDED_TRASH_KEY;
+        titlePrefixBase = 'Trash – Excluded Results';
+    }
+
     const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     let movies = [];
     if (currentTermForView) {
@@ -158,17 +178,13 @@ function updateView() {
         });
         movies = unique;
     }
-    const titleMap = {
-        filtered: currentTermForView ? `Free Movies: "${currentTermForView}"` : 'All Saved Free Movies',
-        excluded: currentTermForView ? `Excluded (Non‑Free) results for "${currentTermForView}"` : 'All Excluded Results'
-    };
     const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : 'by channel');
-    const titlePrefix = `${titleMap[currentViewMode]} (${sortLabel})`;
+    const titlePrefix = currentTermForView ? `${titlePrefixBase}: "${currentTermForView}" (${sortLabel})` : `${titlePrefixBase} (${sortLabel})`;
     renderMovies(movies, currentSort, titlePrefix);
 }
 
 function updateSettingsIcon() {
-    if (currentViewMode === 'filtered') {
+    if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
         settingsBtn.innerHTML = 'settings_heart';
         settingsBtn.title = 'Settings for Free Movies';
     } else {
@@ -177,6 +193,7 @@ function updateSettingsIcon() {
     }
 }
 
+// Muestra la vista de ajustes (ya existente)
 function showSettings() {
     previousViewState = {
         viewMode: currentViewMode,
@@ -185,11 +202,13 @@ function showSettings() {
     };
     isSettingsView = true;
     resultsTitle.innerText = 'Settings';
-    const currentPrefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
+    const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
+    // Añadir botón para ir a la papelera (si no estamos ya en ella)
+    const trashLink = `<button id="goToTrashBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px; margin-top: 20px;">🗑️ Go to Trash</button>`;
     resultsGrid.innerHTML = `
         <div style="background: #1a1a1a; padding: 20px; border-radius: 12px; max-width: 500px; margin: 0 auto;">
-            <h3 style="margin-bottom: 20px;">Display options for ${currentViewMode === 'filtered' ? 'Free Movies' : 'Excluded Results'}</h3>
+            <h3 style="margin-bottom: 20px;">Display options for ${(currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Free Movies' : 'Excluded Results'}</h3>
             <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
                 <input type="checkbox" id="showExtraInfoCheckbox" ${currentPrefValue ? 'checked' : ''}>
                 <span>Show technical information in movie modal (ID, dates, etc.)</span>
@@ -197,6 +216,7 @@ function showSettings() {
             <div style="margin-top: 30px;">
                 <button id="backFromSettingsBtn" class="secondary-btn" style="background: #2a2a2a; padding: 8px 20px; border-radius: 20px;">← Back</button>
             </div>
+            ${trashLink}
         </div>
     `;
     resultsStats.innerHTML = '';
@@ -220,7 +240,31 @@ function showSettings() {
             refreshTopBar();
             configureTrashButton();
             updateSettingsIcon();
-            if (currentViewMode === 'excluded') {
+            if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
+                modeToggle.classList.add('excluded-mode');
+                document.body.classList.add('excluded-mode');
+            } else {
+                modeToggle.classList.remove('excluded-mode');
+                document.body.classList.remove('excluded-mode');
+            }
+        };
+    }
+    const goToTrashBtn = document.getElementById('goToTrashBtn');
+    if (goToTrashBtn) {
+        goToTrashBtn.onclick = () => {
+            isSettingsView = false;
+            if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
+                currentViewMode = 'filtered_trash';
+            } else {
+                currentViewMode = 'excluded_trash';
+            }
+            currentTermForView = null;
+            currentSort = 'date';
+            updateView();
+            refreshTopBar();        // refrescará la barra con los tags de la papelera (si los hubiera)
+            configureTrashButton(); // el botón de borrar todo ahora vaciará la papelera
+            updateSettingsIcon();
+            if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
                 modeToggle.classList.add('excluded-mode');
                 document.body.classList.add('excluded-mode');
             } else {
@@ -231,7 +275,7 @@ function showSettings() {
     }
 }
 
-// Función guardar resultados enriquecidos (ahora con más campos)
+// Guardar resultados enriquecidos (sin cambios, ya guarda en las claves principales)
 function saveSearchResults(searchTerm, enrichedItems) {
     const filteredItems = [];
     const excludedItems = [];
@@ -242,11 +286,10 @@ function saveSearchResults(searchTerm, enrichedItems) {
             channel: item.channel,
             imageUrl: item.imageUrl,
             url: item.url,
-            description: item.description,       // descripción completa
+            description: item.description,
             publishedAt: item.publishedAt,
             searchTerm: searchTerm,
             date: new Date().toISOString(),
-            // nuevos campos
             duration: item.duration,
             viewCount: item.viewCount,
             likeCount: item.likeCount,
@@ -280,12 +323,210 @@ function saveSearchResults(searchTerm, enrichedItems) {
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
+// ========== GESTIÓN DE PAPELERA ==========
+function getTrashKey(mode) {
+    return (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_TRASH_KEY : EXCLUDED_TRASH_KEY;
+}
+
+// Mover una película individual a la papelera
+function moveMovieToTrash(movie, mode) {
+    const trashKey = getTrashKey(mode);
+    let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+    const term = movie.searchTerm;
+    let termEntry = trash.find(entry => entry.searchTerm === term);
+    if (!termEntry) {
+        termEntry = { searchTerm: term, date: new Date().toISOString(), results: [] };
+        trash.unshift(termEntry);
+    }
+    // Añadir la película con deletedAt
+    const movieWithDeleted = { ...movie, deletedAt: new Date().toISOString() };
+    // Evitar duplicados (si ya existe en la papelera, no añadir de nuevo)
+    const exists = termEntry.results.some(m => m.id === movie.id);
+    if (!exists) {
+        termEntry.results.push(movieWithDeleted);
+        // Ordenar por deletedAt descendente (más reciente primero) y truncar a MAX_TRASH_PER_TERM
+        termEntry.results.sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+        termEntry.results = termEntry.results.slice(0, MAX_TRASH_PER_TERM);
+        termEntry.date = new Date().toISOString(); // actualizar fecha del término
+    }
+    // Guardar papelera
+    localStorage.setItem(trashKey, JSON.stringify(trash));
+    // Eliminar la película de la bolsa principal
+    let mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+    let termMain = main.find(entry => entry.searchTerm === term);
+    if (termMain) {
+        termMain.results = termMain.results.filter(m => m.id !== movie.id);
+        if (termMain.results.length === 0) {
+            main = main.filter(entry => entry.searchTerm !== term);
+        } else {
+            // actualizar fecha del término (por si acaso)
+            termMain.date = new Date().toISOString();
+        }
+        localStorage.setItem(mainKey, JSON.stringify(main));
+    }
+    // Actualizar la vista si es necesario
+    if (currentViewMode === mode && currentTermForView === term) {
+        updateView();
+    } else if (currentViewMode === mode && currentTermForView === null) {
+        updateView();
+    }
+    refreshTopBar(); // actualiza los tags de la vista principal (puede desaparecer el tag si se vació)
+}
+
+// Mover un término completo a la papelera
+function moveTermToTrash(term, mode) {
+    const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+    const termEntry = main.find(entry => entry.searchTerm === term);
+    if (!termEntry) return;
+    // Copiar todas las películas del término a la papelera, añadiendo deletedAt
+    const moviesWithDeleted = termEntry.results.map(movie => ({ ...movie, deletedAt: new Date().toISOString() }));
+    const trashKey = getTrashKey(mode);
+    let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+    let trashTermEntry = trash.find(entry => entry.searchTerm === term);
+    if (trashTermEntry) {
+        // Fusionar, evitando duplicados por id
+        const existingIds = new Set(trashTermEntry.results.map(m => m.id));
+        const newMovies = moviesWithDeleted.filter(m => !existingIds.has(m.id));
+        trashTermEntry.results.push(...newMovies);
+        trashTermEntry.results.sort((a,b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+        trashTermEntry.results = trashTermEntry.results.slice(0, MAX_TRASH_PER_TERM);
+        trashTermEntry.date = new Date().toISOString();
+    } else {
+        trash.unshift({
+            searchTerm: term,
+            date: new Date().toISOString(),
+            results: moviesWithDeleted.slice(0, MAX_TRASH_PER_TERM)
+        });
+    }
+    localStorage.setItem(trashKey, JSON.stringify(trash));
+    // Eliminar el término de la bolsa principal
+    main = main.filter(entry => entry.searchTerm !== term);
+    localStorage.setItem(mainKey, JSON.stringify(main));
+    // Actualizar vista
+    if (currentViewMode === mode && (currentTermForView === term || currentTermForView === null)) {
+        currentTermForView = null;
+        currentSort = 'date';
+        updateView();
+    }
+    refreshTopBar();
+}
+
+// Restaurar una película desde la papelera
+function restoreMovieFromTrash(movie, mode) {
+    const trashKey = getTrashKey(mode);
+    let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+    const term = movie.searchTerm;
+    const termIndex = trash.findIndex(entry => entry.searchTerm === term);
+    if (termIndex === -1) return;
+    const termEntry = trash[termIndex];
+    // Eliminar la película de la papelera
+    const newResults = termEntry.results.filter(m => m.id !== movie.id);
+    if (newResults.length === 0) {
+        trash.splice(termIndex, 1);
+    } else {
+        termEntry.results = newResults;
+        termEntry.date = new Date().toISOString();
+    }
+    localStorage.setItem(trashKey, JSON.stringify(trash));
+    // Añadir la película a la bolsa principal (sin el campo deletedAt)
+    const { deletedAt, ...movieClean } = movie;
+    const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+    let mainTermEntry = main.find(entry => entry.searchTerm === term);
+    if (mainTermEntry) {
+        const exists = mainTermEntry.results.some(m => m.id === movieClean.id);
+        if (!exists) {
+            mainTermEntry.results.push(movieClean);
+            mainTermEntry.results.sort((a,b) => new Date(b.date) - new Date(a.date));
+            mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
+            mainTermEntry.date = new Date().toISOString();
+        }
+    } else {
+        main.unshift({
+            searchTerm: term,
+            date: new Date().toISOString(),
+            results: [movieClean]
+        });
+    }
+    localStorage.setItem(mainKey, JSON.stringify(main));
+    // Actualizar vista si estamos en la papelera o en principal
+    if (currentViewMode === mode || currentViewMode === (mode + '_trash')) {
+        updateView();
+        refreshTopBar();
+    }
+}
+
+// Restaurar un término completo desde la papelera
+function restoreTermFromTrash(term, mode) {
+    const trashKey = getTrashKey(mode);
+    let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+    const trashTermIndex = trash.findIndex(entry => entry.searchTerm === term);
+    if (trashTermIndex === -1) return;
+    const trashTermEntry = trash[trashTermIndex];
+    // Eliminar el campo deletedAt de cada película
+    const cleanedMovies = trashTermEntry.results.map(({ deletedAt, ...movie }) => movie);
+    // Añadir a la bolsa principal
+    const mainKey = (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+    let mainTermEntry = main.find(entry => entry.searchTerm === term);
+    if (mainTermEntry) {
+        const existingIds = new Set(mainTermEntry.results.map(m => m.id));
+        const newMovies = cleanedMovies.filter(m => !existingIds.has(m.id));
+        mainTermEntry.results.push(...newMovies);
+        mainTermEntry.results.sort((a,b) => new Date(b.date) - new Date(a.date));
+        mainTermEntry.results = mainTermEntry.results.slice(0, MAX_RESULTS_PER_TERM);
+        mainTermEntry.date = new Date().toISOString();
+    } else {
+        main.unshift({
+            searchTerm: term,
+            date: new Date().toISOString(),
+            results: cleanedMovies.slice(0, MAX_RESULTS_PER_TERM)
+        });
+    }
+    localStorage.setItem(mainKey, JSON.stringify(main));
+    // Eliminar el término de la papelera
+    trash.splice(trashTermIndex, 1);
+    localStorage.setItem(trashKey, JSON.stringify(trash));
+    // Actualizar vista
+    if (currentViewMode === mode || currentViewMode === (mode + '_trash')) {
+        updateView();
+        refreshTopBar();
+    }
+}
+
+// Vaciar toda la papelera (modo actual)
+function emptyTrash(mode) {
+    const trashKey = getTrashKey(mode);
+    localStorage.setItem(trashKey, JSON.stringify([]));
+    if (currentViewMode === (mode + '_trash')) {
+        currentTermForView = null;
+        updateView();
+        refreshTopBar();
+    }
+}
+
+// ========== BARRA SUPERIOR (tags) ==========
 function refreshTopBar() {
-    const currentBucket = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
-    const searches = JSON.parse(localStorage.getItem(currentBucket) || '[]');
+    // Los tags se muestran según la vista actual (principal o papelera)
+    let storageKey;
+    if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
+    else if (currentViewMode === 'excluded') storageKey = EXCLUDED_SEARCH_KEY;
+    else if (currentViewMode === 'filtered_trash') storageKey = FILTERED_TRASH_KEY;
+    else if (currentViewMode === 'excluded_trash') storageKey = EXCLUDED_TRASH_KEY;
+    else return;
+
+    const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     const terms = searches.map(entry => entry.searchTerm).filter((v,i,a)=>a.indexOf(v)===i);
-    const filterIcon = (currentViewMode === 'filtered') ? 'filter_alt' : 'video_search';
-    const filterTitle = (currentViewMode === 'filtered') ? 'Show all Free Movies' : 'Show all Excluded Results';
+    let filterIcon, filterTitle;
+    if (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') {
+        filterIcon = 'filter_alt';
+        filterTitle = 'Show all Free Movies';
+    } else {
+        filterIcon = 'video_search';
+        filterTitle = 'Show all Excluded Results';
+    }
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
@@ -317,69 +558,90 @@ function refreshTopBar() {
             updateView();
         };
     });
-
+    // La X ahora mueve el término completo a la papelera (si estamos en vista principal) o lo elimina definitivamente si estamos en papelera?
+    // Decidido: en vista principal, mover a papelera; en papelera, eliminar definitivamente.
     document.querySelectorAll('.history-delete').forEach(btn => {
         btn.onclick = (e) => {
             e.stopPropagation();
             const term = btn.dataset.term;
-            const bucketToUpdate = (currentViewMode === 'filtered') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
-            let searches = JSON.parse(localStorage.getItem(bucketToUpdate) || '[]');
-            searches = searches.filter(entry => entry.searchTerm !== term);
-            localStorage.setItem(bucketToUpdate, JSON.stringify(searches));
-            if (currentTermForView === term) {
-                currentTermForView = null;
-                currentSort = 'date';
-                updateView();
-            } else {
-                updateView();
+            if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
+                // Mover a papelera
+                moveTermToTrash(term, currentViewMode);
+            } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
+                // Eliminar definitivamente de la papelera
+                const trashKey = getTrashKey(currentViewMode);
+                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+                trash = trash.filter(entry => entry.searchTerm !== term);
+                localStorage.setItem(trashKey, JSON.stringify(trash));
+                if (currentTermForView === term) {
+                    currentTermForView = null;
+                    currentSort = 'date';
+                    updateView();
+                } else {
+                    updateView();
+                }
+                refreshTopBar(); // actualizar tags de la papelera
             }
-            refreshTopBar();
         };
     });
 }
 
+// ========== BOTÓN DE BORRAR (según modo) ==========
 function configureTrashButton() {
     if (currentViewMode === 'filtered') {
         clearStorageBtn.onclick = () => {
-            if (confirm('Delete ALL Free Movies data? (This will erase all filtered results from "YouTube Movies" channel)')) {
-                localStorage.removeItem(FILTERED_SEARCH_KEY);
+            if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
+                // Mover todas las películas a la papelera (término a término)
+                const mainKey = FILTERED_SEARCH_KEY;
+                let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+                for (const termEntry of main) {
+                    moveTermToTrash(termEntry.searchTerm, 'filtered');
+                }
+                // Después de mover, actualizar vista
                 refreshTopBar();
                 if (currentViewMode === 'filtered') {
                     currentTermForView = null;
                     currentSort = 'date';
                     updateView();
                 }
-                alert('All Free Movies data cleared.');
             }
         };
-        clearStorageBtn.title = 'Delete all Free Movies data';
-    } else {
+        clearStorageBtn.title = 'Move all Free Movies to trash';
+    } else if (currentViewMode === 'excluded') {
         clearStorageBtn.onclick = () => {
-            if (confirm('Delete ALL Excluded data? (This will erase all results that are not from "YouTube Movies" channel)')) {
-                localStorage.removeItem(EXCLUDED_SEARCH_KEY);
+            if (confirm('Delete ALL Excluded data? (This will move them to trash)')) {
+                const mainKey = EXCLUDED_SEARCH_KEY;
+                let main = JSON.parse(localStorage.getItem(mainKey) || '[]');
+                for (const termEntry of main) {
+                    moveTermToTrash(termEntry.searchTerm, 'excluded');
+                }
                 refreshTopBar();
                 if (currentViewMode === 'excluded') {
                     currentTermForView = null;
                     currentSort = 'date';
                     updateView();
                 }
-                alert('All Excluded data cleared.');
             }
         };
-        clearStorageBtn.title = 'Delete all Excluded results';
+        clearStorageBtn.title = 'Move all Excluded data to trash';
+    } else if (currentViewMode === 'filtered_trash') {
+        clearStorageBtn.onclick = () => {
+            if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) {
+                emptyTrash('filtered');
+            }
+        };
+        clearStorageBtn.title = 'Empty Free Movies trash';
+    } else if (currentViewMode === 'excluded_trash') {
+        clearStorageBtn.onclick = () => {
+            if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) {
+                emptyTrash('excluded');
+            }
+        };
+        clearStorageBtn.title = 'Empty Excluded Results trash';
     }
 }
 
-settingsBtn.onclick = () => {
-    if (!isSettingsView) {
-        showSettings();
-    } else {
-        const backBtn = document.getElementById('backFromSettingsBtn');
-        if (backBtn) backBtn.click();
-    }
-};
-
-// ========== BÚSQUEDA PRINCIPAL CON SEGUNDA LLAMADA A videos.list ==========
+// ========== BÚSQUEDA PRINCIPAL ==========
 async function performSearch(query) {
     loadingDiv.style.display = 'flex';
     try {
@@ -394,16 +656,13 @@ async function performSearch(query) {
         const searchData = await searchResponse.json();
         if (!searchData.items) return;
 
-        // Extraer IDs de los videos
         const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
         if (videoIds.length === 0) return;
 
-        // Segunda llamada a videos.list para obtener datos completos
         const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
         const videosResponse = await fetch(videosUrl);
         const videosData = await videosResponse.json();
 
-        // Crear un mapa para acceder rápidamente a los datos enriquecidos
         const detailsMap = new Map();
         if (videosData.items) {
             videosData.items.forEach(video => {
@@ -426,7 +685,6 @@ async function performSearch(query) {
             });
         }
 
-        // Fusionar los datos en un array de objetos enriquecidos
         const enrichedItems = searchData.items.map(item => {
             const videoId = item.id.videoId;
             const extra = detailsMap.get(videoId) || {};
@@ -439,7 +697,6 @@ async function performSearch(query) {
                 url: `https://youtube.com/watch?v=${videoId}`,
                 description: extra.fullDescription || item.snippet.description,
                 publishedAt: extra.publishedAt || item.snippet.publishedAt,
-                // nuevos campos
                 duration: extra.duration,
                 viewCount: extra.viewCount,
                 likeCount: extra.likeCount,
@@ -448,7 +705,6 @@ async function performSearch(query) {
             };
         });
 
-        // Guardar resultados enriquecidos
         saveSearchResults(currentSearchTerm, enrichedItems);
         currentViewMode = 'filtered';
         currentTermForView = currentSearchTerm;
@@ -457,7 +713,6 @@ async function performSearch(query) {
         refreshTopBar();
         if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
         if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
-        currentViewMode = 'filtered';
         configureTrashButton();
         updateSettingsIcon();
         if (isSettingsView) {
@@ -481,11 +736,14 @@ searchBtn.onclick = async () => {
 
 function toggleMode() {
     if (isSettingsView) return;
-    currentViewMode = (currentViewMode === 'filtered') ? 'excluded' : 'filtered';
+    if (currentViewMode === 'filtered') currentViewMode = 'excluded';
+    else if (currentViewMode === 'excluded') currentViewMode = 'filtered';
+    else if (currentViewMode === 'filtered_trash') currentViewMode = 'excluded_trash';
+    else if (currentViewMode === 'excluded_trash') currentViewMode = 'filtered_trash';
     currentTermForView = null;
     currentSort = 'date';
     updateView();
-    if (currentViewMode === 'excluded') {
+    if (currentViewMode === 'excluded' || currentViewMode === 'excluded_trash') {
         modeToggle.classList.add('excluded-mode');
         document.body.classList.add('excluded-mode');
     } else {
@@ -510,10 +768,10 @@ function init() {
 }
 init();
 
-// ========== MODAL CON INFORMACIÓN ENRIQUECIDA ==========
-function openModal(movie) {
+// ========== MODAL CON OPCIONES DE PAPELERA ==========
+function openModal(movie, sourceMode) {
     if (!modal) return;
-    // Formatear duración (PT1H2M3S -> 1:02:03)
+    // Formatear duración
     let formattedDuration = 'Unknown';
     if (movie.duration && movie.duration !== 'N/A') {
         const match = movie.duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
@@ -522,6 +780,10 @@ function openModal(movie) {
         const seconds = (match[3] ? match[3].slice(0,-1) : 0);
         formattedDuration = `${hours ? hours+':' : ''}${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
     }
+
+    // Determinar si estamos en papelera (sourceMode contiene 'trash')
+    const isInTrash = sourceMode.includes('trash');
+    const mode = sourceMode.includes('filtered') ? 'filtered' : 'excluded';
 
     modalBody.innerHTML = `
         <div class="modal-header">
@@ -535,8 +797,14 @@ function openModal(movie) {
         <p><strong>Duration:</strong> ${formattedDuration}</p>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
+        ${isInTrash ? `
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="restoreBtn" class="full-search-btn">Restore</button>
+                <button id="permanentDeleteBtn" class="full-search-btn" style="background:#990000;">Delete Permanently</button>
+            </div>
+        ` : ''}
     `;
-    const prefKey = (currentViewMode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
+    const prefKey = (mode === 'filtered') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const showExtra = localStorage.getItem(prefKey) === 'true';
     if (showExtra) {
         const extraDiv = document.createElement('div');
@@ -558,19 +826,66 @@ function openModal(movie) {
     }
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
+
     const deleteBtn = modalBody.querySelector('.modal-delete-btn');
-    if (deleteBtn) deleteBtn.onclick = () => {
-        let filtered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
-        let excluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-        const removeFromArray = (arr, movieId) => arr.map(entry => ({ ...entry, results: entry.results.filter(m => m.id !== movieId) })).filter(entry => entry.results.length > 0);
-        const newFiltered = removeFromArray(filtered, movie.id);
-        const newExcluded = removeFromArray(excluded, movie.id);
-        localStorage.setItem(FILTERED_SEARCH_KEY, JSON.stringify(newFiltered));
-        localStorage.setItem(EXCLUDED_SEARCH_KEY, JSON.stringify(newExcluded));
-        if (!isSettingsView) updateView();
-        modal.style.display = 'none';
-    };
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            if (isInTrash) {
+                // Eliminar permanentemente de la papelera
+                const trashKey = getTrashKey(mode);
+                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+                let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
+                if (termEntry) {
+                    termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
+                    if (termEntry.results.length === 0) {
+                        trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
+                    }
+                    localStorage.setItem(trashKey, JSON.stringify(trash));
+                }
+                modal.style.display = 'none';
+                if (currentViewMode === (mode + '_trash')) updateView();
+                refreshTopBar();
+            } else {
+                // Mover a papelera
+                moveMovieToTrash(movie, mode);
+                modal.style.display = 'none';
+                if (currentViewMode === mode) updateView();
+                refreshTopBar();
+            }
+        };
+    }
+
+    if (isInTrash) {
+        const restoreBtn = document.getElementById('restoreBtn');
+        if (restoreBtn) {
+            restoreBtn.onclick = () => {
+                restoreMovieFromTrash(movie, mode);
+                modal.style.display = 'none';
+                if (currentViewMode === (mode + '_trash')) updateView();
+                refreshTopBar();
+            };
+        }
+        const permanentDeleteBtn = document.getElementById('permanentDeleteBtn');
+        if (permanentDeleteBtn) {
+            permanentDeleteBtn.onclick = () => {
+                const trashKey = getTrashKey(mode);
+                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+                let termEntry = trash.find(entry => entry.searchTerm === movie.searchTerm);
+                if (termEntry) {
+                    termEntry.results = termEntry.results.filter(m => m.id !== movie.id);
+                    if (termEntry.results.length === 0) {
+                        trash = trash.filter(entry => entry.searchTerm !== movie.searchTerm);
+                    }
+                    localStorage.setItem(trashKey, JSON.stringify(trash));
+                }
+                modal.style.display = 'none';
+                if (currentViewMode === (mode + '_trash')) updateView();
+                refreshTopBar();
+            };
+        }
+    }
 }
+
 if (closeModal) closeModal.onclick = () => { modal.style.display = 'none'; };
 if (watchBtn) watchBtn.onclick = () => window.open(currentMovieUrl);
 window.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
