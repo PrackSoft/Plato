@@ -1,4 +1,4 @@
-// script.js - Con papelera, vista de Settings y orden por vistas
+// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -12,7 +12,7 @@ const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
-const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count'; // Nueva preferencia
+const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -479,7 +479,6 @@ function exitTrashAndShowAll() {
     } else if (currentViewMode === 'excluded_trash') {
         currentViewMode = 'excluded';
     } else {
-        // Si no está en trash, solo mostrar todos los términos
         currentTermForView = null;
         currentSort = 'date';
         updateView();
@@ -500,109 +499,8 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BARRA SUPERIOR (corregida, sin cloneNode) ==========
-function refreshTopBar() {
-    let storageKey;
-    if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
-    else if (currentViewMode === 'excluded') storageKey = EXCLUDED_SEARCH_KEY;
-    else if (currentViewMode === 'filtered_trash') storageKey = FILTERED_TRASH_KEY;
-    else if (currentViewMode === 'excluded_trash') storageKey = EXCLUDED_TRASH_KEY;
-    else return;
-
-    const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
-    const terms = searches.map(entry => entry.searchTerm).filter((v, i, a) => a.indexOf(v) === i);
-    let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
-    let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
-
-    let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
-    if (terms.length === 0) {
-        html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
-    } else {
-        html += terms.map(term => `
-            <button class="full-search-btn tag-btn" data-term="${term}">
-                ${term}
-                <span class="history-delete" data-term="${term}">✖</span>
-            </button>
-        `).join('');
-    }
-    fullSearchDiv.innerHTML = html;
-
-    const unionIcon = document.getElementById('unionIcon');
-    if (unionIcon) {
-        unionIcon.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            exitTrashAndShowAll();
-        };
-    }
-    document.querySelectorAll('.tag-btn').forEach(btn => {
-        btn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            currentTermForView = btn.dataset.term;
-            currentSort = 'date';
-            updateView();
-        };
-    });
-    document.querySelectorAll('.history-delete').forEach(btn => {
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            const term = btn.dataset.term;
-            if (isSettingsView) closeSettingsAndRestore();
-
-            if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
-                moveTermToTrash(term, currentViewMode);
-            } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
-                const trashKey = getTrashKey(currentViewMode);
-                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
-                trash = trash.filter(entry => entry.searchTerm !== term);
-                localStorage.setItem(trashKey, JSON.stringify(trash));
-                if (currentTermForView === term) currentTermForView = null;
-                updateView();
-                refreshTopBar();
-            }
-        };
-    });
-}
-
-function configureTrashButton() {
-    if (currentViewMode === 'filtered') {
-        clearStorageBtn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
-                let main = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
-                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'filtered');
-                refreshTopBar();
-                if (currentViewMode === 'filtered') { currentTermForView = null; updateView(); }
-            }
-        };
-        clearStorageBtn.title = 'Move all Free Movies to trash';
-    } else if (currentViewMode === 'excluded') {
-        clearStorageBtn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            if (confirm('Delete ALL Excluded data? (This will move them to trash)')) {
-                let main = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'excluded');
-                refreshTopBar();
-                if (currentViewMode === 'excluded') { currentTermForView = null; updateView(); }
-            }
-        };
-        clearStorageBtn.title = 'Move all Excluded data to trash';
-    } else if (currentViewMode === 'filtered_trash') {
-        clearStorageBtn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) emptyTrash('filtered');
-        };
-        clearStorageBtn.title = 'Empty Free Movies trash';
-    } else if (currentViewMode === 'excluded_trash') {
-        clearStorageBtn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) emptyTrash('excluded');
-        };
-        clearStorageBtn.title = 'Empty Excluded Results trash';
-    }
-}
-
-// ========== BÚSQUEDA PRINCIPAL ==========
-async function performSearch(query) {
+// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED ==========
+async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
     loadingDiv.style.display = 'flex';
@@ -611,8 +509,7 @@ async function performSearch(query) {
             ? `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`
             : `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query + ' Películas Gratis YouTube Películas y TV de YouTube')}&key=${API_KEY}`;
         
-        // Aplicar orden por vistas si está activado
-        const orderByViews = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+        const orderByViews = forceOrderByViewCount || (localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true');
         if (orderByViews) {
             url += '&order=viewCount';
         }
@@ -682,6 +579,11 @@ async function performSearch(query) {
     }
 }
 
+async function performTopViewedSearch() {
+    currentSearchTerm = "Top Viewed";
+    await performSearch("movie", true);  // fuerza orden por vistas
+}
+
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
     if (!baseQuery) return;
@@ -711,6 +613,115 @@ function toggleMode() {
     updateSettingsIcon();
 }
 modeToggle.onclick = toggleMode;
+
+// ========== BARRA SUPERIOR (con botón Top Viewed) ==========
+function refreshTopBar() {
+    let storageKey;
+    if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
+    else if (currentViewMode === 'excluded') storageKey = EXCLUDED_SEARCH_KEY;
+    else if (currentViewMode === 'filtered_trash') storageKey = FILTERED_TRASH_KEY;
+    else if (currentViewMode === 'excluded_trash') storageKey = EXCLUDED_TRASH_KEY;
+    else return;
+
+    const searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    const terms = searches.map(entry => entry.searchTerm).filter((v, i, a) => a.indexOf(v) === i);
+    let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
+    let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
+
+    let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>
+                <button class="full-search-btn material-symbols-outlined" id="topViewedBtn" title="Top 50 most viewed movies">trending_up</button>`;
+    if (terms.length === 0) {
+        html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
+    } else {
+        html += terms.map(term => `
+            <button class="full-search-btn tag-btn" data-term="${term}">
+                ${term}
+                <span class="history-delete" data-term="${term}">✖</span>
+            </button>
+        `).join('');
+    }
+    fullSearchDiv.innerHTML = html;
+
+    const unionIcon = document.getElementById('unionIcon');
+    if (unionIcon) {
+        unionIcon.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            exitTrashAndShowAll();
+        };
+    }
+    const topViewedBtn = document.getElementById('topViewedBtn');
+    if (topViewedBtn) {
+        topViewedBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            performTopViewedSearch();
+        };
+    }
+    document.querySelectorAll('.tag-btn').forEach(btn => {
+        btn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            currentTermForView = btn.dataset.term;
+            currentSort = 'date';
+            updateView();
+        };
+    });
+    document.querySelectorAll('.history-delete').forEach(btn => {
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            const term = btn.dataset.term;
+            if (isSettingsView) closeSettingsAndRestore();
+
+            if (currentViewMode === 'filtered' || currentViewMode === 'excluded') {
+                moveTermToTrash(term, currentViewMode);
+            } else if (currentViewMode === 'filtered_trash' || currentViewMode === 'excluded_trash') {
+                const trashKey = getTrashKey(currentViewMode);
+                let trash = JSON.parse(localStorage.getItem(trashKey) || '[]');
+                trash = trash.filter(entry => entry.searchTerm !== term);
+                localStorage.setItem(trashKey, JSON.stringify(trash));
+                if (currentTermForView === term) currentTermForView = null;
+                updateView();
+                refreshTopBar();
+            }
+        };
+    });
+}
+
+function configureTrashButton() {
+    if (currentViewMode === 'filtered') {
+        clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            if (confirm('Delete ALL Free Movies data? (This will move them to trash)')) {
+                let main = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
+                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'filtered');
+                refreshTopBar();
+                if (currentViewMode === 'filtered') { currentTermForView = null; updateView(); }
+            }
+        };
+        clearStorageBtn.title = 'Move all Free Movies to trash';
+    } else if (currentViewMode === 'excluded') {
+        clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            if (confirm('Delete ALL Excluded data? (This will move them to trash)')) {
+                let main = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
+                for (const termEntry of main) moveTermToTrash(termEntry.searchTerm, 'excluded');
+                refreshTopBar();
+                if (currentViewMode === 'excluded') { currentTermForView = null; updateView(); }
+            }
+        };
+        clearStorageBtn.title = 'Move all Excluded data to trash';
+    } else if (currentViewMode === 'filtered_trash') {
+        clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            if (confirm('Empty trash for Free Movies? (All items will be permanently deleted)')) emptyTrash('filtered');
+        };
+        clearStorageBtn.title = 'Empty Free Movies trash';
+    } else if (currentViewMode === 'excluded_trash') {
+        clearStorageBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            if (confirm('Empty trash for Excluded Results? (All items will be permanently deleted)')) emptyTrash('excluded');
+        };
+        clearStorageBtn.title = 'Empty Excluded Results trash';
+    }
+}
 
 function init() {
     refreshTopBar();
