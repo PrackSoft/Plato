@@ -1,4 +1,4 @@
-// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (con término "movie" por defecto)
+// script.js - Sin búsqueda automática al cargar
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -507,12 +507,10 @@ async function performSearch(query, forceOrderByViewCount = false) {
 
     loadingDiv.style.display = 'flex';
     try {
-        // Construir el término de búsqueda final: si query está vacío, se usa "movie" + términos extra
         let finalQuery;
         if (query && query.trim() !== "") {
             finalQuery = query + EXTRA_SEARCH_TERMS;
         } else {
-            // Si no hay query (búsqueda vacía), usamos "movie" más los términos extra
             finalQuery = "movie" + EXTRA_SEARCH_TERMS;
         }
         
@@ -606,7 +604,6 @@ async function performSearch(query, forceOrderByViewCount = false) {
     }
 }
 
-// "Top Viewed" usa los términos extra solos (sin "movie") y fuerza orden por vistas
 async function performTopViewedSearch() {
     currentSearchTerm = "Top Viewed";
     await performSearch("", true);
@@ -615,7 +612,6 @@ async function performTopViewedSearch() {
 // ========== MANEJADORES ==========
 searchBtn.onclick = async () => {
     let baseQuery = searchInput.value.trim();
-    // Si el campo está vacío, forzamos el término "movie"
     if (baseQuery === "") {
         currentSearchTerm = "movie";
     } else {
@@ -763,7 +759,7 @@ function init() {
     currentTermForView = null;
     currentSort = 'date';
     isSettingsView = false;
-    updateView();
+    updateView();   // Solo muestra datos guardados, NO hace fetch
     updateSettingsIcon();
     settingsBtn.onclick = () => {
         if (!isSettingsView) {
