@@ -1,4 +1,4 @@
-// script.js - Con papelera y vista de Settings integrada (corregido: botón Show all results funciona en trash)
+// script.js - Con papelera, vista de Settings y orden por vistas
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -12,6 +12,7 @@ const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
+const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count'; // Nueva preferencia
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -227,6 +228,8 @@ function showSettings() {
     resultsTitle.innerText = `Settings – ${modeName}`;
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
+    const searchOrderViewCount = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    
     resultsGrid.innerHTML = `
         <div class="settings-section">
             <h3 class="settings-section-title">Display</h3>
@@ -238,6 +241,15 @@ function showSettings() {
             </div>
         </div>
         <div class="settings-section">
+            <h3 class="settings-section-title">Search</h3>
+            <div class="settings-option">
+                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                    <input type="checkbox" id="searchOrderViewCountCheckbox" ${searchOrderViewCount ? 'checked' : ''}>
+                    <span>Buscar las 50 películas más vistas (ordenar por número de vistas)</span>
+                </label>
+            </div>
+        </div>
+        <div class="settings-section">
             <h3 class="settings-section-title">Delete</h3>
             <div class="settings-option">
                 <button id="goToTrashBtn" class="full-search-btn" style="background: #2a2a2a; padding: 6px 18px;">🗑️ Go to Trash</button>
@@ -245,10 +257,17 @@ function showSettings() {
         </div>
     `;
     resultsStats.innerHTML = '';
+    
     const checkbox = document.getElementById('showExtraInfoCheckbox');
     if (checkbox) {
         checkbox.onchange = () => {
             localStorage.setItem(currentPrefKey, checkbox.checked);
+        };
+    }
+    const searchOrderCheckbox = document.getElementById('searchOrderViewCountCheckbox');
+    if (searchOrderCheckbox) {
+        searchOrderCheckbox.onchange = () => {
+            localStorage.setItem(SEARCH_ORDER_VIEW_COUNT, searchOrderCheckbox.checked);
         };
     }
     const goToTrashBtn = document.getElementById('goToTrashBtn');
@@ -508,7 +527,6 @@ function refreshTopBar() {
     }
     fullSearchDiv.innerHTML = html;
 
-    // Asignar eventos sin clonar
     const unionIcon = document.getElementById('unionIcon');
     if (unionIcon) {
         unionIcon.onclick = () => {
@@ -592,6 +610,13 @@ async function performSearch(query) {
         let url = SEARCH_MODE === 'channel'
             ? `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`
             : `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query + ' Películas Gratis YouTube Películas y TV de YouTube')}&key=${API_KEY}`;
+        
+        // Aplicar orden por vistas si está activado
+        const orderByViews = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+        if (orderByViews) {
+            url += '&order=viewCount';
+        }
+        
         const searchResponse = await fetch(url);
         const searchData = await searchResponse.json();
         if (!searchData.items) return;
