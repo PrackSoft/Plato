@@ -14,7 +14,7 @@ const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
 
-const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube';
+const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube Movies';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -609,7 +609,7 @@ async function performTopViewedSearch() {
 // ========== MANEJADORES ==========
 searchBtn.onclick = async () => {
     const baseQuery = searchInput.value.trim();
-    if (!baseQuery) return;
+    //if (!baseQuery) return;
     currentSearchTerm = baseQuery;
     searchInput.value = '';
     await performSearch(currentSearchTerm);
