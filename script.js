@@ -1,4 +1,4 @@
-// script.js - Sin búsqueda automática al cargar
+// script.js - Eliminado el botón fijo trending_up
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -501,7 +501,7 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL (CON TÉRMINOS EXTRA Y "movie" POR DEFECTO) ==========
+// ========== BÚSQUEDA PRINCIPAL ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
@@ -604,11 +604,6 @@ async function performSearch(query, forceOrderByViewCount = false) {
     }
 }
 
-async function performTopViewedSearch() {
-    currentSearchTerm = "Top Viewed";
-    await performSearch("", true);
-}
-
 // ========== MANEJADORES ==========
 searchBtn.onclick = async () => {
     let baseQuery = searchInput.value.trim();
@@ -643,7 +638,7 @@ function toggleMode() {
 }
 modeToggle.onclick = toggleMode;
 
-// ========== BARRA SUPERIOR ==========
+// ========== BARRA SUPERIOR (SIN EL BOTÓN TRENDING_UP) ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
@@ -657,8 +652,8 @@ function refreshTopBar() {
     let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
 
-    let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>
-                <button class="full-search-btn material-symbols-outlined" id="topViewedBtn" title="Top 50 most viewed movies">trending_up</button>`;
+    // Ya no se añade el botón trending_up
+    let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
     } else {
@@ -676,13 +671,6 @@ function refreshTopBar() {
         unionIcon.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
             exitTrashAndShowAll();
-        };
-    }
-    const topViewedBtn = document.getElementById('topViewedBtn');
-    if (topViewedBtn) {
-        topViewedBtn.onclick = () => {
-            if (isSettingsView) closeSettingsAndRestore();
-            performTopViewedSearch();
         };
     }
     document.querySelectorAll('.tag-btn').forEach(btn => {
@@ -759,7 +747,7 @@ function init() {
     currentTermForView = null;
     currentSort = 'date';
     isSettingsView = false;
-    updateView();   // Solo muestra datos guardados, NO hace fetch
+    updateView();
     updateSettingsIcon();
     settingsBtn.onclick = () => {
         if (!isSettingsView) {
