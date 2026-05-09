@@ -1,4 +1,4 @@
-// script.js - Eliminado el botón fijo trending_up
+// script.js - Búsqueda vacía solo cuando el checkbox de "más vistas" está activado
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -511,6 +511,7 @@ async function performSearch(query, forceOrderByViewCount = false) {
         if (query && query.trim() !== "") {
             finalQuery = query + EXTRA_SEARCH_TERMS;
         } else {
+            // Solo se llega aquí si se fuerza la búsqueda vacía (cuando checkbox activado)
             finalQuery = "movie" + EXTRA_SEARCH_TERMS;
         }
         
@@ -608,12 +609,22 @@ async function performSearch(query, forceOrderByViewCount = false) {
 searchBtn.onclick = async () => {
     let baseQuery = searchInput.value.trim();
     if (baseQuery === "") {
+        // Verificar si el checkbox de "más vistas" está activado
+        const orderByViews = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+        if (!orderByViews) {
+            resultsGrid.innerHTML = '<p class="stats">⚠️ Please enable "Buscar las 50 películas más vistas" in Settings to search with an empty field, or type a keyword.</p>';
+            resultsTitle.innerText = 'No search performed';
+            resultsStats.innerHTML = '';
+            return;
+        }
+        // Forzar búsqueda con "movie" y orden por vistas
         currentSearchTerm = "movie";
+        await performSearch(currentSearchTerm, true);  // forceOrderByViewCount = true
     } else {
         currentSearchTerm = baseQuery;
+        await performSearch(currentSearchTerm);
     }
     searchInput.value = '';
-    await performSearch(currentSearchTerm);
 };
 
 function toggleMode() {
@@ -652,7 +663,6 @@ function refreshTopBar() {
     let filterIcon = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'filter_alt' : 'video_search';
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
 
-    // Ya no se añade el botón trending_up
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
