@@ -499,7 +499,7 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED (CON DEBUG) ==========
+// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED (COMPLETA) ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
@@ -516,32 +516,102 @@ async function performSearch(query, forceOrderByViewCount = false) {
             url += '&order=viewCount';
         }
         
-        console.log("Fetching URL:", url); // DEBUG
+        console.log("Fetching URL:", url);
         
         const searchResponse = await fetch(url);
         const searchData = await searchResponse.json();
-        console.log("Search response:", searchData); // DEBUG
+        console.log("Search response:", searchData);
         
         if (!searchData.items || searchData.items.length === 0) {
             console.error("No items returned from API");
             resultsGrid.innerHTML = '<p class="stats">No movies found. Check console.</p>';
+            loadingDiv.style.display = 'none';
             return;
         }
         
         const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
-        if (videoIds.length === 0) return;
+        if (videoIds.length === 0) {
+            loadingDiv.style.display = 'none';
+            return;
+        }
+        
         const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
         const videosResponse = await fetch(videosUrl);
         const videosData = await videosResponse.json();
-        // ... resto igual
+        
+        const detailsMap = new Map();
+        if (videosData.items) {
+            videosData.items.forEach(video => {
+                const snippet = video.snippet;
+                const stats = video.statistics || {};
+                const cd = video.contentDetails || {};
+                detailsMap.set(video.id, {
+                    fullDescription: snippet.description,
+                    tags: snippet.tags || [],
+                    viewCount: stats.viewCount || 'N/A',
+                    likeCount: stats.likeCount || 'N/A',
+                    commentCount: stats.commentCount || 'N/A',
+                    duration: cd.duration || 'N/A',
+                    channelId: snippet.channelId,
+                    channelTitle: snippet.channelTitle,
+                    title: snippet.title,
+                    publishedAt: snippet.publishedAt,
+                    thumbnails: snippet.thumbnails
+                });
+            });
+        }
+        
+        const enrichedItems = searchData.items.map(item => {
+            const videoId = item.id.videoId;
+            const extra = detailsMap.get(videoId) || {};
+            return {
+                id: videoId,
+                title: extra.title || item.snippet.title,
+                channel: extra.channelTitle || item.snippet.channelTitle,
+                channelId: extra.channelId || item.snippet.channelId,
+                imageUrl: extra.thumbnails?.medium?.url || item.snippet.thumbnails.medium.url,
+                url: `https://youtube.com/watch?v=${videoId}`,
+                description: extra.fullDescription || item.snippet.description,
+                publishedAt: extra.publishedAt || item.snippet.publishedAt,
+                duration: extra.duration,
+                viewCount: extra.viewCount,
+                likeCount: extra.likeCount,
+                commentCount: extra.commentCount,
+                tags: extra.tags
+            };
+        });
+        
+        saveSearchResults(currentSearchTerm, enrichedItems);
+        currentViewMode = 'filtered';
+        currentTermForView = currentSearchTerm;
+        currentSort = 'date';
+        if (!isSettingsView) updateView();
+        refreshTopBar();
+        if (modeToggle.classList.contains('excluded-mode')) modeToggle.classList.remove('excluded-mode');
+        if (document.body.classList.contains('excluded-mode')) document.body.classList.remove('excluded-mode');
+        configureTrashButton();
+        updateSettingsIcon();
+    } catch (error) {
+        console.error("Search error:", error);
+        resultsGrid.innerHTML = `<p class="stats">Error: ${error.message}</p>`;
+    } finally {
+        loadingDiv.style.display = 'none';
     }
 }
 
 async function performTopViewedSearch() {
     currentSearchTerm = "Top Viewed";
-    // Usamos un término amplio "movie" para asegurar resultados, con orden por vistas
     await performSearch("movie", true);
 }
+
+// ========== MANEJADORES ==========
+searchBtn.onclick = async () => {
+    const baseQuery = searchInput.value.trim();
+    if (!baseQuery) return;
+    currentSearchTerm = baseQuery;
+    searchInput.value = '';
+    await performSearch(currentSearchTerm);
+};
 
 function toggleMode() {
     if (isSettingsView) closeSettingsAndRestore();
@@ -565,7 +635,7 @@ function toggleMode() {
 }
 modeToggle.onclick = toggleMode;
 
-// ========== BARRA SUPERIOR (con botón Top Viewed) ==========
+// ========== BARRA SUPERIOR ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
