@@ -1,4 +1,4 @@
-// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (con términos extra restaurados)
+// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (con término "movie" por defecto)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -501,14 +501,20 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL (CON TÉRMINOS EXTRA RESTAURADOS) ==========
+// ========== BÚSQUEDA PRINCIPAL (CON TÉRMINOS EXTRA Y "movie" POR DEFECTO) ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
     loadingDiv.style.display = 'flex';
     try {
-        // Construir el término de búsqueda final: si query está vacío, solo los términos extra
-        let finalQuery = query && query.trim() !== "" ? query + EXTRA_SEARCH_TERMS : EXTRA_SEARCH_TERMS.trim();
+        // Construir el término de búsqueda final: si query está vacío, se usa "movie" + términos extra
+        let finalQuery;
+        if (query && query.trim() !== "") {
+            finalQuery = query + EXTRA_SEARCH_TERMS;
+        } else {
+            // Si no hay query (búsqueda vacía), usamos "movie" más los términos extra
+            finalQuery = "movie" + EXTRA_SEARCH_TERMS;
+        }
         
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
         
@@ -600,7 +606,7 @@ async function performSearch(query, forceOrderByViewCount = false) {
     }
 }
 
-// "Top Viewed" usa los términos extra solos (sin query adicional)
+// "Top Viewed" usa los términos extra solos (sin "movie") y fuerza orden por vistas
 async function performTopViewedSearch() {
     currentSearchTerm = "Top Viewed";
     await performSearch("", true);
@@ -608,9 +614,13 @@ async function performTopViewedSearch() {
 
 // ========== MANEJADORES ==========
 searchBtn.onclick = async () => {
-    const baseQuery = searchInput.value.trim();
-    //if (!baseQuery) return;
-    currentSearchTerm = baseQuery;
+    let baseQuery = searchInput.value.trim();
+    // Si el campo está vacío, forzamos el término "movie"
+    if (baseQuery === "") {
+        currentSearchTerm = "movie";
+    } else {
+        currentSearchTerm = baseQuery;
+    }
     searchInput.value = '';
     await performSearch(currentSearchTerm);
 };
