@@ -1,4 +1,4 @@
-// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed
+// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (corregido)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -499,15 +499,19 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED ==========
+// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED (CORREGIDO) ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
     loadingDiv.style.display = 'flex';
     try {
-        let url = SEARCH_MODE === 'channel'
-            ? `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&q=${encodeURIComponent(query)}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`
-            : `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query + ' Películas Gratis YouTube Películas y TV de YouTube')}&key=${API_KEY}`;
+        // Construir URL base: siempre channelId, tipo video, maxResults
+        let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`;
+        
+        // Añadir parámetro q solo si query no está vacío
+        if (query && query.trim() !== "") {
+            url += `&q=${encodeURIComponent(query)}`;
+        }
         
         const orderByViews = forceOrderByViewCount || (localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true');
         if (orderByViews) {
@@ -581,7 +585,7 @@ async function performSearch(query, forceOrderByViewCount = false) {
 
 async function performTopViewedSearch() {
     currentSearchTerm = "Top Viewed";
-    await performSearch("movie", true);  // fuerza orden por vistas
+    await performSearch("", true);  // query vacío, fuerza orden por vistas
 }
 
 searchBtn.onclick = async () => {
