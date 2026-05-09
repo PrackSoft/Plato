@@ -1,4 +1,4 @@
-// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (corregido)
+// script.js - Con papelera, Settings, orden por vistas y botón Top Viewed (con términos extra restaurados)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -13,6 +13,8 @@ const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
+
+const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -499,17 +501,16 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL Y TOP VIEWED (COMPLETA) ==========
+// ========== BÚSQUEDA PRINCIPAL (CON TÉRMINOS EXTRA RESTAURADOS) ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
 
     loadingDiv.style.display = 'flex';
     try {
-        let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&key=${API_KEY}`;
+        // Construir el término de búsqueda final: si query está vacío, solo los términos extra
+        let finalQuery = query && query.trim() !== "" ? query + EXTRA_SEARCH_TERMS : EXTRA_SEARCH_TERMS.trim();
         
-        if (query && query.trim() !== "") {
-            url += `&q=${encodeURIComponent(query)}`;
-        }
+        let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
         
         const orderByViews = forceOrderByViewCount || (localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true');
         if (orderByViews) {
@@ -599,9 +600,10 @@ async function performSearch(query, forceOrderByViewCount = false) {
     }
 }
 
+// "Top Viewed" usa los términos extra solos (sin query adicional)
 async function performTopViewedSearch() {
     currentSearchTerm = "Top Viewed";
-    await performSearch("movie", true);
+    await performSearch("", true);
 }
 
 // ========== MANEJADORES ==========
