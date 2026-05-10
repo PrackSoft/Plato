@@ -1,4 +1,4 @@
-// script.js - Búsqueda vacía solo cuando el checkbox de "más vistas" está activado
+// script.js - Búsqueda vacía solo si checkbox "más vistas" está activado (con doble verificación)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -42,7 +42,6 @@ let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
 
-// ========== Funciones auxiliares ==========
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
@@ -338,7 +337,6 @@ function saveSearchResults(searchTerm, enrichedItems) {
     updateBucket(EXCLUDED_SEARCH_KEY, excludedItems);
 }
 
-// ========== GESTIÓN DE PAPELERA ==========
 function getTrashKey(mode) {
     return (mode === 'filtered' || mode === 'filtered_trash') ? FILTERED_TRASH_KEY : EXCLUDED_TRASH_KEY;
 }
@@ -474,7 +472,6 @@ function emptyTrash(mode) {
     }
 }
 
-// ========== FUNCIÓN PARA SALIR DE PAPELERA ==========
 function exitTrashAndShowAll() {
     if (currentViewMode === 'filtered_trash') {
         currentViewMode = 'filtered';
@@ -501,29 +498,39 @@ function exitTrashAndShowAll() {
     }
 }
 
-// ========== BÚSQUEDA PRINCIPAL ==========
 async function performSearch(query, forceOrderByViewCount = false) {
     if (isSettingsView) closeSettingsAndRestore();
-
+    
+    const trimmedQuery = query ? query.trim() : '';
+    const orderByViewsPref = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    
+    // Si la consulta está vacía y la preferencia no está activada, mostrar error y salir
+    if (trimmedQuery === "" && !orderByViewsPref && !forceOrderByViewCount) {
+        resultsGrid.innerHTML = '<p class="stats">⚠️ Please enable "Buscar las 50 películas más vistas" in Settings to search with empty field, or type a keyword.</p>';
+        resultsTitle.innerText = 'No search performed';
+        resultsStats.innerHTML = '';
+        loadingDiv.style.display = 'none';
+        return;
+    }
+    
     loadingDiv.style.display = 'flex';
     try {
         let finalQuery;
-        if (query && query.trim() !== "") {
-            finalQuery = query + EXTRA_SEARCH_TERMS;
+        if (trimmedQuery !== "") {
+            finalQuery = trimmedQuery + EXTRA_SEARCH_TERMS;
         } else {
-            // Solo se llega aquí si se fuerza la búsqueda vacía (cuando checkbox activado)
+            // Búsqueda vacía solo permitida si llegamos hasta aquí (checkbox marcado o force)
             finalQuery = "movie" + EXTRA_SEARCH_TERMS;
         }
         
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
         
-        const orderByViews = forceOrderByViewCount || (localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true');
+        const orderByViews = forceOrderByViewCount || orderByViewsPref;
         if (orderByViews) {
             url += '&order=viewCount';
         }
         
         console.log("Fetching URL:", url);
-        
         const searchResponse = await fetch(url);
         const searchData = await searchResponse.json();
         console.log("Search response:", searchData);
@@ -608,18 +615,17 @@ async function performSearch(query, forceOrderByViewCount = false) {
 // ========== MANEJADORES ==========
 searchBtn.onclick = async () => {
     let baseQuery = searchInput.value.trim();
+    const orderByViewsPref = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    
     if (baseQuery === "") {
-        // Verificar si el checkbox de "más vistas" está activado
-        const orderByViews = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
-        if (!orderByViews) {
+        if (!orderByViewsPref) {
             resultsGrid.innerHTML = '<p class="stats">⚠️ Please enable "Buscar las 50 películas más vistas" in Settings to search with an empty field, or type a keyword.</p>';
             resultsTitle.innerText = 'No search performed';
             resultsStats.innerHTML = '';
             return;
         }
-        // Forzar búsqueda con "movie" y orden por vistas
         currentSearchTerm = "movie";
-        await performSearch(currentSearchTerm, true);  // forceOrderByViewCount = true
+        await performSearch("", true);  // fuerza orden por vistas
     } else {
         currentSearchTerm = baseQuery;
         await performSearch(currentSearchTerm);
@@ -649,7 +655,7 @@ function toggleMode() {
 }
 modeToggle.onclick = toggleMode;
 
-// ========== BARRA SUPERIOR (SIN EL BOTÓN TRENDING_UP) ==========
+// ========== BARRA SUPERIOR (sin trending_up) ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
