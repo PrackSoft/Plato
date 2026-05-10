@@ -1,4 +1,4 @@
-// script.js - Añadido "Most Commented" como opción de orden local
+// script.js - Añadidos contadores de vistas y likes en cada tarjeta
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -44,6 +44,15 @@ let isSettingsView = false;
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
+}
+
+function formatNumber(numStr) {
+    if (!numStr || numStr === 'N/A') return 'N/A';
+    let num = parseInt(numStr, 10);
+    if (isNaN(num)) return numStr;
+    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+    return num.toString();
 }
 
 function getLocalDateKey(d) {
@@ -127,6 +136,10 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
                     <div class="info">
                         <h3>${escapeHtml(movie.title)}</h3>
                         <div class="channel">${escapeHtml(movie.channel)}</div>
+                        <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
+                            <span class="views"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">preview</span> ${formatNumber(movie.viewCount)}</span>
+                            <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
+                        </div>
                     </div>
                 </div>
             `).join('');
@@ -141,6 +154,10 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
                 <div class="info">
                     <h3>${escapeHtml(movie.title)}</h3>
                     <div class="channel">${escapeHtml(movie.channel)}</div>
+                    <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
+                        <span class="views"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">preview</span> ${formatNumber(movie.viewCount)}</span>
+                        <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
+                    </div>
                 </div>
             </div>
         `).join('');
