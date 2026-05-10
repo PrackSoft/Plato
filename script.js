@@ -1,4 +1,4 @@
-// script.js - Búsqueda vacía solo si checkbox "más vistas" está activado (con doble verificación)
+// script.js - Añadida opción "más likeadas" (rating) en Settings
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -13,6 +13,7 @@ const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
+const SEARCH_ORDER_RATING = 'search_order_rating';  // Nueva preferencia
 
 //const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube Movies';
 
@@ -230,6 +231,7 @@ function showSettings() {
     const currentPrefKey = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? SHOW_EXTRA_FILTERED : SHOW_EXTRA_EXCLUDED;
     const currentPrefValue = localStorage.getItem(currentPrefKey) === 'true';
     const searchOrderViewCount = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    const searchOrderRating = localStorage.getItem(SEARCH_ORDER_RATING) === 'true';
     
     resultsGrid.innerHTML = `
         <div class="settings-section">
@@ -242,12 +244,21 @@ function showSettings() {
             </div>
         </div>
         <div class="settings-section">
-            <h3 class="settings-section-title">Search</h3>
+            <h3 class="settings-section-title">Search Order</h3>
             <div class="settings-option">
                 <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
                     <input type="checkbox" id="searchOrderViewCountCheckbox" ${searchOrderViewCount ? 'checked' : ''}>
-                    <span>Buscar las 50 películas más vistas (ordenar por número de vistas)</span>
+                    <span>Buscar las 50 más vistas (orden por número de reproducciones)</span>
                 </label>
+            </div>
+            <div class="settings-option">
+                <label style="display: flex; align-items: center; gap: 12px; cursor: pointer;">
+                    <input type="checkbox" id="searchOrderRatingCheckbox" ${searchOrderRating ? 'checked' : ''}>
+                    <span>Buscar las 50 más likeadas (orden por calificación)</span>
+                </label>
+            </div>
+            <div class="settings-option">
+                <span style="font-size: 12px; color: #aaa;">Nota: Solo puede estar activo un orden a la vez. El orden por calificación se basa en likes/dislikes.</span>
             </div>
         </div>
         <div class="settings-section">
@@ -265,12 +276,28 @@ function showSettings() {
             localStorage.setItem(currentPrefKey, checkbox.checked);
         };
     }
-    const searchOrderCheckbox = document.getElementById('searchOrderViewCountCheckbox');
-    if (searchOrderCheckbox) {
-        searchOrderCheckbox.onchange = () => {
-            localStorage.setItem(SEARCH_ORDER_VIEW_COUNT, searchOrderCheckbox.checked);
+    const viewCountCheckbox = document.getElementById('searchOrderViewCountCheckbox');
+    const ratingCheckbox = document.getElementById('searchOrderRatingCheckbox');
+    
+    if (viewCountCheckbox) {
+        viewCountCheckbox.onchange = () => {
+            if (viewCountCheckbox.checked) {
+                ratingCheckbox.checked = false;
+                localStorage.setItem(SEARCH_ORDER_RATING, 'false');
+            }
+            localStorage.setItem(SEARCH_ORDER_VIEW_COUNT, viewCountCheckbox.checked);
         };
     }
+    if (ratingCheckbox) {
+        ratingCheckbox.onchange = () => {
+            if (ratingCheckbox.checked) {
+                viewCountCheckbox.checked = false;
+                localStorage.setItem(SEARCH_ORDER_VIEW_COUNT, 'false');
+            }
+            localStorage.setItem(SEARCH_ORDER_RATING, ratingCheckbox.checked);
+        };
+    }
+    
     const goToTrashBtn = document.getElementById('goToTrashBtn');
     if (goToTrashBtn) {
         goToTrashBtn.onclick = () => {
@@ -503,10 +530,11 @@ async function performSearch(query, forceOrderByViewCount = false) {
     
     const trimmedQuery = query ? query.trim() : '';
     const orderByViewsPref = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    const orderByRatingPref = localStorage.getItem(SEARCH_ORDER_RATING) === 'true';
     
-    // Si la consulta está vacía y la preferencia no está activada, mostrar error y salir
-    if (trimmedQuery === "" && !orderByViewsPref && !forceOrderByViewCount) {
-        resultsGrid.innerHTML = '<p class="stats">⚠️ Please enable "Buscar las 50 películas más vistas" in Settings to search with empty field, or type a keyword.</p>';
+    // Si la consulta está vacía y no hay preferencia de orden activa, mostrar error
+    if (trimmedQuery === "" && !orderByViewsPref && !orderByRatingPref && !forceOrderByViewCount) {
+        resultsGrid.innerHTML = '<p class="stats">⚠️ Please type a keyword or enable "Buscar las 50 más vistas" o "Buscar las 50 más likeadas" in Settings to search with empty field.</p>';
         resultsTitle.innerText = 'No search performed';
         resultsStats.innerHTML = '';
         loadingDiv.style.display = 'none';
@@ -517,21 +545,22 @@ async function performSearch(query, forceOrderByViewCount = false) {
     try {
         let finalQuery;
         if (trimmedQuery !== "") {
-            //finalQuery = trimmedQuery + EXTRA_SEARCH_TERMS;
-
             finalQuery = trimmedQuery;
         } else {
-            // Búsqueda vacía solo permitida si llegamos hasta aquí (checkbox marcado o force)
-            //finalQuery = "movie" + EXTRA_SEARCH_TERMS;
-
             finalQuery = "movie";
         }
         
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
         
-        const orderByViews = forceOrderByViewCount || orderByViewsPref;
-        if (orderByViews) {
-            url += '&order=viewCount';
+        // Determinar orden: prioridad rating > views > ninguno
+        let orderParam = '';
+        if (orderByRatingPref) {
+            orderParam = 'rating';
+        } else if (orderByViewsPref || forceOrderByViewCount) {
+            orderParam = 'viewCount';
+        }
+        if (orderParam) {
+            url += `&order=${orderParam}`;
         }
         
         console.log("Fetching URL:", url);
@@ -620,16 +649,17 @@ async function performSearch(query, forceOrderByViewCount = false) {
 searchBtn.onclick = async () => {
     let baseQuery = searchInput.value.trim();
     const orderByViewsPref = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
+    const orderByRatingPref = localStorage.getItem(SEARCH_ORDER_RATING) === 'true';
     
     if (baseQuery === "") {
-        if (!orderByViewsPref) {
-            resultsGrid.innerHTML = '<p class="stats">⚠️ Please type a keyword as a search term, or enable "Buscar las 50 películas más vistas" in Settings, to search with an empty field.</p>';
+        if (!orderByViewsPref && !orderByRatingPref) {
+            resultsGrid.innerHTML = '<p class="stats">⚠️ Please type a keyword or enable "Buscar las 50 más vistas" o "Buscar las 50 más likeadas" in Settings to search with empty field.</p>';
             resultsTitle.innerText = 'No search performed';
             resultsStats.innerHTML = '';
             return;
         }
         currentSearchTerm = "movie";
-        await performSearch("", true);  // fuerza orden por vistas
+        await performSearch("", false);  // forceOrderByViewCount ya no se usa, el orden se decide por preferencias
     } else {
         currentSearchTerm = baseQuery;
         await performSearch(currentSearchTerm);
@@ -659,7 +689,7 @@ function toggleMode() {
 }
 modeToggle.onclick = toggleMode;
 
-// ========== BARRA SUPERIOR (sin trending_up) ==========
+// ========== BARRA SUPERIOR ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
