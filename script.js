@@ -1,4 +1,4 @@
-// script.js - Añadidos "Most Viewed" y "Most Liked" como opciones de orden local
+// script.js - Añadido "Most Commented" como opción de orden local
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -73,6 +73,12 @@ function sortMovies(movies, primarySort) {
             const bLikes = parseInt(b.likeCount, 10) || 0;
             return bLikes - aLikes;
         });
+    } else if (primarySort === 'mostCommented') {
+        sorted.sort((a,b) => {
+            const aComments = parseInt(a.commentCount, 10) || 0;
+            const bComments = parseInt(b.commentCount, 10) || 0;
+            return bComments - aComments;
+        });
     } else { // date
         sorted.sort((a,b) => {
             const dateCompare = new Date(b.date) - new Date(a.date);
@@ -141,8 +147,8 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
         resultsGrid.style.display = 'grid';
     }
     resultsTitle.innerText = titlePrefix;
-    const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : (sortBy === 'channel' ? 'by channel' : (sortBy === 'mostViewed' ? 'by views' : 'by likes')));
-    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button> | <button data-sort="mostViewed">Most Viewed</button> | <button data-sort="mostLiked">Most Liked</button></span>`;
+    const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : (sortBy === 'channel' ? 'by channel' : (sortBy === 'mostViewed' ? 'by views' : (sortBy === 'mostLiked' ? 'by likes' : 'by comments'))));
+    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button> | <button data-sort="mostViewed">Most Viewed</button> | <button data-sort="mostLiked">Most Liked</button> | <button data-sort="mostCommented">Most Commented</button></span>`;
     const buttons = resultsStats.querySelectorAll('#sortButtons button');
     buttons.forEach(btn => {
         btn.onclick = () => {
@@ -187,7 +193,7 @@ function updateView() {
         });
         movies = unique;
     }
-    const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : (currentSort === 'channel' ? 'by channel' : (currentSort === 'mostViewed' ? 'by views' : 'by likes')));
+    const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : (currentSort === 'channel' ? 'by channel' : (currentSort === 'mostViewed' ? 'by views' : (currentSort === 'mostLiked' ? 'by likes' : 'by comments'))));
     const titlePrefix = currentTermForView ? `${titlePrefixBase}: "${currentTermForView}" (${sortLabel})` : `${titlePrefixBase} (${sortLabel})`;
     renderMovies(movies, currentSort, titlePrefix, currentViewMode);
 }
