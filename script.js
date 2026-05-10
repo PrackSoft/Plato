@@ -14,7 +14,7 @@ const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
 
-const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube Movies';
+//const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube Movies';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -517,10 +517,14 @@ async function performSearch(query, forceOrderByViewCount = false) {
     try {
         let finalQuery;
         if (trimmedQuery !== "") {
-            finalQuery = trimmedQuery + EXTRA_SEARCH_TERMS;
+            //finalQuery = trimmedQuery + EXTRA_SEARCH_TERMS;
+
+            finalQuery = trimmedQuery;
         } else {
             // Búsqueda vacía solo permitida si llegamos hasta aquí (checkbox marcado o force)
-            finalQuery = "movie" + EXTRA_SEARCH_TERMS;
+            //finalQuery = "movie" + EXTRA_SEARCH_TERMS;
+
+            finalQuery = "movie";
         }
         
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
@@ -619,7 +623,7 @@ searchBtn.onclick = async () => {
     
     if (baseQuery === "") {
         if (!orderByViewsPref) {
-            resultsGrid.innerHTML = '<p class="stats">⚠️ Please enable "Buscar las 50 películas más vistas" in Settings to search with an empty field, or type a keyword.</p>';
+            resultsGrid.innerHTML = '<p class="stats">⚠️ Please type a keyword as a search term, or enable "Buscar las 50 películas más vistas" in Settings, to search with an empty field.</p>';
             resultsTitle.innerText = 'No search performed';
             resultsStats.innerHTML = '';
             return;
