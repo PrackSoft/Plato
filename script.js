@@ -1,4 +1,4 @@
-// script.js - Añadidos contadores de vistas y likes en cada tarjeta
+// script.js - Tarjetas muestran comentarios en lugar de vistas
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -137,7 +137,7 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
                         <h3>${escapeHtml(movie.title)}</h3>
                         <div class="channel">${escapeHtml(movie.channel)}</div>
                         <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
-                            <span class="views"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">preview</span> ${formatNumber(movie.viewCount)}</span>
+                            <span class="comments"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span> ${formatNumber(movie.commentCount)}</span>
                             <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
                         </div>
                     </div>
@@ -155,7 +155,7 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
                     <h3>${escapeHtml(movie.title)}</h3>
                     <div class="channel">${escapeHtml(movie.channel)}</div>
                     <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
-                        <span class="views"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">preview</span> ${formatNumber(movie.viewCount)}</span>
+                        <span class="comments"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span> ${formatNumber(movie.commentCount)}</span>
                         <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
                     </div>
                 </div>
