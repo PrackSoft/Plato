@@ -1,4 +1,4 @@
-// script.js - Tarjetas muestran comentarios en lugar de vistas
+// script.js - Búsqueda vacía con checkbox "más vistas" guarda término "Most Viewed" con icono trending_up
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -579,6 +579,8 @@ async function performSearch(query, forceOrderByViewCount = false) {
         if (trimmedQuery !== "") {
             finalQuery = trimmedQuery;
         } else {
+            // Cuando la búsqueda está vacía y el checkbox de vistas está activado,
+            // usamos "movie" para la API, pero el término guardado será "Most Viewed"
             finalQuery = "movie";
         }
         
@@ -689,7 +691,8 @@ searchBtn.onclick = async () => {
             resultsStats.innerHTML = '';
             return;
         }
-        currentSearchTerm = "movie";
+        // Búsqueda vacía con checkbox activado: guardamos el término especial "Most Viewed"
+        currentSearchTerm = "Most Viewed";
         await performSearch("", false);
     } else {
         currentSearchTerm = baseQuery;
@@ -737,12 +740,20 @@ function refreshTopBar() {
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
     } else {
-        html += terms.map(term => `
-            <button class="full-search-btn tag-btn" data-term="${term}">
-                ${term}
-                <span class="history-delete" data-term="${term}">✖</span>
-            </button>
-        `).join('');
+        html += terms.map(term => {
+            if (term === "Most Viewed") {
+                // Mostrar solo el icono trending_up
+                return `<button class="full-search-btn tag-btn" data-term="${term}">
+                            <span class="material-symbols-outlined">trending_up</span>
+                            <span class="history-delete" data-term="${term}">✖</span>
+                        </button>`;
+            } else {
+                return `<button class="full-search-btn tag-btn" data-term="${term}">
+                            ${term}
+                            <span class="history-delete" data-term="${term}">✖</span>
+                        </button>`;
+            }
+        }).join('');
     }
     fullSearchDiv.innerHTML = html;
 
