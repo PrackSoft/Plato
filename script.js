@@ -1,4 +1,4 @@
-// script.js - Añadida opción "más likeadas" (rating) en Settings
+// script.js - Añadidos "Most Viewed" y "Most Liked" como opciones de orden local
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -13,9 +13,7 @@ const EXCLUDED_TRASH_KEY = 'plato_excluded_trash';
 const SHOW_EXTRA_FILTERED = 'show_extra_info_filtered';
 const SHOW_EXTRA_EXCLUDED = 'show_extra_info_excluded';
 const SEARCH_ORDER_VIEW_COUNT = 'search_order_view_count';
-const SEARCH_ORDER_RATING = 'search_order_rating';  // Nueva preferencia
-
-//const EXTRA_SEARCH_TERMS = ' Películas Gratis YouTube Películas y TV de YouTube Movies';
+const SEARCH_ORDER_RATING = 'search_order_rating';
 
 const searchBtn = document.getElementById('searchBtn');
 const searchInput = document.getElementById('searchInput');
@@ -63,7 +61,19 @@ function sortMovies(movies, primarySort) {
             if (channelCompare !== 0) return channelCompare;
             return a.title.localeCompare(b.title, undefined, { sensitivity: 'base' });
         });
-    } else {
+    } else if (primarySort === 'mostViewed') {
+        sorted.sort((a,b) => {
+            const aViews = parseInt(a.viewCount, 10) || 0;
+            const bViews = parseInt(b.viewCount, 10) || 0;
+            return bViews - aViews;
+        });
+    } else if (primarySort === 'mostLiked') {
+        sorted.sort((a,b) => {
+            const aLikes = parseInt(a.likeCount, 10) || 0;
+            const bLikes = parseInt(b.likeCount, 10) || 0;
+            return bLikes - aLikes;
+        });
+    } else { // date
         sorted.sort((a,b) => {
             const dateCompare = new Date(b.date) - new Date(a.date);
             if (dateCompare !== 0) return dateCompare;
@@ -131,8 +141,8 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
         resultsGrid.style.display = 'grid';
     }
     resultsTitle.innerText = titlePrefix;
-    const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : 'by channel');
-    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button></span>`;
+    const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : (sortBy === 'channel' ? 'by channel' : (sortBy === 'mostViewed' ? 'by views' : 'by likes')));
+    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button> | <button data-sort="mostViewed">Most Viewed</button> | <button data-sort="mostLiked">Most Liked</button></span>`;
     const buttons = resultsStats.querySelectorAll('#sortButtons button');
     buttons.forEach(btn => {
         btn.onclick = () => {
@@ -177,7 +187,7 @@ function updateView() {
         });
         movies = unique;
     }
-    const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : 'by channel');
+    const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : (currentSort === 'channel' ? 'by channel' : (currentSort === 'mostViewed' ? 'by views' : 'by likes')));
     const titlePrefix = currentTermForView ? `${titlePrefixBase}: "${currentTermForView}" (${sortLabel})` : `${titlePrefixBase} (${sortLabel})`;
     renderMovies(movies, currentSort, titlePrefix, currentViewMode);
 }
@@ -532,7 +542,6 @@ async function performSearch(query, forceOrderByViewCount = false) {
     const orderByViewsPref = localStorage.getItem(SEARCH_ORDER_VIEW_COUNT) === 'true';
     const orderByRatingPref = localStorage.getItem(SEARCH_ORDER_RATING) === 'true';
     
-    // Si la consulta está vacía y no hay preferencia de orden activa, mostrar error
     if (trimmedQuery === "" && !orderByViewsPref && !orderByRatingPref && !forceOrderByViewCount) {
         resultsGrid.innerHTML = '<p class="stats">⚠️ Please type a keyword or enable "Buscar las 50 más vistas" o "Buscar las 50 más likeadas" in Settings to search with empty field.</p>';
         resultsTitle.innerText = 'No search performed';
@@ -552,7 +561,6 @@ async function performSearch(query, forceOrderByViewCount = false) {
         
         let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${TARGET_CHANNEL_ID}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(finalQuery)}&key=${API_KEY}`;
         
-        // Determinar orden: prioridad rating > views > ninguno
         let orderParam = '';
         if (orderByRatingPref) {
             orderParam = 'rating';
@@ -659,7 +667,7 @@ searchBtn.onclick = async () => {
             return;
         }
         currentSearchTerm = "movie";
-        await performSearch("", false);  // forceOrderByViewCount ya no se usa, el orden se decide por preferencias
+        await performSearch("", false);
     } else {
         currentSearchTerm = baseQuery;
         await performSearch(currentSearchTerm);
@@ -689,7 +697,6 @@ function toggleMode() {
 }
 modeToggle.onclick = toggleMode;
 
-// ========== BARRA SUPERIOR ==========
 function refreshTopBar() {
     let storageKey;
     if (currentViewMode === 'filtered') storageKey = FILTERED_SEARCH_KEY;
@@ -809,7 +816,6 @@ function init() {
 }
 init();
 
-// ========== MODAL ==========
 function openModal(movie, sourceMode) {
     if (!modal) return;
     let formattedDuration = 'Unknown';
