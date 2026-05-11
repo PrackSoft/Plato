@@ -1,4 +1,4 @@
-// script.js - Añadida funcionalidad "Favoritos" (filtro, orden y checkbox en modal)
+// script.js - Filtros Watching y Favoritos mutuamente excluyentes, se desactivan al seleccionar término
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -41,7 +41,7 @@ let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
 let watchingFilterActive = false;
-let favoriteFilterActive = false;  // Nuevo filtro para favoritos
+let favoriteFilterActive = false;
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -157,8 +157,9 @@ function toggleFavorite(movieId, searchTerm, currentStatus) {
 }
 
 function renderMovies(movies, sortBy, titlePrefix, viewMode) {
-    // Aplicar filtros: si ambos activos, mostrar solo las que tienen ambos true; si solo uno, filtrar por él
     let filteredMovies = movies;
+    // Filtros excluyentes: si ambos activos, priorizamos el que se activó último? En realidad se maneja desde los toggles.
+    // Por seguridad, si ambos están activos, mostramos la intersección (pero por lógica de UI no debería ocurrir).
     if (watchingFilterActive && favoriteFilterActive) {
         filteredMovies = movies.filter(m => m.watching === true && m.favorite === true);
     } else if (watchingFilterActive) {
@@ -172,7 +173,7 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
     if (sorted.length === 0) {
         let msg = 'No movies to display.';
         if ((watchingFilterActive || favoriteFilterActive) && movies.length > 0) {
-            msg = 'No movies match the active filters (Watching/Favorites). Click filter buttons again to show all.';
+            msg = 'No movies match the active filter. Click the filter button again to show all.';
         }
         resultsGrid.innerHTML = `<p class="stats">${msg}</p>`;
         resultsStats.innerHTML = '';
@@ -253,7 +254,6 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
         };
     });
 
-    // Eventos para íconos de watching (evitan abrir modal)
     document.querySelectorAll('.watching-icon').forEach(icon => {
         icon.onclick = (e) => {
             e.stopPropagation();
@@ -462,10 +462,9 @@ function showSettings() {
 function saveSearchResults(searchTerm, enrichedItems) {
     const filteredItems = [];
     const excludedItems = [];
-    // Leer datos existentes para preservar watching y favorite
     const existingFiltered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
     const existingExcluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-    const existingStateMap = new Map(); // key: id, value: {watching, favorite}
+    const existingStateMap = new Map();
     existingFiltered.forEach(entry => {
         entry.results.forEach(m => {
             existingStateMap.set(m.id, { watching: m.watching || false, favorite: m.favorite || false });
@@ -822,13 +821,20 @@ searchBtn.onclick = async () => {
 };
 
 function toggleWatchingFilter() {
+    // Si activamos Watching, desactivamos Favoritos
+    if (!watchingFilterActive) {
+        favoriteFilterActive = false;
+    }
     watchingFilterActive = !watchingFilterActive;
-    // Si activamos watching, opcionalmente podríamos desactivar favorite? No, permitimos combinación.
     updateView();
     refreshTopBar();
 }
 
 function toggleFavoriteFilter() {
+    // Si activamos Favoritos, desactivamos Watching
+    if (!favoriteFilterActive) {
+        watchingFilterActive = false;
+    }
     favoriteFilterActive = !favoriteFilterActive;
     updateView();
     refreshTopBar();
@@ -915,9 +921,13 @@ function refreshTopBar() {
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
+            // Al seleccionar un término, desactivamos los filtros
+            watchingFilterActive = false;
+            favoriteFilterActive = false;
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
             updateView();
+            refreshTopBar(); // para actualizar estilos de botones
         };
     });
     document.querySelectorAll('.history-delete').forEach(btn => {
