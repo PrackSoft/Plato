@@ -1,4 +1,4 @@
-// script.js - Filtros Watching y Favoritos mutuamente excluyentes, se desactivan al seleccionar término
+// script.js - Filtros Watching y Favoritos: globales (ignoran término) y excluyentes
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -42,6 +42,7 @@ let previousViewState = null;
 let isSettingsView = false;
 let watchingFilterActive = false;
 let favoriteFilterActive = false;
+let lastTermBeforeFilter = null; // guardar el término cuando se activa un filtro
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -158,8 +159,6 @@ function toggleFavorite(movieId, searchTerm, currentStatus) {
 
 function renderMovies(movies, sortBy, titlePrefix, viewMode) {
     let filteredMovies = movies;
-    // Filtros excluyentes: si ambos activos, priorizamos el que se activó último? En realidad se maneja desde los toggles.
-    // Por seguridad, si ambos están activos, mostramos la intersección (pero por lógica de UI no debería ocurrir).
     if (watchingFilterActive && favoriteFilterActive) {
         filteredMovies = movies.filter(m => m.watching === true && m.favorite === true);
     } else if (watchingFilterActive) {
@@ -821,21 +820,33 @@ searchBtn.onclick = async () => {
 };
 
 function toggleWatchingFilter() {
-    // Si activamos Watching, desactivamos Favoritos
-    if (!watchingFilterActive) {
-        favoriteFilterActive = false;
+    if (watchingFilterActive) {
+        // Desactivar filtro: restaurar término si había uno guardado, o mostrar todo
+        watchingFilterActive = false;
+        currentTermForView = lastTermBeforeFilter !== null ? lastTermBeforeFilter : null;
+        lastTermBeforeFilter = null;
+    } else {
+        // Activar filtro: guardar término actual y quitarlo
+        lastTermBeforeFilter = currentTermForView;
+        currentTermForView = null;
+        watchingFilterActive = true;
+        favoriteFilterActive = false; // excluyente
     }
-    watchingFilterActive = !watchingFilterActive;
     updateView();
     refreshTopBar();
 }
 
 function toggleFavoriteFilter() {
-    // Si activamos Favoritos, desactivamos Watching
-    if (!favoriteFilterActive) {
+    if (favoriteFilterActive) {
+        favoriteFilterActive = false;
+        currentTermForView = lastTermBeforeFilter !== null ? lastTermBeforeFilter : null;
+        lastTermBeforeFilter = null;
+    } else {
+        lastTermBeforeFilter = currentTermForView;
+        currentTermForView = null;
+        favoriteFilterActive = true;
         watchingFilterActive = false;
     }
-    favoriteFilterActive = !favoriteFilterActive;
     updateView();
     refreshTopBar();
 }
@@ -921,13 +932,16 @@ function refreshTopBar() {
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
-            // Al seleccionar un término, desactivamos los filtros
-            watchingFilterActive = false;
-            favoriteFilterActive = false;
+            // Al seleccionar un término, desactivamos cualquier filtro activo
+            if (watchingFilterActive || favoriteFilterActive) {
+                watchingFilterActive = false;
+                favoriteFilterActive = false;
+                lastTermBeforeFilter = null;
+            }
             currentTermForView = btn.dataset.term;
             currentSort = 'date';
             updateView();
-            refreshTopBar(); // para actualizar estilos de botones
+            refreshTopBar();
         };
     });
     document.querySelectorAll('.history-delete').forEach(btn => {
@@ -998,6 +1012,7 @@ function init() {
     isSettingsView = false;
     watchingFilterActive = false;
     favoriteFilterActive = false;
+    lastTermBeforeFilter = null;
     updateView();
     updateSettingsIcon();
     settingsBtn.onclick = () => {
