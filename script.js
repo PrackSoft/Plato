@@ -1,4 +1,4 @@
-// script.js - Añadida funcionalidad "Watching" (visible/invisible) con iconos y filtro en top bar
+// script.js - Añadida funcionalidad "Favoritos" (filtro, orden y checkbox en modal)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -40,7 +40,8 @@ let currentSort = 'date';
 let currentTermForView = null;
 let previousViewState = null;
 let isSettingsView = false;
-let watchingFilterActive = false; // Nuevo: estado del filtro "Watching"
+let watchingFilterActive = false;
+let favoriteFilterActive = false;  // Nuevo filtro para favoritos
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -89,6 +90,18 @@ function sortMovies(movies, primarySort) {
             const bComments = parseInt(b.commentCount, 10) || 0;
             return bComments - aComments;
         });
+    } else if (primarySort === 'watching') {
+        sorted.sort((a,b) => {
+            if (a.watching !== b.watching) return (a.watching === true ? -1 : 1);
+            if (a.favorite !== b.favorite) return (a.favorite === true ? -1 : 1);
+            return 0;
+        });
+    } else if (primarySort === 'favorite') {
+        sorted.sort((a,b) => {
+            if (a.favorite !== b.favorite) return (a.favorite === true ? -1 : 1);
+            if (a.watching !== b.watching) return (a.watching === true ? -1 : 1);
+            return 0;
+        });
     } else { // date
         sorted.sort((a,b) => {
             const dateCompare = new Date(b.date) - new Date(a.date);
@@ -99,9 +112,7 @@ function sortMovies(movies, primarySort) {
     return sorted;
 }
 
-// Función para actualizar el estado "watching" de una película en localStorage
 function setWatching(movieId, searchTerm, watchingStatus) {
-    // Actualizar en filtered y excluded
     const updateBucket = (storageKey) => {
         let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
         let idx = searches.findIndex(entry => entry.searchTerm === searchTerm);
@@ -115,34 +126,77 @@ function setWatching(movieId, searchTerm, watchingStatus) {
     };
     updateBucket(FILTERED_SEARCH_KEY);
     updateBucket(EXCLUDED_SEARCH_KEY);
-    // Si el filtro "Watching" está activo, refrescar vista
     if (watchingFilterActive) updateView();
 }
 
-// Alternar estado watching desde la tarjeta o modal
+function setFavorite(movieId, searchTerm, favoriteStatus) {
+    const updateBucket = (storageKey) => {
+        let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        let idx = searches.findIndex(entry => entry.searchTerm === searchTerm);
+        if (idx !== -1) {
+            let movieIdx = searches[idx].results.findIndex(m => m.id === movieId);
+            if (movieIdx !== -1) {
+                searches[idx].results[movieIdx].favorite = favoriteStatus;
+                localStorage.setItem(storageKey, JSON.stringify(searches));
+            }
+        }
+    };
+    updateBucket(FILTERED_SEARCH_KEY);
+    updateBucket(EXCLUDED_SEARCH_KEY);
+    if (favoriteFilterActive) updateView();
+}
+
 function toggleWatching(movieId, searchTerm, currentStatus) {
     setWatching(movieId, searchTerm, !currentStatus);
-    updateView(); // Refrescar la vista actual
+    updateView();
+}
+
+function toggleFavorite(movieId, searchTerm, currentStatus) {
+    setFavorite(movieId, searchTerm, !currentStatus);
+    updateView();
 }
 
 function renderMovies(movies, sortBy, titlePrefix, viewMode) {
-    // Aplicar filtro de watching si está activo
+    // Aplicar filtros: si ambos activos, mostrar solo las que tienen ambos true; si solo uno, filtrar por él
     let filteredMovies = movies;
-    if (watchingFilterActive) {
+    if (watchingFilterActive && favoriteFilterActive) {
+        filteredMovies = movies.filter(m => m.watching === true && m.favorite === true);
+    } else if (watchingFilterActive) {
         filteredMovies = movies.filter(m => m.watching === true);
+    } else if (favoriteFilterActive) {
+        filteredMovies = movies.filter(m => m.favorite === true);
     }
+
     const sorted = sortMovies(filteredMovies, sortBy);
     const isDateSort = (sortBy === 'date');
     if (sorted.length === 0) {
-        if (watchingFilterActive && movies.length > 0) {
-            resultsGrid.innerHTML = '<p class="stats">No movies marked as watching in this view. Click the "Watching" button again to show all.</p>';
-        } else {
-            resultsGrid.innerHTML = '<p class="stats">No movies to display.</p>';
+        let msg = 'No movies to display.';
+        if ((watchingFilterActive || favoriteFilterActive) && movies.length > 0) {
+            msg = 'No movies match the active filters (Watching/Favorites). Click filter buttons again to show all.';
         }
+        resultsGrid.innerHTML = `<p class="stats">${msg}</p>`;
         resultsStats.innerHTML = '';
         resultsTitle.innerText = titlePrefix;
         return;
     }
+
+    const generateCard = (movie) => `
+        <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${viewMode}")'>
+            <img src="${movie.imageUrl}" alt="${movie.title}">
+            <div class="info">
+                <h3>${escapeHtml(movie.title)}</h3>
+                <div class="channel">${escapeHtml(movie.channel)}</div>
+                <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
+                    <span class="comments"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span> ${formatNumber(movie.commentCount)}</span>
+                    <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
+                    <span class="watching-icon" data-id="${movie.id}" data-term="${movie.searchTerm}" data-watching="${movie.watching}" style="cursor: pointer;">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+
     if (isDateSort) {
         const groups = new Map();
         const todayKey = getLocalDateKey(new Date());
@@ -166,48 +220,31 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
                 label = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             }
             html += `<div class="date-group"><div class="group-date">${label}</div><div class="results-group">`;
-            html += movieList.map(movie => `
-                <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${viewMode}")'>
-                    <img src="${movie.imageUrl}" alt="${movie.title}">
-                    <div class="info">
-                        <h3>${escapeHtml(movie.title)}</h3>
-                        <div class="channel">${escapeHtml(movie.channel)}</div>
-                        <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
-                            <span class="comments"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span> ${formatNumber(movie.commentCount)}</span>
-                            <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
-                            <span class="watching-icon" data-id="${movie.id}" data-term="${movie.searchTerm}" data-watching="${movie.watching}" style="cursor: pointer;">
-                                <span class="material-symbols-outlined" style="font-size: 18px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
+            html += movieList.map(movie => generateCard(movie)).join('');
             html += `</div></div>`;
         }
         resultsGrid.innerHTML = html;
         resultsGrid.style.display = 'block';
     } else {
-        resultsGrid.innerHTML = sorted.map(movie => `
-            <div class="video-card" onclick='openModal(${JSON.stringify(movie).replace(/'/g, "&#39;")}, "${viewMode}")'>
-                <img src="${movie.imageUrl}" alt="${movie.title}">
-                <div class="info">
-                    <h3>${escapeHtml(movie.title)}</h3>
-                    <div class="channel">${escapeHtml(movie.channel)}</div>
-                    <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
-                        <span class="comments"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span> ${formatNumber(movie.commentCount)}</span>
-                        <span class="likes"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span> ${formatNumber(movie.likeCount)}</span>
-                        <span class="watching-icon" data-id="${movie.id}" data-term="${movie.searchTerm}" data-watching="${movie.watching}" style="cursor: pointer;">
-                            <span class="material-symbols-outlined" style="font-size: 18px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        resultsGrid.innerHTML = sorted.map(movie => generateCard(movie)).join('');
         resultsGrid.style.display = 'grid';
     }
+
     resultsTitle.innerText = titlePrefix;
-    const sortLabel = sortBy === 'date' ? 'by date' : (sortBy === 'title' ? 'by title' : (sortBy === 'channel' ? 'by channel' : (sortBy === 'mostViewed' ? 'by views' : (sortBy === 'mostLiked' ? 'by likes' : 'by comments'))));
-    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button> | <button data-sort="mostViewed">Most Viewed</button> | <button data-sort="mostLiked">Most Liked</button> | <button data-sort="mostCommented">Most Commented</button></span>`;
+    const sortLabel = (() => {
+        switch (sortBy) {
+            case 'date': return 'by date';
+            case 'title': return 'by title';
+            case 'channel': return 'by channel';
+            case 'mostViewed': return 'by views';
+            case 'mostLiked': return 'by likes';
+            case 'mostCommented': return 'by comments';
+            case 'watching': return 'by watching';
+            case 'favorite': return 'by favorite';
+            default: return '';
+        }
+    })();
+    resultsStats.innerHTML = `<strong>${sorted.length} movies</strong> · <span id="sortButtons">Sort by: <button data-sort="date">Date</button> | <button data-sort="title">Title</button> | <button data-sort="channel">Channel</button> | <button data-sort="mostViewed">Most Viewed</button> | <button data-sort="mostLiked">Most Liked</button> | <button data-sort="mostCommented">Most Commented</button> | <button data-sort="watching">Watching</button> | <button data-sort="favorite">Favorites</button></span>`;
     const buttons = resultsStats.querySelectorAll('#sortButtons button');
     buttons.forEach(btn => {
         btn.onclick = () => {
@@ -215,10 +252,11 @@ function renderMovies(movies, sortBy, titlePrefix, viewMode) {
             updateView();
         };
     });
-    // Asignar eventos a los íconos de watching en las tarjetas
+
+    // Eventos para íconos de watching (evitan abrir modal)
     document.querySelectorAll('.watching-icon').forEach(icon => {
         icon.onclick = (e) => {
-            e.stopPropagation(); // Evitar que se abra el modal al hacer clic en el icono
+            e.stopPropagation();
             const movieId = icon.dataset.id;
             const term = icon.dataset.term;
             const current = icon.dataset.watching === 'true';
@@ -262,9 +300,23 @@ function updateView() {
         });
         movies = unique;
     }
-    const sortLabel = currentSort === 'date' ? 'by date' : (currentSort === 'title' ? 'by title' : (currentSort === 'channel' ? 'by channel' : (currentSort === 'mostViewed' ? 'by views' : (currentSort === 'mostLiked' ? 'by likes' : 'by comments'))));
+    const sortLabel = (() => {
+        switch (currentSort) {
+            case 'date': return 'by date';
+            case 'title': return 'by title';
+            case 'channel': return 'by channel';
+            case 'mostViewed': return 'by views';
+            case 'mostLiked': return 'by likes';
+            case 'mostCommented': return 'by comments';
+            case 'watching': return 'by watching';
+            case 'favorite': return 'by favorite';
+            default: return '';
+        }
+    })();
     let titlePrefix = currentTermForView ? `${titlePrefixBase}: "${currentTermForView}" (${sortLabel})` : `${titlePrefixBase} (${sortLabel})`;
-    if (watchingFilterActive) titlePrefix = `👁️ Watching filtered · ${titlePrefix}`;
+    if (watchingFilterActive && favoriteFilterActive) titlePrefix = `👁️ Watching ★ Favorites · ${titlePrefix}`;
+    else if (watchingFilterActive) titlePrefix = `👁️ Watching · ${titlePrefix}`;
+    else if (favoriteFilterActive) titlePrefix = `★ Favorites · ${titlePrefix}`;
     renderMovies(movies, currentSort, titlePrefix, currentViewMode);
 }
 
@@ -410,18 +462,23 @@ function showSettings() {
 function saveSearchResults(searchTerm, enrichedItems) {
     const filteredItems = [];
     const excludedItems = [];
-    // Leer datos existentes para preservar el estado "watching" de películas que ya existían
+    // Leer datos existentes para preservar watching y favorite
     const existingFiltered = JSON.parse(localStorage.getItem(FILTERED_SEARCH_KEY) || '[]');
     const existingExcluded = JSON.parse(localStorage.getItem(EXCLUDED_SEARCH_KEY) || '[]');
-    const existingWatchingMap = new Map();
+    const existingStateMap = new Map(); // key: id, value: {watching, favorite}
     existingFiltered.forEach(entry => {
-        entry.results.forEach(m => { if (m.watching) existingWatchingMap.set(m.id, true); });
+        entry.results.forEach(m => {
+            existingStateMap.set(m.id, { watching: m.watching || false, favorite: m.favorite || false });
+        });
     });
     existingExcluded.forEach(entry => {
-        entry.results.forEach(m => { if (m.watching) existingWatchingMap.set(m.id, true); });
+        entry.results.forEach(m => {
+            existingStateMap.set(m.id, { watching: m.watching || false, favorite: m.favorite || false });
+        });
     });
 
     enrichedItems.forEach(item => {
+        const existing = existingStateMap.get(item.id);
         const movie = {
             id: item.id,
             title: item.title,
@@ -437,7 +494,8 @@ function saveSearchResults(searchTerm, enrichedItems) {
             likeCount: item.likeCount,
             commentCount: item.commentCount,
             tags: item.tags,
-            watching: existingWatchingMap.has(item.id) ? true : false  // preservar estado si existía
+            watching: existing ? existing.watching : false,
+            favorite: existing ? existing.favorite : false
         };
         if (item.channelId === TARGET_CHANNEL_ID) filteredItems.push(movie);
         else excludedItems.push(movie);
@@ -448,7 +506,6 @@ function saveSearchResults(searchTerm, enrichedItems) {
         let idx = searches.findIndex(entry => entry.searchTerm === searchTerm);
         let existing = idx !== -1 ? searches[idx].results : [];
         const existingIds = new Set(existing.map(m => m.id));
-        // Combinar preservando el estado watching de los existentes que no se reemplazan
         const toAdd = newItems.filter(m => !existingIds.has(m.id));
         const combined = [...existing, ...toAdd];
         combined.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -766,8 +823,15 @@ searchBtn.onclick = async () => {
 
 function toggleWatchingFilter() {
     watchingFilterActive = !watchingFilterActive;
+    // Si activamos watching, opcionalmente podríamos desactivar favorite? No, permitimos combinación.
     updateView();
-    refreshTopBar(); // para actualizar el estilo del botón
+    refreshTopBar();
+}
+
+function toggleFavoriteFilter() {
+    favoriteFilterActive = !favoriteFilterActive;
+    updateView();
+    refreshTopBar();
 }
 
 function toggleMode() {
@@ -806,7 +870,8 @@ function refreshTopBar() {
     let filterTitle = (currentViewMode === 'filtered' || currentViewMode === 'filtered_trash') ? 'Show all Free Movies' : 'Show all Excluded Results';
 
     let html = `<button class="full-search-btn material-symbols-outlined" id="unionIcon" title="${filterTitle}">${filterIcon}</button>
-                <button class="full-search-btn material-symbols-outlined" id="watchingFilterBtn" title="Show only movies marked as watching" style="${watchingFilterActive ? 'background-color: #444;' : ''}">visibility</button>`;
+                <button class="full-search-btn material-symbols-outlined" id="watchingFilterBtn" title="Show only movies marked as watching" style="${watchingFilterActive ? 'background-color: #444;' : ''}">visibility</button>
+                <button class="full-search-btn material-symbols-outlined" id="favoriteFilterBtn" title="Show only favorite movies" style="${favoriteFilterActive ? 'background-color: #444;' : ''}">star</button>`;
     if (terms.length === 0) {
         html += '<div style="margin: 10px 0; font-size: 14px; color: #aaa;">No recent searches in this mode.</div>';
     } else {
@@ -838,6 +903,13 @@ function refreshTopBar() {
         watchingFilterBtn.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
             toggleWatchingFilter();
+        };
+    }
+    const favoriteFilterBtn = document.getElementById('favoriteFilterBtn');
+    if (favoriteFilterBtn) {
+        favoriteFilterBtn.onclick = () => {
+            if (isSettingsView) closeSettingsAndRestore();
+            toggleFavoriteFilter();
         };
     }
     document.querySelectorAll('.tag-btn').forEach(btn => {
@@ -915,6 +987,7 @@ function init() {
     currentSort = 'date';
     isSettingsView = false;
     watchingFilterActive = false;
+    favoriteFilterActive = false;
     updateView();
     updateSettingsIcon();
     settingsBtn.onclick = () => {
@@ -951,12 +1024,21 @@ function openModal(movie, sourceMode) {
         <p><strong>Duration:</strong> ${formattedDuration}</p>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
         <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
-        <div class="watching-modal" style="margin: 15px 0; padding: 10px; background: #2a2a2a; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-            <span>Marcar como "Watching":</span>
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                <input type="checkbox" id="modalWatchingCheckbox" ${movie.watching ? 'checked' : ''} style="width: 18px; height: 18px;">
-            </label>
+        <div style="margin: 15px 0; padding: 10px; background: #2a2a2a; border-radius: 8px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                <span>Marcar como "Watching":</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
+                    <input type="checkbox" id="modalWatchingCheckbox" ${movie.watching ? 'checked' : ''} style="width: 18px; height: 18px;">
+                </label>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span>Marcar como "Favorito":</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <span class="material-symbols-outlined">${movie.favorite ? 'star' : 'star_outline'}</span>
+                    <input type="checkbox" id="modalFavoriteCheckbox" ${movie.favorite ? 'checked' : ''} style="width: 18px; height: 18px;">
+                </label>
+            </div>
         </div>
         ${isInTrash ? `
             <div style="display: flex; gap: 10px; margin-top: 15px;">
@@ -985,15 +1067,22 @@ function openModal(movie, sourceMode) {
     currentMovieUrl = movie.url;
     modal.style.display = 'flex';
 
-    // Checkbox del modal: toggle watching
-    const modalCheckbox = document.getElementById('modalWatchingCheckbox');
-    if (modalCheckbox) {
-        modalCheckbox.onchange = (e) => {
+    const modalWatchingCheckbox = document.getElementById('modalWatchingCheckbox');
+    if (modalWatchingCheckbox) {
+        modalWatchingCheckbox.onchange = (e) => {
             toggleWatching(movie.id, movie.searchTerm, movie.watching);
-            movie.watching = !movie.watching; // actualizar localmente para que el modal se muestre correctamente si se vuelve a abrir
-            // Actualizar texto del label
-            const labelSpan = modalCheckbox.parentElement.querySelector('span');
+            movie.watching = !movie.watching;
+            const labelSpan = modalWatchingCheckbox.parentElement.querySelector('span');
             if (labelSpan) labelSpan.textContent = movie.watching ? 'visibility' : 'visibility_off';
+        };
+    }
+    const modalFavoriteCheckbox = document.getElementById('modalFavoriteCheckbox');
+    if (modalFavoriteCheckbox) {
+        modalFavoriteCheckbox.onchange = (e) => {
+            toggleFavorite(movie.id, movie.searchTerm, movie.favorite);
+            movie.favorite = !movie.favorite;
+            const labelSpan = modalFavoriteCheckbox.parentElement.querySelector('span');
+            if (labelSpan) labelSpan.textContent = movie.favorite ? 'star' : 'star_outline';
         };
     }
 
