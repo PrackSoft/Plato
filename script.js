@@ -1,4 +1,4 @@
-// script.js - Filtros Watching y Favoritos: globales (ignoran término) y excluyentes
+// script.js - Añadida edición del término de búsqueda (movimiento entre términos)
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -42,7 +42,7 @@ let previousViewState = null;
 let isSettingsView = false;
 let watchingFilterActive = false;
 let favoriteFilterActive = false;
-let lastTermBeforeFilter = null; // guardar el término cuando se activa un filtro
+let lastTermBeforeFilter = null;
 
 function escapeHtml(str) {
     if (!str) return '';
@@ -155,6 +155,52 @@ function toggleWatching(movieId, searchTerm, currentStatus) {
 function toggleFavorite(movieId, searchTerm, currentStatus) {
     setFavorite(movieId, searchTerm, !currentStatus);
     updateView();
+}
+
+// Función para mover una película de un término a otro
+function moveMovieToTerm(movie, newTerm, sourceMode) {
+    const storageKey = (sourceMode === 'filtered' || sourceMode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
+    let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    
+    // 1. Eliminar del término antiguo
+    const oldTerm = movie.searchTerm;
+    let oldTermIdx = searches.findIndex(entry => entry.searchTerm === oldTerm);
+    if (oldTermIdx !== -1) {
+        searches[oldTermIdx].results = searches[oldTermIdx].results.filter(m => m.id !== movie.id);
+        if (searches[oldTermIdx].results.length === 0) {
+            searches.splice(oldTermIdx, 1);
+        } else {
+            searches[oldTermIdx].date = new Date().toISOString();
+        }
+    }
+    
+    // 2. Añadir al nuevo término
+    const movieCopy = { ...movie, searchTerm: newTerm };
+    let newTermIdx = searches.findIndex(entry => entry.searchTerm === newTerm);
+    if (newTermIdx !== -1) {
+        // Evitar duplicados por ID
+        if (!searches[newTermIdx].results.some(m => m.id === movie.id)) {
+            searches[newTermIdx].results.push(movieCopy);
+            searches[newTermIdx].results.sort((a,b) => new Date(b.date) - new Date(a.date));
+            searches[newTermIdx].results = searches[newTermIdx].results.slice(0, MAX_RESULTS_PER_TERM);
+            searches[newTermIdx].date = new Date().toISOString();
+        }
+    } else {
+        searches.unshift({
+            searchTerm: newTerm,
+            date: new Date().toISOString(),
+            results: [movieCopy]
+        });
+    }
+    
+    // 3. Guardar
+    localStorage.setItem(storageKey, JSON.stringify(searches));
+    
+    // 4. Actualizar vista
+    if (currentViewMode === sourceMode || currentViewMode === sourceMode + '_trash') {
+        updateView();
+        refreshTopBar();
+    }
 }
 
 function renderMovies(movies, sortBy, titlePrefix, viewMode) {
@@ -821,16 +867,14 @@ searchBtn.onclick = async () => {
 
 function toggleWatchingFilter() {
     if (watchingFilterActive) {
-        // Desactivar filtro: restaurar término si había uno guardado, o mostrar todo
         watchingFilterActive = false;
         currentTermForView = lastTermBeforeFilter !== null ? lastTermBeforeFilter : null;
         lastTermBeforeFilter = null;
     } else {
-        // Activar filtro: guardar término actual y quitarlo
         lastTermBeforeFilter = currentTermForView;
         currentTermForView = null;
         watchingFilterActive = true;
-        favoriteFilterActive = false; // excluyente
+        favoriteFilterActive = false;
     }
     updateView();
     refreshTopBar();
@@ -932,7 +976,6 @@ function refreshTopBar() {
     document.querySelectorAll('.tag-btn').forEach(btn => {
         btn.onclick = () => {
             if (isSettingsView) closeSettingsAndRestore();
-            // Al seleccionar un término, desactivamos cualquier filtro activo
             if (watchingFilterActive || favoriteFilterActive) {
                 watchingFilterActive = false;
                 favoriteFilterActive = false;
@@ -1048,7 +1091,11 @@ function openModal(movie, sourceMode) {
         <div class="modal-description">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Duration:</strong> ${formattedDuration}</p>
         <p><strong>Search performed:</strong> ${new Date(movie.date).toLocaleString()}</p>
-        <p><strong>Key Word:</strong> ${escapeHtml(movie.searchTerm)}</p>
+        <div style="margin: 15px 0; display: flex; align-items: center; gap: 10px; background: #2a2a2a; padding: 8px; border-radius: 8px;">
+            <strong>Key Word:</strong>
+            <input type="text" id="editSearchTerm" value="${escapeHtml(movie.searchTerm)}" style="flex: 1; background: #1e1e1e; border: 1px solid #444; padding: 6px; color: white; border-radius: 4px;">
+            <button id="saveTermBtn" class="material-symbols-outlined" style="background: #444; border: none; border-radius: 4px; padding: 4px; cursor: pointer;">save</button>
+        </div>
         <div style="margin: 15px 0; padding: 10px; background: #2a2a2a; border-radius: 8px;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
                 <span>Marcar como "Watching":</span>
@@ -1108,6 +1155,25 @@ function openModal(movie, sourceMode) {
             movie.favorite = !movie.favorite;
             const labelSpan = modalFavoriteCheckbox.parentElement.querySelector('span');
             if (labelSpan) labelSpan.textContent = movie.favorite ? 'star' : 'star_outline';
+        };
+    }
+
+    const saveTermBtn = document.getElementById('saveTermBtn');
+    const editTermInput = document.getElementById('editSearchTerm');
+    if (saveTermBtn && editTermInput) {
+        saveTermBtn.onclick = () => {
+            const newTerm = editTermInput.value.trim();
+            if (newTerm && newTerm !== movie.searchTerm) {
+                // Mover la película al nuevo término
+                moveMovieToTerm(movie, newTerm, mode);
+                // Cerrar modal
+                modal.style.display = 'none';
+                // Actualizar vista (ya se actualiza dentro de moveMovieToTerm, pero por si acaso)
+                updateView();
+                refreshTopBar();
+            } else if (!newTerm) {
+                alert("El término no puede estar vacío.");
+            }
         };
     }
 
