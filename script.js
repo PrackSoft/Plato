@@ -1,4 +1,4 @@
-// script.js - Añadida edición del término de búsqueda (movimiento entre términos)
+// script.js - Corregido: al ir a Trash desde Settings se desactivan los filtros Watching/Favoritos
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -157,12 +157,10 @@ function toggleFavorite(movieId, searchTerm, currentStatus) {
     updateView();
 }
 
-// Función para mover una película de un término a otro
 function moveMovieToTerm(movie, newTerm, sourceMode) {
     const storageKey = (sourceMode === 'filtered' || sourceMode === 'filtered_trash') ? FILTERED_SEARCH_KEY : EXCLUDED_SEARCH_KEY;
     let searches = JSON.parse(localStorage.getItem(storageKey) || '[]');
     
-    // 1. Eliminar del término antiguo
     const oldTerm = movie.searchTerm;
     let oldTermIdx = searches.findIndex(entry => entry.searchTerm === oldTerm);
     if (oldTermIdx !== -1) {
@@ -174,11 +172,9 @@ function moveMovieToTerm(movie, newTerm, sourceMode) {
         }
     }
     
-    // 2. Añadir al nuevo término
     const movieCopy = { ...movie, searchTerm: newTerm };
     let newTermIdx = searches.findIndex(entry => entry.searchTerm === newTerm);
     if (newTermIdx !== -1) {
-        // Evitar duplicados por ID
         if (!searches[newTermIdx].results.some(m => m.id === movie.id)) {
             searches[newTermIdx].results.push(movieCopy);
             searches[newTermIdx].results.sort((a,b) => new Date(b.date) - new Date(a.date));
@@ -193,10 +189,8 @@ function moveMovieToTerm(movie, newTerm, sourceMode) {
         });
     }
     
-    // 3. Guardar
     localStorage.setItem(storageKey, JSON.stringify(searches));
     
-    // 4. Actualizar vista
     if (currentViewMode === sourceMode || currentViewMode === sourceMode + '_trash') {
         updateView();
         refreshTopBar();
@@ -485,6 +479,10 @@ function showSettings() {
     if (goToTrashBtn) {
         goToTrashBtn.onclick = () => {
             closeSettingsAndRestore();
+            // Resetear filtros al ir a la papelera
+            watchingFilterActive = false;
+            favoriteFilterActive = false;
+            lastTermBeforeFilter = null;
             if (currentViewMode === 'filtered') currentViewMode = 'filtered_trash';
             else if (currentViewMode === 'excluded') currentViewMode = 'excluded_trash';
             currentTermForView = null;
@@ -897,6 +895,10 @@ function toggleFavoriteFilter() {
 
 function toggleMode() {
     if (isSettingsView) closeSettingsAndRestore();
+    // Al cambiar de modo (filtered/excluded), reseteamos los filtros para evitar confusiones
+    watchingFilterActive = false;
+    favoriteFilterActive = false;
+    lastTermBeforeFilter = null;
     if (currentViewMode === 'filtered') currentViewMode = 'excluded';
     else if (currentViewMode === 'excluded') currentViewMode = 'filtered';
     else if (currentViewMode === 'filtered_trash') currentViewMode = 'excluded_trash';
@@ -1164,11 +1166,8 @@ function openModal(movie, sourceMode) {
         saveTermBtn.onclick = () => {
             const newTerm = editTermInput.value.trim();
             if (newTerm && newTerm !== movie.searchTerm) {
-                // Mover la película al nuevo término
                 moveMovieToTerm(movie, newTerm, mode);
-                // Cerrar modal
                 modal.style.display = 'none';
-                // Actualizar vista (ya se actualiza dentro de moveMovieToTerm, pero por si acaso)
                 updateView();
                 refreshTopBar();
             } else if (!newTerm) {
