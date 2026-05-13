@@ -1,38 +1,47 @@
 // js/app.js
-import { openDB, saveMovie } from './db.js';
+import { openDB, getAllMovies } from './db.js';
 import { searchYouTube } from './api/youtube.js';
+import { renderMovies } from './render.js';
 
-// Initialize database on load
-await openDB();
+let dbReady = openDB();
 
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
-const outputDiv = document.getElementById('output');
+const resultsGrid = document.getElementById('resultsGrid');
 
+// Load and display all saved movies on startup
+async function loadAndDisplayAll() {
+    await dbReady;
+    const movies = await getAllMovies();
+    renderMovies(resultsGrid, movies, 'All saved movies');
+}
+
+// Search and save, then refresh display
 searchBtn.onclick = async () => {
     const query = searchInput.value.trim();
     if (!query) {
-        outputDiv.innerText = 'Please enter a search term.';
+        resultsGrid.innerHTML = '<div class="stats">Enter a search term</div>';
         return;
     }
-    
-    outputDiv.innerText = 'Searching...';
+    resultsGrid.innerHTML = '<div class="stats">Searching...</div>';
     try {
-        const movies = await searchYouTube(query);
-        if (movies.length === 0) {
-            outputDiv.innerText = 'No movies found.';
+        const moviesFromAPI = await searchYouTube(query);
+        if (moviesFromAPI.length === 0) {
+            resultsGrid.innerHTML = '<div class="stats">No movies found</div>';
             return;
         }
-        
-        // Save each movie with the current search term
-        for (const movie of movies) {
+        const { saveMovie } = await import('./db.js');
+        for (const movie of moviesFromAPI) {
             await saveMovie(movie, query);
         }
-        
-        outputDiv.innerText = `Saved ${movies.length} movies (or updated existing). Check console for details.`;
-        console.log('Saved movies:', movies);
+        // Reload display after saving
+        await loadAndDisplayAll();
+        searchInput.value = '';
     } catch (err) {
         console.error(err);
-        outputDiv.innerText = `Error: ${err.message}`;
+        resultsGrid.innerHTML = `<div class="stats">Error: ${err.message}</div>`;
     }
 };
+
+// Initial load
+loadAndDisplayAll();

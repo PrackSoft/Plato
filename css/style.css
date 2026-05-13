@@ -1,1 +1,15 @@
-/* css/style.css - will be filled later */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f0f0f; color: white; font-family: system-ui, sans-serif; }
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.search-box { display: flex; gap: 12px; margin-bottom: 30px; }
+#searchInput { flex: 1; padding: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; color: white; }
+#searchBtn { padding: 0 24px; background: #ff0000; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
+.results { margin-top: 20px; }
+.movies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.video-card { background: #1a1a1a; border-radius: 12px; overflow: hidden; cursor: pointer; }
+.video-card img { width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+.info { padding: 12px; }
+.info h3 { font-size: 14px; margin-bottom: 6px; }
+.channel { font-size: 12px; color: #aaa; }
+.terms { font-size: 10px; color: #666; margin-top: 6px; }
+.stats { text-align: center; padding: 40px; color: #aaa; }

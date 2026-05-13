@@ -73,3 +73,26 @@ export async function saveMovie(movieData, searchTerm) {
         getRequest.onerror = () => reject(getRequest.error);
     });
 }
+
+
+// Get all movies from the store, sorted by dateSaved desc
+export async function getAllMovies() {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_MOVIES], 'readonly');
+    const store = transaction.objectStore(STORE_MOVIES);
+    const index = store.index('by_dateSaved');
+    return new Promise((resolve, reject) => {
+        const request = index.openCursor(null, 'prev'); // descending
+        const movies = [];
+        request.onsuccess = () => {
+            const cursor = request.result;
+            if (cursor) {
+                movies.push(cursor.value);
+                cursor.continue();
+            } else {
+                resolve(movies);
+            }
+        };
+        request.onerror = () => reject(request.error);
+    });
+}
