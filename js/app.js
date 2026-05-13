@@ -1,10 +1,7 @@
 // js/app.js
-//import { openDB, getAllMovies } from './db.js';
 import { openDB, getAllMovies, saveMovie } from './db.js';
-
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
-
 import { CHANNELS, getChannelName } from './channels.js';
 
 let dbReady = openDB();
@@ -13,12 +10,15 @@ const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const resultsGrid = document.getElementById('resultsGrid');
 
+// Elementos de los dropdowns
+const searchChannelBtn = document.getElementById('searchChannelBtn');
 const searchChannelSelect = document.getElementById('searchChannelSelect');
-const displayFilterDiv = document.getElementById('displayFilterCheckboxes');
+const displayFilterBtn = document.getElementById('displayFilterBtn');
+const displayFilterPanel = document.getElementById('displayFilterPanel');
 
-let currentDisplayChannelIds = []; // array of selected channel IDs for filtering
+let currentDisplayChannelIds = []; // array de IDs seleccionados (null significa "todos")
 
-// Populate search channel dropdown
+// Llenar el select de búsqueda (exclusivo)
 CHANNELS.forEach(channel => {
     const option = document.createElement('option');
     option.value = channel.id === null ? '' : channel.id;
@@ -26,52 +26,74 @@ CHANNELS.forEach(channel => {
     searchChannelSelect.appendChild(option);
 });
 
-// Populate display filter checkboxes
-function buildDisplayFilter() {
-    displayFilterDiv.innerHTML = '';
+// Mostrar el select nativo al hacer clic en el botón (simulamos dropdown)
+searchChannelBtn.addEventListener('click', () => {
+    searchChannelSelect.click(); // abre el select nativo
+});
+// Sincronizar el texto del botón con la selección actual
+searchChannelSelect.addEventListener('change', () => {
+    const selectedOption = searchChannelSelect.options[searchChannelSelect.selectedIndex];
+    const selectedName = selectedOption.textContent;
+    // Actualizar el botón manteniendo el ícono
+    searchChannelBtn.innerHTML = `<span class="material-symbols-outlined">subscriptions</span> ${selectedName} <span class="material-symbols-outlined">arrow_drop_down</span>`;
+    // No es necesario reiniciar búsqueda, solo cambiar el canal para futuras búsquedas
+});
+// Forzar cambio inicial para que el botón muestre el primer canal
+searchChannelSelect.dispatchEvent(new Event('change'));
+
+// Construir el panel de checkboxes para filtro de visualización
+function buildDisplayFilterPanel() {
+    displayFilterPanel.innerHTML = '';
     CHANNELS.forEach(channel => {
         const label = document.createElement('label');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = channel.id === null ? '' : channel.id;
-        checkbox.checked = (channel.id === 'UCuVPpxrm2VAgpH3Ktln4HXg'); // default: free movies channel selected
+        // Por defecto, seleccionar el canal de películas gratis (si existe)
+        const isFreeMovies = channel.id === 'UCuVPpxrm2VAgpH3Ktln4HXg';
+        checkbox.checked = isFreeMovies;
         checkbox.addEventListener('change', () => {
             updateDisplayFilter();
             loadAndDisplayAll();
         });
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(channel.name));
-        displayFilterDiv.appendChild(label);
-        displayFilterDiv.appendChild(document.createTextNode(' '));
+        displayFilterPanel.appendChild(label);
     });
+    updateDisplayFilter(); // inicializar currentDisplayChannelIds
 }
 
 function updateDisplayFilter() {
-    const checkboxes = displayFilterDiv.querySelectorAll('input[type="checkbox"]');
+    const checkboxes = displayFilterPanel.querySelectorAll('input[type="checkbox"]');
     currentDisplayChannelIds = Array.from(checkboxes)
         .filter(cb => cb.checked)
         .map(cb => cb.value === '' ? null : cb.value);
 }
 
-// Load and display movies filtered by selected display channels
+// Toggle del panel de filtros al hacer clic en el botón
+displayFilterBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    displayFilterPanel.classList.toggle('hidden');
+});
+// Cerrar panel si se hace clic fuera
+document.addEventListener('click', (e) => {
+    if (!displayFilterBtn.contains(e.target) && !displayFilterPanel.contains(e.target)) {
+        displayFilterPanel.classList.add('hidden');
+    }
+});
+
+// Cargar y mostrar películas aplicando el filtro de canales
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies = await getAllMovies();
-    // Filter by selected display channels
+    // Aplicar filtro según currentDisplayChannelIds
     if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
-        // Show only movies whose channelId is in the selected list
         allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
-    } else if (currentDisplayChannelIds.includes(null)) {
-        // "All channels" selected: show everything, no filtering
-        // (do nothing)
-    } else {
-        // No filter selected? Show nothing? We'll treat as "no filter" but let's be safe: show all
-        // Actually if no checkboxes are checked, we could show empty, but for UX we'll show all.
-    }
+    } // si incluye null, mostrar todos (sin filtro)
     renderMovies(resultsGrid, allMovies, `Movies (${allMovies.length})`);
 }
 
-// Search and save
+// Búsqueda y guardado
 searchBtn.onclick = async () => {
     const query = searchInput.value.trim();
     if (!query) {
@@ -97,7 +119,6 @@ searchBtn.onclick = async () => {
     }
 };
 
-// Initial load
-buildDisplayFilter();
-updateDisplayFilter();
+// Inicializar
+buildDisplayFilterPanel();
 loadAndDisplayAll();

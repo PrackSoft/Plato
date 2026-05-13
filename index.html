@@ -23,13 +23,24 @@
 
             <!-- Inside .header .container, after .logo and before .search-box -->
             <div class="channel-controls">
-                <div class="search-channel">
-                    <label>Search in:</label>
-                    <select id="searchChannelSelect"></select>
+                <!-- Desplegable para búsqueda (exclusivo) -->
+                <div class="dropdown-search">
+                    <button id="searchChannelBtn" class="channel-btn">
+                        <span class="material-symbols-outlined">subscriptions</span> Search in
+                        <span class="material-symbols-outlined">arrow_drop_down</span>
+                    </button>
+                    <select id="searchChannelSelect" class="hidden-select"></select>
                 </div>
-                <div class="display-filter">
-                    <label>Show channels:</label>
-                    <div id="displayFilterCheckboxes"></div>
+
+                <!-- Desplegable para filtro de visualización (inclusivo con checkboxes) -->
+                <div class="dropdown-filter">
+                    <button id="displayFilterBtn" class="channel-btn">
+                        <span class="material-symbols-outlined">live_tv</span> Show Channels
+                        <span class="material-symbols-outlined">arrow_drop_down</span>
+                    </button>
+                    <div id="displayFilterPanel" class="filter-panel hidden">
+                        <!-- Los checkboxes se generarán con JS -->
+                    </div>
                 </div>
             </div>
 
