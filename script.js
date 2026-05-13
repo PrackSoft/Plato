@@ -1,4 +1,4 @@
-// script.js - Corregido: al ir a Trash desde Settings se desactivan los filtros Watching/Favoritos
+// script.js - Botón "Show all results" resetea término y desactiva filtros Watching/Favoritos
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -703,9 +703,14 @@ function exitTrashAndShowAll() {
     } else if (currentViewMode === 'excluded_trash') {
         currentViewMode = 'excluded';
     } else {
+        // En modo normal, reseteamos término y filtros para mostrar todo
         currentTermForView = null;
+        watchingFilterActive = false;
+        favoriteFilterActive = false;
+        lastTermBeforeFilter = null;
         currentSort = 'date';
         updateView();
+        refreshTopBar();
         return;
     }
     currentTermForView = null;
