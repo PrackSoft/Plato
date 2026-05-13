@@ -1,4 +1,56 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Header and Logo */
+.header {
+    background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+    padding: 20px 0;
+    border-bottom: 1px solid #2a2a2a;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.logo {
+    font-family: 'Monoton', cursive;
+    font-size: 33px;
+    font-weight: 400;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+.logo span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ff0000;
+    border-radius: 4px;
+    padding: 0;
+    line-height: 1;
+    height: 28px;
+    width: 28px;
+    border: 1.5px solid #ff9999;
+    transition: all 0.2s ease;
+}
+
+.material-symbols-outlined {
+    font-size: 24px;
+}
+
+/* Existing styles below remain unchanged */
+/* ... (todo el CSS que ya tenías para .search-box, .results, .video-card, etc.) ... */
+
+
 body { background: #0f0f0f; color: white; font-family: system-ui, sans-serif; }
 .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
 .search-box { display: flex; gap: 12px; margin-bottom: 30px; }
