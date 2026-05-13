@@ -141,8 +141,37 @@ body { background: #0f0f0f; color: white; font-family: system-ui, sans-serif; }
 .filter-panel.hidden {
     display: none;
 }
-.dropdown-filter {
+.dropdown-search, .dropdown-filter {
     position: relative;
+}
+.dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #1e1e1e;
+    border-radius: 12px;
+    padding: 8px 0;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 200;
+    margin-top: 8px;
+}
+.dropdown-panel.hidden {
+    display: none;
+}
+.dropdown-panel label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.dropdown-panel label:hover {
+    background: #2a2a2a;
+}
+.dropdown-panel input {
+    margin: 0;
 }
 
 @media (max-width: 768px) {

@@ -23,26 +23,31 @@
 
             <!-- Inside .header .container, after .logo and before .search-box -->
             <div class="channel-controls">
-                <!-- Desplegable para búsqueda (exclusivo) -->
+                <!-- Search In dropdown (single selection) -->
                 <div class="dropdown-search">
-                    <button id="searchChannelBtn" class="channel-btn">
+                    <button id="searchInBtn" class="channel-btn">
                         <span class="material-symbols-outlined">subscriptions</span> Search in
                         <span class="material-symbols-outlined">arrow_drop_down</span>
                     </button>
-                    <select id="searchChannelSelect" class="hidden-select"></select>
+                    <div id="searchInPanel" class="dropdown-panel hidden">
+                        <!-- Radio options will be added by JS -->
+                    </div>
                 </div>
 
-                <!-- Desplegable para filtro de visualización (inclusivo con checkboxes) -->
+                <!-- Show Channels dropdown (multi selection) -->
                 <div class="dropdown-filter">
-                    <button id="displayFilterBtn" class="channel-btn">
-                        <span class="material-symbols-outlined">live_tv</span> Show Channels
+                    <button id="showChannelsBtn" class="channel-btn">
+                        <span class="material-symbols-outlined">live_tv</span> Show channels
                         <span class="material-symbols-outlined">arrow_drop_down</span>
                     </button>
-                    <div id="displayFilterPanel" class="filter-panel hidden">
-                        <!-- Los checkboxes se generarán con JS -->
+                    <div id="showChannelsPanel" class="dropdown-panel hidden">
+                        <!-- Checkboxes will be added by JS -->
                     </div>
                 </div>
             </div>
+
+
+
 
             <div id="resultsGrid" class="results"></div>
         </div>
