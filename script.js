@@ -1,4 +1,4 @@
-// script.js - Botón "Show all results" resetea término y desactiva filtros Watching/Favoritos
+// script.js - Sin límite de número de términos de búsqueda (se eliminó slice(0,20))
 const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';
 const SEARCH_MODE = 'channel';
@@ -555,7 +555,8 @@ function saveSearchResults(searchTerm, enrichedItems) {
         const entry = { searchTerm, date: new Date().toISOString(), results: limited };
         if (idx !== -1) searches[idx] = entry;
         else searches.unshift(entry);
-        searches = searches.slice(0, 20);
+        // Se ELIMINA el límite de 20 términos. Ahora se guardan todos.
+        // searches = searches.slice(0, 20);
         localStorage.setItem(storageKey, JSON.stringify(searches));
     }
     updateBucket(FILTERED_SEARCH_KEY, filteredItems);
