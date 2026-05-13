@@ -20,6 +20,19 @@
                 <input type="text" id="searchInput" placeholder="Search movies..." autocomplete="off">
                 <button id="searchBtn">Search</button>
             </div>
+
+            <!-- Inside .header .container, after .logo and before .search-box -->
+            <div class="channel-controls">
+                <div class="search-channel">
+                    <label>Search in:</label>
+                    <select id="searchChannelSelect"></select>
+                </div>
+                <div class="display-filter">
+                    <label>Show channels:</label>
+                    <div id="displayFilterCheckboxes"></div>
+                </div>
+            </div>
+
             <div id="resultsGrid" class="results"></div>
         </div>
     </div>

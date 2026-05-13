@@ -1,34 +1,33 @@
 // js/api/youtube.js
 // YouTube API interactions
 
-const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';  // Replace with your key or move to config
+//const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';  // Replace with your key or move to config
+// js/api/youtube.js
+import { API_KEY } from '../config.js'; // We'll create config.js later
+
 const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';       // Default channel, will be dynamic later
 const MAX_RESULTS_PER_PAGE = 50;
 
 // Perform search and return enriched items (without saving)
-export async function searchYouTube(query, channelId = TARGET_CHANNEL_ID) {
-    const trimmedQuery = query ? query.trim() : '';
-    if (!trimmedQuery) {
-        throw new Error('Search query cannot be empty');
+export async function searchYouTube(query, channelId = null) {
+    if (!query || query.trim() === "") {
+        throw new Error("Search query cannot be empty");
     }
-    
-    // Step 1: search for videos
-    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&channelId=${channelId}&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(trimmedQuery)}&key=${API_KEY}`;
-    const searchResponse = await fetch(searchUrl);
+    // Build base search URL
+    let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query)}&key=${API_KEY}`;
+    // Add channelId only if provided (non-null)
+    if (channelId) {
+        url += `&channelId=${channelId}`;
+    }
+    const searchResponse = await fetch(url);
     const searchData = await searchResponse.json();
-    
-    if (!searchData.items || searchData.items.length === 0) {
-        return [];
-    }
-    
+    if (!searchData.items || searchData.items.length === 0) return [];
+
     const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
-    if (videoIds.length === 0) return [];
-    
-    // Step 2: get additional details (statistics, contentDetails)
     const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
     const videosResponse = await fetch(videosUrl);
     const videosData = await videosResponse.json();
-    
+
     const detailsMap = new Map();
     if (videosData.items) {
         videosData.items.forEach(video => {
@@ -47,8 +46,7 @@ export async function searchYouTube(query, channelId = TARGET_CHANNEL_ID) {
             });
         });
     }
-    
-    // Build enriched items
+
     const enrichedItems = searchData.items.map(item => {
         const videoId = item.id.videoId;
         const extra = detailsMap.get(videoId) || {};
@@ -68,6 +66,5 @@ export async function searchYouTube(query, channelId = TARGET_CHANNEL_ID) {
             tags: extra.tags
         };
     });
-    
     return enrichedItems;
 }
