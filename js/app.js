@@ -101,40 +101,51 @@ function buildSearchInPanel() {
 }
 
 // ---------------------- Build Show Channels panel (multi-checkbox with separator) ----------------------
-function buildShowChannelsPanel() {
-    showChannelsPanel.innerHTML = '';
+function buildSearchInPanel() {
+    searchInPanel.innerHTML = '';
 
-    // Helper to close panel after a short delay (consistency with Search In)
+    // Helper: close panel with delay (consistent with Show Channels)
     function closePanelWithDelay() {
         setTimeout(() => {
             closeAllPanels();
         }, 150);
     }
 
-    // All Channels option
+    // Exclusive logic: only one checkbox can be checked at a time
+    function setExclusive(clickedCheckbox) {
+        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
+        all.forEach(cb => {
+            cb.checked = (cb === clickedCheckbox);
+        });
+        // Update state
+        const checked = Array.from(all).find(cb => cb.checked);
+        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+        closePanelWithDelay(); // was: closeAllPanels();
+    }
+
+    // All Channels option (value = '')
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
     allCb.value = '';
-    allCb.checked = currentDisplayChannelIds.includes(null);
+    allCb.checked = (currentSearchChannelId === null);
     allCb.addEventListener('change', () => {
-        if (allCb.checked) {
-            currentDisplayChannelIds = [null];
-        } else {
-            currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
+        if (allCb.checked) setExclusive(allCb);
+        else {
+            const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
+            if (!anyChecked) {
+                allCb.checked = true;
+                setExclusive(allCb);
+            } else {
+                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
+                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                closePanelWithDelay(); // was: closeAllPanels();
+            }
         }
-        updateShowChannelsCheckboxes();
-        loadAndDisplayAll();
-        closePanelWithDelay(); // auto-close after change
     });
     allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
-    showChannelsPanel.appendChild(allLabel);
-
-    // Separator
-    const sep = document.createElement('hr');
-    sep.className = 'panel-separator';
-    showChannelsPanel.appendChild(sep);
+    searchInPanel.appendChild(allLabel);
 
     // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
@@ -142,26 +153,27 @@ function buildShowChannelsPanel() {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.value = channel.id;
-        cb.checked = currentDisplayChannelIds.includes(channel.id);
+        cb.checked = (currentSearchChannelId === channel.id);
         cb.addEventListener('change', () => {
-            if (cb.checked) {
-                // If All Channels was checked, uncheck it
-                if (currentDisplayChannelIds.includes(null)) {
-                    currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-                    updateShowChannelsCheckboxes();
+            if (cb.checked) setExclusive(cb);
+            else {
+                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
+                if (!anyChecked) {
+                    const allCb2 = searchInPanel.querySelector('input[value=""]');
+                    if (allCb2) {
+                        allCb2.checked = true;
+                        setExclusive(allCb2);
+                    }
+                } else {
+                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
+                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                    closePanelWithDelay(); // was: closeAllPanels();
                 }
-                if (!currentDisplayChannelIds.includes(channel.id)) {
-                    currentDisplayChannelIds.push(channel.id);
-                }
-            } else {
-                currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
             }
-            loadAndDisplayAll();
-            closePanelWithDelay(); // auto-close after change
         });
         label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
-        showChannelsPanel.appendChild(label);
+        searchInPanel.appendChild(label);
     });
 }
 
