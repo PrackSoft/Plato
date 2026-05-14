@@ -1,173 +1,143 @@
 // ==========================================
-// js/app.js - Main application logic
+// js/app.js - Plato App (fixed dropdowns)
 // ==========================================
 
-// ------------------------------------------
-// 1. IMPORTS
-// ------------------------------------------
 import { openDB, getAllMovies, saveMovie } from './db.js';
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
 import { CHANNELS } from './channels.js';
 
-// ------------------------------------------
-// 2. DOM ELEMENTS
-// ------------------------------------------
+// ---------------------- DOM elements ----------------------
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
 const resultsGrid = document.getElementById('resultsGrid');
-
-// Dropdown: Search In (single selection)
 const searchInBtn = document.getElementById('searchInBtn');
 const searchInPanel = document.getElementById('searchInPanel');
-
-// Dropdown: Show Channels (multi selection)
 const showChannelsBtn = document.getElementById('showChannelsBtn');
 const showChannelsPanel = document.getElementById('showChannelsPanel');
 
-// ------------------------------------------
-// 3. GLOBAL STATE
-// ------------------------------------------
+// ---------------------- Global state ----------------------
 let dbReady = openDB();
-// Default search channel: YouTube Free Movies (not All Channels)
-let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg';   // ID from channels.js
-let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg']; // default: free movies channel
+// Default: YouTube Free Movies (not All Channels)
+let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg';
+let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
 
-// ------------------------------------------
-// 4. SEARCH IN PANEL (single selection with checkboxes, visually consistent)
-// ------------------------------------------
+// ---------------------- Helper: close all panels ----------------------
+function closeAllPanels() {
+    searchInPanel.classList.add('hidden');
+    showChannelsPanel.classList.add('hidden');
+}
+
+// ---------------------- Build Search In panel (exclusive checkboxes) ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
-    function setChecked(checkboxToCheck) {
-        // Uncheck all other checkboxes in this panel
-        const allCheckboxes = searchInPanel.querySelectorAll('input[type="checkbox"]');
-        allCheckboxes.forEach(cb => {
-            cb.checked = (cb === checkboxToCheck);
+    // Exclusive logic: only one checkbox can be checked at a time
+    function setExclusive(clickedCheckbox) {
+        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
+        all.forEach(cb => {
+            cb.checked = (cb === clickedCheckbox);
         });
-        // Update currentSearchChannelId based on the checked one
-        const checkedCb = Array.from(allCheckboxes).find(cb => cb.checked);
-        if (checkedCb) {
-            currentSearchChannelId = checkedCb.value === '' ? null : checkedCb.value;
-        } else {
-            currentSearchChannelId = null;
-        }
-        searchInPanel.classList.add('hidden'); // close panel after selection
+        // Update state
+        const checked = Array.from(all).find(cb => cb.checked);
+        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+        closeAllPanels();
     }
 
-    // Option: All Channels
+    // All Channels option (value = '')
     const allLabel = document.createElement('label');
-    const allCheckbox = document.createElement('input');
-    allCheckbox.type = 'checkbox';
-    allCheckbox.value = '';
-    allCheckbox.checked = (currentSearchChannelId === null);
-    allCheckbox.addEventListener('change', (e) => {
-        if (allCheckbox.checked) {
-            setChecked(allCheckbox);
-        } else {
-            // If unchecking, do nothing (but we ensure at least one remains checked? Better to keep one)
-            // For simplicity, we prevent uncheck by re-checking if no other is checked? We'll just let it be,
-            // but we want always one selected. We'll add logic: if unchecking and no other checked, re-check it.
+    const allCb = document.createElement('input');
+    allCb.type = 'checkbox';
+    allCb.value = '';
+    allCb.checked = (currentSearchChannelId === null);
+    allCb.addEventListener('change', () => {
+        if (allCb.checked) setExclusive(allCb);
+        else {
+            // If unchecking, ensure at least one stays checked; if none, re-check All Channels
             const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
             if (!anyChecked) {
-                allCheckbox.checked = true;
-                setChecked(allCheckbox);
+                allCb.checked = true;
+                setExclusive(allCb);
             } else {
-                // Update state
-                const checkedCb = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
-                currentSearchChannelId = checkedCb ? (checkedCb.value === '' ? null : checkedCb.value) : null;
-                searchInPanel.classList.add('hidden');
+                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
+                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                closeAllPanels();
             }
         }
     });
-    allLabel.appendChild(allCheckbox);
+    allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
     searchInPanel.appendChild(allLabel);
 
-    // Options for each real channel
+    // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
         const label = document.createElement('label');
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = channel.id;
-        checkbox.checked = (currentSearchChannelId === channel.id);
-        checkbox.addEventListener('change', (e) => {
-            if (checkbox.checked) {
-                setChecked(checkbox);
-            } else {
-                // If unchecking, ensure at least one remains checked; if none, re-check the "All Channels"
-                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = channel.id;
+        cb.checked = (currentSearchChannelId === channel.id);
+        cb.addEventListener('change', () => {
+            if (cb.checked) setExclusive(cb);
+            else {
+                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
                 if (!anyChecked) {
-                    const allCb = searchInPanel.querySelector('input[value=""]');
-                    if (allCb) {
-                        allCb.checked = true;
-                        setChecked(allCb);
+                    // Re-check All Channels
+                    const allCb2 = searchInPanel.querySelector('input[value=""]');
+                    if (allCb2) {
+                        allCb2.checked = true;
+                        setExclusive(allCb2);
                     }
                 } else {
-                    const checkedCb = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
-                    currentSearchChannelId = checkedCb ? (checkedCb.value === '' ? null : checkedCb.value) : null;
-                    searchInPanel.classList.add('hidden');
+                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
+                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                    closeAllPanels();
                 }
             }
         });
-        label.appendChild(checkbox);
+        label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
         searchInPanel.appendChild(label);
     });
-
-    // If no checkbox matches currentSearchChannelId, ensure All Channels is checked
-    const hasMatch = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => {
-        const val = cb.value === '' ? null : cb.value;
-        return val === currentSearchChannelId;
-    });
-    if (!hasMatch) {
-        const allCb = searchInPanel.querySelector('input[value=""]');
-        if (allCb) {
-            allCb.checked = true;
-            currentSearchChannelId = null;
-        }
-    }
 }
 
-// ------------------------------------------
-// 5. SHOW CHANNELS PANEL (multi selection with checkboxes, with separator)
-// ------------------------------------------
+// ---------------------- Build Show Channels panel (multi-checkbox with separator) ----------------------
 function buildShowChannelsPanel() {
     showChannelsPanel.innerHTML = '';
 
-    // Option: All Channels (checkbox)
+    // All Channels option
     const allLabel = document.createElement('label');
-    const allCheckbox = document.createElement('input');
-    allCheckbox.type = 'checkbox';
-    allCheckbox.value = '';
-    allCheckbox.checked = currentDisplayChannelIds.includes(null);
-    allCheckbox.addEventListener('change', () => {
-        if (allCheckbox.checked) {
+    const allCb = document.createElement('input');
+    allCb.type = 'checkbox';
+    allCb.value = '';
+    allCb.checked = currentDisplayChannelIds.includes(null);
+    allCb.addEventListener('change', () => {
+        if (allCb.checked) {
             currentDisplayChannelIds = [null];
-            updateShowChannelsCheckboxes();
         } else {
             currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
         }
+        updateShowChannelsCheckboxes();
         loadAndDisplayAll();
     });
-    allLabel.appendChild(allCheckbox);
+    allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
     showChannelsPanel.appendChild(allLabel);
 
-    // Separator line
-    const separator = document.createElement('hr');
-    separator.className = 'panel-separator';
-    showChannelsPanel.appendChild(separator);
+    // Separator
+    const sep = document.createElement('hr');
+    sep.className = 'panel-separator';
+    showChannelsPanel.appendChild(sep);
 
-    // Options for each real channel
+    // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
         const label = document.createElement('label');
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.value = channel.id;
-        checkbox.checked = currentDisplayChannelIds.includes(channel.id);
-        checkbox.addEventListener('change', () => {
-            if (checkbox.checked) {
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = channel.id;
+        cb.checked = currentDisplayChannelIds.includes(channel.id);
+        cb.addEventListener('change', () => {
+            if (cb.checked) {
+                // If All Channels was checked, uncheck it
                 if (currentDisplayChannelIds.includes(null)) {
                     currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
                     updateShowChannelsCheckboxes();
@@ -180,55 +150,71 @@ function buildShowChannelsPanel() {
             }
             loadAndDisplayAll();
         });
-        label.appendChild(checkbox);
+        label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
         showChannelsPanel.appendChild(label);
     });
 }
 
-// ------------------------------------------
-// 6. LOAD AND DISPLAY MOVIES (with channel filter)
-// ------------------------------------------
+function updateShowChannelsCheckboxes() {
+    const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+        const val = cb.value === '' ? null : cb.value;
+        cb.checked = currentDisplayChannelIds.includes(val);
+    });
+}
+
+// ---------------------- Panel toggle logic ----------------------
+searchInBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    searchInPanel.classList.toggle('hidden');
+    showChannelsPanel.classList.add('hidden');
+});
+
+showChannelsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showChannelsPanel.classList.toggle('hidden');
+    searchInPanel.classList.add('hidden');
+});
+
+// Close panels when clicking outside
+document.addEventListener('click', (e) => {
+    if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) {
+        searchInPanel.classList.add('hidden');
+    }
+    if (!showChannelsBtn.contains(e.target) && !showChannelsPanel.contains(e.target)) {
+        showChannelsPanel.classList.add('hidden');
+    }
+});
+
+// ---------------------- Load and display movies ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies = await getAllMovies();
-
-    // Apply display filter (currentDisplayChannelIds)
     if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
-        // Show only movies whose channelId is in the selected list
         allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
     }
-    // If currentDisplayChannelIds includes null, show all movies (no filtering)
-
     renderMovies(resultsGrid, allMovies, `Movies (${allMovies.length})`);
 }
 
-// ------------------------------------------
-// 7. SEARCH ACTION
-// ------------------------------------------
+// ---------------------- Search ----------------------
 searchBtn.onclick = async () => {
     const query = searchInput.value.trim();
     if (!query) {
         resultsGrid.innerHTML = '<div class="stats">Enter a search term</div>';
         return;
     }
-
-    const searchChannelId = currentSearchChannelId; // null = all channels
+    const searchChannelId = currentSearchChannelId;
     resultsGrid.innerHTML = '<div class="stats">Searching...</div>';
-
     try {
         const moviesFromAPI = await searchYouTube(query, searchChannelId);
         if (moviesFromAPI.length === 0) {
             resultsGrid.innerHTML = '<div class="stats">No movies found</div>';
             return;
         }
-
-        // Save each movie (will not duplicate, just add searchTerm)
         for (const movie of moviesFromAPI) {
             await saveMovie(movie, query);
         }
-
-        // Refresh the displayed list
         await loadAndDisplayAll();
         searchInput.value = '';
     } catch (err) {
@@ -237,9 +223,7 @@ searchBtn.onclick = async () => {
     }
 };
 
-// ------------------------------------------
-// 8. INITIALIZATION
-// ------------------------------------------
+// ---------------------- Initialization ----------------------
 buildSearchInPanel();
 buildShowChannelsPanel();
 loadAndDisplayAll();
