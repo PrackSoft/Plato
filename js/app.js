@@ -104,6 +104,13 @@ function buildSearchInPanel() {
 function buildShowChannelsPanel() {
     showChannelsPanel.innerHTML = '';
 
+    // Helper to close panel after a short delay (consistency with Search In)
+    function closePanelWithDelay() {
+        setTimeout(() => {
+            closeAllPanels();
+        }, 150);
+    }
+
     // All Channels option
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
@@ -118,6 +125,7 @@ function buildShowChannelsPanel() {
         }
         updateShowChannelsCheckboxes();
         loadAndDisplayAll();
+        closePanelWithDelay(); // auto-close after change
     });
     allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
@@ -149,6 +157,7 @@ function buildShowChannelsPanel() {
                 currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
             }
             loadAndDisplayAll();
+            closePanelWithDelay(); // auto-close after change
         });
         label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
