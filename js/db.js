@@ -111,6 +111,7 @@ export async function getTrashMovies(channelIds = null) {
     const transaction = db.transaction([STORE_TRASH], 'readonly');
     const store = transaction.objectStore(STORE_TRASH);
     const index = store.index('by_deletedAt');
+    console.log('getTrashMovies called with channelIds:', channelIds); // DEBUG
     return new Promise((resolve, reject) => {
         const request = index.openCursor(null, 'prev');
         const movies = [];
@@ -118,13 +119,15 @@ export async function getTrashMovies(channelIds = null) {
             const cursor = request.result;
             if (cursor) {
                 const movie = cursor.value;
+                let include = false;
                 if (channelIds && channelIds.length > 0 && !channelIds.includes(null)) {
                     if (channelIds.includes(movie.channelId)) {
-                        movies.push(movie);
+                        include = true;
                     }
                 } else {
-                    movies.push(movie);
+                    include = true;
                 }
+                if (include) movies.push(movie);
                 cursor.continue();
             } else {
                 resolve(movies);
