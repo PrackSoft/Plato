@@ -106,11 +106,26 @@ function buildSearchInPanel() {
 function buildShowChannelsPanel() {
     showChannelsPanel.innerHTML = '';
 
-    // Helper to close this panel after a short delay
     function closeThisPanelWithDelay() {
         setTimeout(() => {
             showChannelsPanel.classList.add('hidden');
         }, 150);
+    }
+
+    // Función para asegurar que al menos un checkbox esté marcado
+    function ensureAtLeastOneChecked() {
+        const allCheckboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
+        const anyChecked = Array.from(allCheckboxes).some(cb => cb.checked);
+        if (!anyChecked) {
+            // Si ninguno está marcado, marcar "All Channels"
+            const allCb = showChannelsPanel.querySelector('input[value=""]');
+            if (allCb) {
+                allCb.checked = true;
+                currentDisplayChannelIds = [null];
+                updateShowChannelsCheckboxes();
+                loadAndDisplayAll();
+            }
+        }
     }
 
     // All Channels option
@@ -122,12 +137,23 @@ function buildShowChannelsPanel() {
     allCb.addEventListener('change', () => {
         if (allCb.checked) {
             currentDisplayChannelIds = [null];
+            updateShowChannelsCheckboxes();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
         } else {
+            // Si intentamos desmarcar "All Channels", pero no hay otro marcado, lo impedimos
+            const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
+                .some(cb => cb !== allCb && cb.checked);
+            if (!anyOtherChecked) {
+                allCb.checked = true; // mantenerlo marcado
+                return;
+            }
             currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
+            updateShowChannelsCheckboxes();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
         }
-        updateShowChannelsCheckboxes();
-        loadAndDisplayAll();
-        closeThisPanelWithDelay();
+        ensureAtLeastOneChecked();
     });
     allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
@@ -154,16 +180,30 @@ function buildShowChannelsPanel() {
                 if (!currentDisplayChannelIds.includes(channel.id)) {
                     currentDisplayChannelIds.push(channel.id);
                 }
+                loadAndDisplayAll();
+                closeThisPanelWithDelay();
             } else {
+                // Evitar desmarcar si es el único que queda (y "All Channels" no está marcado)
+                const allCb = showChannelsPanel.querySelector('input[value=""]');
+                const remainingChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
+                    .filter(c => c !== cb && c.checked);
+                if (remainingChecked.length === 0 && (!allCb || !allCb.checked)) {
+                    // No se permite desmarcar el último
+                    cb.checked = true;
+                    return;
+                }
                 currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
+                loadAndDisplayAll();
+                closeThisPanelWithDelay();
             }
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
+            ensureAtLeastOneChecked();
         });
         label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
         showChannelsPanel.appendChild(label);
     });
+
+    ensureAtLeastOneChecked(); // inicial
 }
 
 function updateShowChannelsCheckboxes() {
