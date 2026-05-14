@@ -1,5 +1,5 @@
 // ==========================================
-// js/app.js - Plato App (fixed dropdowns)
+// js/app.js - Plato App (consistent dropdowns with delay)
 // ==========================================
 
 import { openDB, getAllMovies, saveMovie } from './db.js';
@@ -18,33 +18,37 @@ const showChannelsPanel = document.getElementById('showChannelsPanel');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
-// Default: YouTube Free Movies (not All Channels)
-let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg';
-let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
+let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg'; // default: YouTube Free Movies
+let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg']; // default: free movies channel
 
-// ---------------------- Helper: close all panels ----------------------
+// ---------------------- Helper: close all panels with optional delay ----------------------
 function closeAllPanels() {
     searchInPanel.classList.add('hidden');
     showChannelsPanel.classList.add('hidden');
 }
 
-// ---------------------- Build Search In panel (exclusive checkboxes) ----------------------
+function closePanelWithDelay(panel) {
+    setTimeout(() => {
+        panel.classList.add('hidden');
+    }, 150);
+}
+
+// ---------------------- Build Search In panel (exclusive checkboxes, closes with delay) ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
-    // Exclusive logic: only one checkbox can be checked at a time
+    // Exclusive logic: only one checkbox can be checked at a time, then close panel with delay
     function setExclusive(clickedCheckbox) {
         const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
         all.forEach(cb => {
             cb.checked = (cb === clickedCheckbox);
         });
-        // Update state
         const checked = Array.from(all).find(cb => cb.checked);
         currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-        closeAllPanels();
+        closePanelWithDelay(searchInPanel);
     }
 
-    // All Channels option (value = '')
+    // All Channels
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
@@ -53,7 +57,6 @@ function buildSearchInPanel() {
     allCb.addEventListener('change', () => {
         if (allCb.checked) setExclusive(allCb);
         else {
-            // If unchecking, ensure at least one stays checked; if none, re-check All Channels
             const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
             if (!anyChecked) {
                 allCb.checked = true;
@@ -61,7 +64,7 @@ function buildSearchInPanel() {
             } else {
                 const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
                 currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                closeAllPanels();
+                closePanelWithDelay(searchInPanel);
             }
         }
     });
@@ -81,7 +84,6 @@ function buildSearchInPanel() {
             else {
                 const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
                 if (!anyChecked) {
-                    // Re-check All Channels
                     const allCb2 = searchInPanel.querySelector('input[value=""]');
                     if (allCb2) {
                         allCb2.checked = true;
@@ -90,7 +92,7 @@ function buildSearchInPanel() {
                 } else {
                     const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
                     currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                    closeAllPanels();
+                    closePanelWithDelay(searchInPanel);
                 }
             }
         });
@@ -100,52 +102,41 @@ function buildSearchInPanel() {
     });
 }
 
-// ---------------------- Build Show Channels panel (multi-checkbox with separator) ----------------------
-function buildSearchInPanel() {
-    searchInPanel.innerHTML = '';
+// ---------------------- Build Show Channels panel (multi-checkbox with separator, closes with delay) ----------------------
+function buildShowChannelsPanel() {
+    showChannelsPanel.innerHTML = '';
 
-    // Helper: close panel with delay (consistent with Show Channels)
-    function closePanelWithDelay() {
+    // Helper to close this panel after a short delay
+    function closeThisPanelWithDelay() {
         setTimeout(() => {
-            closeAllPanels();
+            showChannelsPanel.classList.add('hidden');
         }, 150);
     }
 
-    // Exclusive logic: only one checkbox can be checked at a time
-    function setExclusive(clickedCheckbox) {
-        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
-        all.forEach(cb => {
-            cb.checked = (cb === clickedCheckbox);
-        });
-        // Update state
-        const checked = Array.from(all).find(cb => cb.checked);
-        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-        closePanelWithDelay(); // was: closeAllPanels();
-    }
-
-    // All Channels option (value = '')
+    // All Channels option
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
     allCb.value = '';
-    allCb.checked = (currentSearchChannelId === null);
+    allCb.checked = currentDisplayChannelIds.includes(null);
     allCb.addEventListener('change', () => {
-        if (allCb.checked) setExclusive(allCb);
-        else {
-            const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
-            if (!anyChecked) {
-                allCb.checked = true;
-                setExclusive(allCb);
-            } else {
-                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
-                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                closePanelWithDelay(); // was: closeAllPanels();
-            }
+        if (allCb.checked) {
+            currentDisplayChannelIds = [null];
+        } else {
+            currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
         }
+        updateShowChannelsCheckboxes();
+        loadAndDisplayAll();
+        closeThisPanelWithDelay();
     });
     allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
-    searchInPanel.appendChild(allLabel);
+    showChannelsPanel.appendChild(allLabel);
+
+    // Separator
+    const sep = document.createElement('hr');
+    sep.className = 'panel-separator';
+    showChannelsPanel.appendChild(sep);
 
     // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
@@ -153,27 +144,25 @@ function buildSearchInPanel() {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.value = channel.id;
-        cb.checked = (currentSearchChannelId === channel.id);
+        cb.checked = currentDisplayChannelIds.includes(channel.id);
         cb.addEventListener('change', () => {
-            if (cb.checked) setExclusive(cb);
-            else {
-                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
-                if (!anyChecked) {
-                    const allCb2 = searchInPanel.querySelector('input[value=""]');
-                    if (allCb2) {
-                        allCb2.checked = true;
-                        setExclusive(allCb2);
-                    }
-                } else {
-                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
-                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                    closePanelWithDelay(); // was: closeAllPanels();
+            if (cb.checked) {
+                if (currentDisplayChannelIds.includes(null)) {
+                    currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
+                    updateShowChannelsCheckboxes();
                 }
+                if (!currentDisplayChannelIds.includes(channel.id)) {
+                    currentDisplayChannelIds.push(channel.id);
+                }
+            } else {
+                currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
             }
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
         });
         label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
-        searchInPanel.appendChild(label);
+        showChannelsPanel.appendChild(label);
     });
 }
 
@@ -188,14 +177,19 @@ function updateShowChannelsCheckboxes() {
 // ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // If opening, close the other panel
+    if (searchInPanel.classList.contains('hidden')) {
+        showChannelsPanel.classList.add('hidden');
+    }
     searchInPanel.classList.toggle('hidden');
-    showChannelsPanel.classList.add('hidden');
 });
 
 showChannelsBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (showChannelsPanel.classList.contains('hidden')) {
+        searchInPanel.classList.add('hidden');
+    }
     showChannelsPanel.classList.toggle('hidden');
-    searchInPanel.classList.add('hidden');
 });
 
 // Close panels when clicking outside
