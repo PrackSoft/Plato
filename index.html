@@ -21,7 +21,7 @@
                 <button id="searchBtn">Search</button>
             </div>
 
-            <!-- Inside .header .container, after .logo and before .search-box -->
+            <!-- Channel selection dropdowns -->
             <div class="channel-controls">
                 <!-- Search In dropdown (single selection) -->
                 <div class="dropdown-search">
@@ -29,9 +29,7 @@
                         <span class="material-symbols-outlined">subscriptions</span> Search in
                         <span class="material-symbols-outlined">arrow_drop_down</span>
                     </button>
-                    <div id="searchInPanel" class="dropdown-panel hidden">
-                        <!-- Radio options will be added by JS -->
-                    </div>
+                    <div id="searchInPanel" class="dropdown-panel hidden"></div>
                 </div>
 
                 <!-- Show Channels dropdown (multi selection) -->
@@ -40,24 +38,21 @@
                         <span class="material-symbols-outlined">live_tv</span> Show channels
                         <span class="material-symbols-outlined">arrow_drop_down</span>
                     </button>
-                    <!-- Dentro de .header .container, después de channel-controls y antes de resultsGrid -->
-                    <div class="filter-buttons">
-                        <button id="filterWatchingBtn" class="filter-btn">
-                            <span class="material-symbols-outlined">visibility</span> Watching
-                        </button>
-                        <button id="filterFavoriteBtn" class="filter-btn">
-                            <span class="material-symbols-outlined">star</span> Favorites
-                        </button>
-                    </div>
-                    <div id="showChannelsPanel" class="dropdown-panel hidden">
-                        <!-- Checkboxes will be added by JS -->
-                    </div>
+                    <div id="showChannelsPanel" class="dropdown-panel hidden"></div>
                 </div>
             </div>
 
+            <!-- Fixed filter buttons -->
+            <div class="filter-buttons">
+                <button id="filterWatchingBtn" class="filter-btn">
+                    <span class="material-symbols-outlined">visibility</span> Watching
+                </button>
+                <button id="filterFavoriteBtn" class="filter-btn">
+                    <span class="material-symbols-outlined">star</span> Favorites
+                </button>
+            </div>
 
-
-
+            <!-- Results grid -->
             <div id="resultsGrid" class="results"></div>
         </div>
     </div>
