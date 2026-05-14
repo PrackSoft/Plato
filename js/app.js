@@ -242,15 +242,31 @@ function updateFilterButtonsUI() {
 }
 
 function toggleWatchingFilter() {
-    if (activeTrashFilter) return; // no filters in trash view
+    // If we are in trash view, exit trash first
+    if (activeTrashFilter) {
+        activeTrashFilter = false;
+        updateFilterButtonsUI();
+    }
+    // Now toggle watching filter (if already active, deactivate; if inactive, activate)
     activeWatchingFilter = !activeWatchingFilter;
+    // If watching filter becomes active, ensure favorite filter is off? (optional, but original behavior)
+    if (activeWatchingFilter) {
+        activeFavoriteFilter = false;
+    }
     updateFilterButtonsUI();
     loadAndDisplayAll();
 }
 
 function toggleFavoriteFilter() {
-    if (activeTrashFilter) return;
+    // Exit trash view if needed
+    if (activeTrashFilter) {
+        activeTrashFilter = false;
+        updateFilterButtonsUI();
+    }
     activeFavoriteFilter = !activeFavoriteFilter;
+    if (activeFavoriteFilter) {
+        activeWatchingFilter = false;
+    }
     updateFilterButtonsUI();
     loadAndDisplayAll();
 }
