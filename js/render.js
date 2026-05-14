@@ -1,7 +1,6 @@
 // js/render.js
 import { toggleWatching } from './db.js';
 
-// Helper to format numbers (e.g., 1200 -> 1.2K)
 function formatNumber(num) {
     if (num === undefined || num === null || num === 'N/A') return 'N/A';
     let n = parseInt(num, 10);
@@ -16,15 +15,15 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
 }
 
-export function renderMovies(container, movies, title) {
+export function renderMovies(container, movies, title, source = 'main') {
     if (!movies.length) {
-        container.innerHTML = `<div class="stats">No movies saved yet.</div>`;
+        container.innerHTML = `<div class="stats">No movies ${source === 'trash' ? 'in trash' : 'saved yet'}.</div>`;
         return;
     }
 
     const html = `
         <div class="history-header">
-            <h2>${escapeHtml(title)} (${movies.length})</h2>
+            <h2>${escapeHtml(title)}</h2>
         </div>
         <div class="movies-grid">
             ${movies.map(movie => `
@@ -42,9 +41,11 @@ export function renderMovies(container, movies, title) {
                                 <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span>
                                 ${formatNumber(movie.likeCount)}
                             </span>
+                            ${source !== 'trash' ? `
                             <span class="watching-icon" data-id="${movie.youtubeId}" data-watching="${movie.watching}" style="cursor: pointer;">
                                 <span class="material-symbols-outlined" style="font-size: 18px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
                             </span>
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -53,28 +54,28 @@ export function renderMovies(container, movies, title) {
     `;
     container.innerHTML = html;
 
-    // Attach click handlers to watching icons
-    document.querySelectorAll('.watching-icon').forEach(icon => {
-        const movieId = icon.dataset.id;
-        const watchingSpan = icon.querySelector('.material-symbols-outlined');
-        icon.onclick = async (e) => {
-            e.stopPropagation();
-            const newStatus = await toggleWatching(movieId);
-            // Update icon
-            watchingSpan.textContent = newStatus ? 'visibility' : 'visibility_off';
-            // Update dataset
-            icon.dataset.watching = newStatus;
-            // Dispatch a custom event to notify app that watching status changed
-            window.dispatchEvent(new CustomEvent('watching-toggled', { detail: { movieId, watching: newStatus } }));
-        };
-    });
-    // Attach click handlers for each card
+    // Only attach watching icon handlers if not in trash
+    if (source !== 'trash') {
+        document.querySelectorAll('.watching-icon').forEach(icon => {
+            const movieId = icon.dataset.id;
+            const watchingSpan = icon.querySelector('.material-symbols-outlined');
+            icon.onclick = async (e) => {
+                e.stopPropagation();
+                const newStatus = await toggleWatching(movieId);
+                watchingSpan.textContent = newStatus ? 'visibility' : 'visibility_off';
+                icon.dataset.watching = newStatus;
+                window.dispatchEvent(new CustomEvent('watching-toggled', { detail: { movieId, watching: newStatus } }));
+            };
+        });
+    }
+
+    // Attach click handlers for each card (open modal with correct source)
     document.querySelectorAll('.video-card').forEach(card => {
         const movieId = card.dataset.id;
         const movie = movies.find(m => m.youtubeId === movieId);
-        if (movie) {
+        if (movie && window.openMovieModal) {
             card.onclick = () => {
-                if (window.openMovieModal) window.openMovieModal(movie);
+                window.openMovieModal(movie, source);
             };
         }
     });
