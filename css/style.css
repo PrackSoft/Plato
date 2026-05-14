@@ -210,6 +210,29 @@ body { background: #0f0f0f; color: white; font-family: system-ui, sans-serif; }
     font-size: 18px;
 }
 
+
+/* Wrapper for channel controls and filter buttons to keep them inline */
+.top-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+/* Adjust existing styles */
+.channel-controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 0;  /* remove bottom margin, handled by wrapper */
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
 @media (max-width: 768px) {
     .channel-controls {
         flex-direction: column;
