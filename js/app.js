@@ -115,20 +115,16 @@ function buildShowChannelsPanel() {
         setTimeout(() => showChannelsPanel.classList.add('hidden'), 150);
     }
 
-    function ensureAtLeastOneChecked() {
-        const allCheckboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
-        const anyChecked = Array.from(allCheckboxes).some(cb => cb.checked);
-        if (!anyChecked) {
-            const allCb = showChannelsPanel.querySelector('input[value=""]');
-            if (allCb) {
-                allCb.checked = true;
-                currentDisplayChannelIds = [null];
-                updateShowChannelsCheckboxes();
-                loadAndDisplayAll();
-            }
-        }
+    // Helper to update UI checkboxes from currentDisplayChannelIds
+    function syncCheckboxes() {
+        const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            const val = cb.value === '' ? null : cb.value;
+            cb.checked = currentDisplayChannelIds.includes(val);
+        });
     }
 
+    // All Channels option
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
@@ -136,32 +132,36 @@ function buildShowChannelsPanel() {
     allCb.checked = currentDisplayChannelIds.includes(null);
     allCb.addEventListener('change', () => {
         if (allCb.checked) {
+            // Checked: set to [null] only
             currentDisplayChannelIds = [null];
-            updateShowChannelsCheckboxes();
+            syncCheckboxes();
             loadAndDisplayAll();
             closeThisPanelWithDelay();
         } else {
+            // Unchecking "All Channels": if no other channel is checked, prevent uncheck
             const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
                 .some(cb => cb !== allCb && cb.checked);
             if (!anyOtherChecked) {
-                allCb.checked = true;
+                allCb.checked = true; // keep it checked
                 return;
             }
+            // Remove null from array
             currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-            updateShowChannelsCheckboxes();
+            syncCheckboxes();
             loadAndDisplayAll();
             closeThisPanelWithDelay();
         }
-        ensureAtLeastOneChecked();
     });
     allLabel.appendChild(allCb);
     allLabel.appendChild(document.createTextNode('All Channels'));
     showChannelsPanel.appendChild(allLabel);
 
+    // Separator
     const sep = document.createElement('hr');
     sep.className = 'panel-separator';
     showChannelsPanel.appendChild(sep);
 
+    // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
         const label = document.createElement('label');
         const cb = document.createElement('input');
@@ -170,34 +170,39 @@ function buildShowChannelsPanel() {
         cb.checked = currentDisplayChannelIds.includes(channel.id);
         cb.addEventListener('change', () => {
             if (cb.checked) {
+                // Remove null (All Channels) if present
                 if (currentDisplayChannelIds.includes(null)) {
                     currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-                    updateShowChannelsCheckboxes();
                 }
+                // Add this channel if not already present
                 if (!currentDisplayChannelIds.includes(channel.id)) {
                     currentDisplayChannelIds.push(channel.id);
                 }
-                loadAndDisplayAll();
-                closeThisPanelWithDelay();
+                // Ensure at least one channel is selected (if no channel after adding? actually added one)
             } else {
-                const allCb = showChannelsPanel.querySelector('input[value=""]');
-                const remainingChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
-                    .filter(c => c !== cb && c.checked);
-                if (remainingChecked.length === 0 && (!allCb || !allCb.checked)) {
-                    cb.checked = true;
-                    return;
-                }
+                // Unchecking a real channel: remove it from array
                 currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
-                loadAndDisplayAll();
-                closeThisPanelWithDelay();
+                // If no channels left and "All Channels" is not checked, then check "All Channels"
+                if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
+                    currentDisplayChannelIds = [null];
+                    allCb.checked = true;
+                }
             }
-            ensureAtLeastOneChecked();
+            syncCheckboxes();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
         });
         label.appendChild(cb);
         label.appendChild(document.createTextNode(channel.name));
         showChannelsPanel.appendChild(label);
     });
-    ensureAtLeastOneChecked();
+
+    // Ensure consistency: if no channel selected and All Channels not checked, check All Channels
+    if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
+        currentDisplayChannelIds = [null];
+        allCb.checked = true;
+    }
+    syncCheckboxes();
 }
 
 function updateShowChannelsCheckboxes() {
