@@ -62,9 +62,10 @@ export function renderMovies(container, movies, title) {
             const newStatus = await toggleWatching(movieId);
             // Update icon
             watchingSpan.textContent = newStatus ? 'visibility' : 'visibility_off';
-            // Also update dataset for future clicks
+            // Update dataset
             icon.dataset.watching = newStatus;
-            // Optionally, we could reload the whole list to reflect any changes, but not necessary
+            // Dispatch a custom event to notify app that watching status changed
+            window.dispatchEvent(new CustomEvent('watching-toggled', { detail: { movieId, watching: newStatus } }));
         };
     });
 }

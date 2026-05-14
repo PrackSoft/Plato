@@ -332,3 +332,10 @@ searchBtn.onclick = async () => {
 buildSearchInPanel();
 buildShowChannelsPanel();
 loadAndDisplayAll();
+
+// Listen for watching toggles from cards to refresh filter view
+window.addEventListener('watching-toggled', () => {
+    if (activeWatchingFilter) {
+        loadAndDisplayAll();
+    }
+});
