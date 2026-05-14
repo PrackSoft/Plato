@@ -1,5 +1,5 @@
 // ==========================================
-// js/app.js - Plato App (with filter buttons, modal and trash)
+// js/app.js - Plato App (with terms bar, filter buttons, modal and trash)
 // ==========================================
 
 import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie } from './db.js';
@@ -16,10 +16,10 @@ const searchInBtn = document.getElementById('searchInBtn');
 const searchInPanel = document.getElementById('searchInPanel');
 const showChannelsBtn = document.getElementById('showChannelsBtn');
 const showChannelsPanel = document.getElementById('showChannelsPanel');
-
 const filterWatchingBtn = document.getElementById('filterWatchingBtn');
 const filterFavoriteBtn = document.getElementById('filterFavoriteBtn');
 const filterTrashBtn = document.getElementById('filterTrashBtn');
+const termsBar = document.getElementById('termsBar');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
@@ -28,7 +28,9 @@ let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
 
 let activeWatchingFilter = false;
 let activeFavoriteFilter = false;
-let activeTrashFilter = false;  // new
+let activeTrashFilter = false;
+let activeTermFilter = null;        // term string or null
+let availableTerms = [];             // list of unique terms from all movies
 
 // ---------------------- Helper: close panels ----------------------
 function closeAllPanels() {
@@ -37,9 +39,7 @@ function closeAllPanels() {
 }
 
 function closePanelWithDelay(panel) {
-    setTimeout(() => {
-        panel.classList.add('hidden');
-    }, 150);
+    setTimeout(() => panel.classList.add('hidden'), 150);
 }
 
 // ---------------------- Build Search In panel (unchanged) ----------------------
@@ -115,7 +115,6 @@ function buildShowChannelsPanel() {
         setTimeout(() => showChannelsPanel.classList.add('hidden'), 150);
     }
 
-    // Helper to update UI checkboxes from currentDisplayChannelIds
     function syncCheckboxes() {
         const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(cb => {
@@ -132,20 +131,17 @@ function buildShowChannelsPanel() {
     allCb.checked = currentDisplayChannelIds.includes(null);
     allCb.addEventListener('change', () => {
         if (allCb.checked) {
-            // Checked: set to [null] only
             currentDisplayChannelIds = [null];
             syncCheckboxes();
             loadAndDisplayAll();
             closeThisPanelWithDelay();
         } else {
-            // Unchecking "All Channels": if no other channel is checked, prevent uncheck
             const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
                 .some(cb => cb !== allCb && cb.checked);
             if (!anyOtherChecked) {
-                allCb.checked = true; // keep it checked
+                allCb.checked = true;
                 return;
             }
-            // Remove null from array
             currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
             syncCheckboxes();
             loadAndDisplayAll();
@@ -156,12 +152,10 @@ function buildShowChannelsPanel() {
     allLabel.appendChild(document.createTextNode('All Channels'));
     showChannelsPanel.appendChild(allLabel);
 
-    // Separator
     const sep = document.createElement('hr');
     sep.className = 'panel-separator';
     showChannelsPanel.appendChild(sep);
 
-    // Real channels
     CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
         const label = document.createElement('label');
         const cb = document.createElement('input');
@@ -170,19 +164,14 @@ function buildShowChannelsPanel() {
         cb.checked = currentDisplayChannelIds.includes(channel.id);
         cb.addEventListener('change', () => {
             if (cb.checked) {
-                // Remove null (All Channels) if present
                 if (currentDisplayChannelIds.includes(null)) {
                     currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
                 }
-                // Add this channel if not already present
                 if (!currentDisplayChannelIds.includes(channel.id)) {
                     currentDisplayChannelIds.push(channel.id);
                 }
-                // Ensure at least one channel is selected (if no channel after adding? actually added one)
             } else {
-                // Unchecking a real channel: remove it from array
                 currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
-                // If no channels left and "All Channels" is not checked, then check "All Channels"
                 if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
                     currentDisplayChannelIds = [null];
                     allCb.checked = true;
@@ -197,7 +186,6 @@ function buildShowChannelsPanel() {
         showChannelsPanel.appendChild(label);
     });
 
-    // Ensure consistency: if no channel selected and All Channels not checked, check All Channels
     if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
         currentDisplayChannelIds = [null];
         allCb.checked = true;
@@ -206,14 +194,10 @@ function buildShowChannelsPanel() {
 }
 
 function updateShowChannelsCheckboxes() {
-    const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach(cb => {
-        const val = cb.value === '' ? null : cb.value;
-        cb.checked = currentDisplayChannelIds.includes(val);
-    });
+    // kept for compatibility (not used directly)
 }
 
-// ---------------------- Panel toggle logic (unchanged) ----------------------
+// ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (searchInPanel.classList.contains('hidden')) showChannelsPanel.classList.add('hidden');
@@ -231,7 +215,7 @@ document.addEventListener('click', (e) => {
     if (!showChannelsBtn.contains(e.target) && !showChannelsPanel.contains(e.target)) showChannelsPanel.classList.add('hidden');
 });
 
-// ---------------------- Filter buttons logic (with trash) ----------------------
+// ---------------------- Filter buttons logic (with trash and term) ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
     else filterWatchingBtn.classList.remove('active');
@@ -242,41 +226,33 @@ function updateFilterButtonsUI() {
 }
 
 function toggleWatchingFilter() {
-    // If we are in trash view, exit trash first
     if (activeTrashFilter) {
         activeTrashFilter = false;
         updateFilterButtonsUI();
     }
-    // Now toggle watching filter (if already active, deactivate; if inactive, activate)
     activeWatchingFilter = !activeWatchingFilter;
-    // If watching filter becomes active, ensure favorite filter is off? (optional, but original behavior)
-    if (activeWatchingFilter) {
-        activeFavoriteFilter = false;
-    }
+    if (activeWatchingFilter) activeFavoriteFilter = false;
     updateFilterButtonsUI();
     loadAndDisplayAll();
 }
 
 function toggleFavoriteFilter() {
-    // Exit trash view if needed
     if (activeTrashFilter) {
         activeTrashFilter = false;
         updateFilterButtonsUI();
     }
     activeFavoriteFilter = !activeFavoriteFilter;
-    if (activeFavoriteFilter) {
-        activeWatchingFilter = false;
-    }
+    if (activeFavoriteFilter) activeWatchingFilter = false;
     updateFilterButtonsUI();
     loadAndDisplayAll();
 }
 
 function toggleTrashFilter() {
-    // Disable other filters when entering trash
     activeTrashFilter = !activeTrashFilter;
     if (activeTrashFilter) {
         activeWatchingFilter = false;
         activeFavoriteFilter = false;
+        activeTermFilter = null;          // clear term filter when entering trash
     }
     updateFilterButtonsUI();
     loadAndDisplayAll();
@@ -286,20 +262,108 @@ if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchin
 if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
 if (filterTrashBtn) filterTrashBtn.addEventListener('click', toggleTrashFilter);
 
-// ---------------------- Load and display movies (with trash support) ----------------------
+// ---------------------- Terms bar management ----------------------
+// Collect all unique search terms from all movies (main store only)
+async function refreshAvailableTerms() {
+    const allMovies = await getAllMovies();
+    const termsSet = new Set();
+    for (const movie of allMovies) {
+        (movie.searchTerms || []).forEach(term => termsSet.add(term));
+    }
+    availableTerms = Array.from(termsSet).sort(); // alphabetical order
+    renderTermsBar();
+}
+
+function renderTermsBar() {
+    if (activeTrashFilter) {
+        termsBar.innerHTML = ''; // hide terms bar in trash view
+        return;
+    }
+    if (availableTerms.length === 0) {
+        termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
+        return;
+    }
+    const html = availableTerms.map(term => `
+        <button class="term-btn ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
+            ${escapeHtml(term)}
+            <span class="term-delete" data-term="${escapeHtml(term)}" title="Delete this term from all movies">✖</span>
+        </button>
+    `).join('');
+    termsBar.innerHTML = html;
+
+    // Attach click handlers to term buttons (filter)
+    document.querySelectorAll('.term-btn').forEach(btn => {
+        const term = btn.dataset.term;
+        btn.addEventListener('click', (e) => {
+            // Prevent delete click from triggering filter
+            if (e.target.classList.contains('term-delete')) return;
+            // Toggle term filter
+            if (activeTermFilter === term) {
+                activeTermFilter = null;
+            } else {
+                activeTermFilter = term;
+            }
+            loadAndDisplayAll();
+            renderTermsBar(); // re-render to show active class
+        });
+    });
+
+    // Attach delete handlers
+    document.querySelectorAll('.term-delete').forEach(deleteSpan => {
+        deleteSpan.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const term = deleteSpan.dataset.term;
+            if (confirm(`Delete term "${term}" from all movies? This action cannot be undone.`)) {
+                await removeTermFromAllMovies(term);
+                if (activeTermFilter === term) {
+                    activeTermFilter = null;
+                }
+                await refreshAvailableTerms();
+                loadAndDisplayAll();
+            }
+        });
+    });
+}
+
+// Remove a term from every movie's searchTerms array
+async function removeTermFromAllMovies(term) {
+    const db = await openDB();
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
+    const allMovies = await getAllMovies(); // already uses openDB
+    for (const movie of allMovies) {
+        if (movie.searchTerms && movie.searchTerms.includes(term)) {
+            const newTerms = movie.searchTerms.filter(t => t !== term);
+            movie.searchTerms = newTerms;
+            movie.lastUpdated = new Date().toISOString();
+            await new Promise((resolve, reject) => {
+                const req = store.put(movie);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+    }
+}
+
+// ---------------------- Load and display movies (with term filter) ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies;
 
     if (activeTrashFilter) {
-        // Load from trash, apply channel filter (currentDisplayChannelIds)
-        let channelIds = (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) ? currentDisplayChannelIds : null;
+        const channelIds = (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) ? currentDisplayChannelIds : null;
         allMovies = await getTrashMovies(channelIds);
     } else {
         allMovies = await getAllMovies();
+        // Apply channel filter
         if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
             allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
         }
+        // Apply term filter
+        if (activeTermFilter) {
+            allMovies = allMovies.filter(movie => (movie.searchTerms || []).includes(activeTermFilter));
+        }
+        // Apply watching/favorite filters
         if (activeWatchingFilter) allMovies = allMovies.filter(movie => movie.watching === true);
         if (activeFavoriteFilter) allMovies = allMovies.filter(movie => movie.favorite === true);
     }
@@ -307,7 +371,7 @@ async function loadAndDisplayAll() {
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main');
 }
 
-// ---------------------- Modal-related functions (now including trash functions) ----------------------
+// ---------------------- Modal-related functions ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
     const transaction = db.transaction(['movies'], 'readwrite');
@@ -325,6 +389,12 @@ async function updateMovieTerms(youtubeId, newTerms) {
             req.onsuccess = () => resolve();
             req.onerror = () => reject(req.error);
         });
+        // Refresh global terms list after updating a movie's terms
+        await refreshAvailableTerms();
+        // If current active term filter was removed from this movie, reload display
+        if (activeTermFilter && !movie.searchTerms.includes(activeTermFilter)) {
+            loadAndDisplayAll();
+        }
     }
 }
 
@@ -350,7 +420,6 @@ async function toggleFavorite(youtubeId) {
     return false;
 }
 
-// Expose modal opener for render.js (now with trash functions)
 window.openMovieModal = (movie, source = 'main') => {
     openModal(movie, {
         updateMovieTerms,
@@ -365,7 +434,6 @@ window.openMovieModal = (movie, source = 'main') => {
 // ---------------------- Search ----------------------
 searchBtn.onclick = async () => {
     if (activeTrashFilter) {
-        // If in trash view, you may want to exit trash first? Or just ignore search.
         alert('Exit trash view to search.');
         return;
     }
@@ -385,6 +453,7 @@ searchBtn.onclick = async () => {
         for (const movie of moviesFromAPI) {
             await saveMovie(movie, query);
         }
+        await refreshAvailableTerms();  // update terms list after saving
         await loadAndDisplayAll();
         searchInput.value = '';
     } catch (err) {
@@ -394,10 +463,18 @@ searchBtn.onclick = async () => {
 };
 
 // ---------------------- Initialization ----------------------
-buildSearchInPanel();
-buildShowChannelsPanel();
-initModal(() => loadAndDisplayAll());
-loadAndDisplayAll();
+async function init() {
+    await dbReady;
+    buildSearchInPanel();
+    buildShowChannelsPanel();
+    initModal(() => {
+        refreshAvailableTerms();
+        loadAndDisplayAll();
+    });
+    await refreshAvailableTerms();
+    loadAndDisplayAll();
+}
+init();
 
 // Listen for watching toggles from cards to refresh filter view
 window.addEventListener('watching-toggled', () => {
@@ -405,3 +482,9 @@ window.addEventListener('watching-toggled', () => {
         loadAndDisplayAll();
     }
 });
+
+// Helper to escape HTML in strings (used in renderTermsBar)
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
+}

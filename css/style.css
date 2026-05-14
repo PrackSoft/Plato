@@ -336,6 +336,53 @@ body {
     background: #cc0000;
 }
 
+/* Terms bar (dynamic term buttons) */
+.terms-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+    padding: 8px 0;
+    border-top: 1px solid #2a2a2a;
+    border-bottom: 1px solid #2a2a2a;
+}
+.term-btn {
+    background: #2a2a2a;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+.term-btn:hover {
+    background: #ff0000;
+}
+.term-btn.active {
+    background: #ff0000;
+    color: white;
+}
+.term-delete {
+    font-size: 14px;
+    font-weight: bold;
+    margin-left: 4px;
+    cursor: pointer;
+    color: #ff9999;
+    transition: color 0.2s;
+}
+.term-delete:hover {
+    color: white;
+}
+.terms-placeholder {
+    color: #aaa;
+    font-size: 13px;
+    padding: 4px 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .top-controls {
