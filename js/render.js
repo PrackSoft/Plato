@@ -68,4 +68,14 @@ export function renderMovies(container, movies, title) {
             window.dispatchEvent(new CustomEvent('watching-toggled', { detail: { movieId, watching: newStatus } }));
         };
     });
+    // Attach click handlers for each card
+    document.querySelectorAll('.video-card').forEach(card => {
+        const movieId = card.dataset.id;
+        const movie = movies.find(m => m.youtubeId === movieId);
+        if (movie) {
+            card.onclick = () => {
+                if (window.openMovieModal) window.openMovieModal(movie);
+            };
+        }
+    });
 }

@@ -1,11 +1,12 @@
 // ==========================================
-// js/app.js - Plato App (with filter buttons)
+// js/app.js - Plato App (with filter buttons and modal)
 // ==========================================
 
-import { openDB, getAllMovies, saveMovie } from './db.js';
+import { openDB, getAllMovies, saveMovie, toggleWatching } from './db.js';
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
 import { CHANNELS } from './channels.js';
+import { initModal, openModal } from './modal.js';
 
 // ---------------------- DOM elements ----------------------
 const searchInput = document.getElementById('searchInput');
@@ -16,20 +17,19 @@ const searchInPanel = document.getElementById('searchInPanel');
 const showChannelsBtn = document.getElementById('showChannelsBtn');
 const showChannelsPanel = document.getElementById('showChannelsPanel');
 
-// Filter buttons (added to HTML)
+// Filter buttons
 const filterWatchingBtn = document.getElementById('filterWatchingBtn');
 const filterFavoriteBtn = document.getElementById('filterFavoriteBtn');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
-let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg'; // default: YouTube Free Movies
-let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg']; // default: free movies channel
+let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg';
+let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
 
-// Filter state
 let activeWatchingFilter = false;
 let activeFavoriteFilter = false;
 
-// ---------------------- Helper: close all panels with optional delay ----------------------
+// ---------------------- Helper: close panels ----------------------
 function closeAllPanels() {
     searchInPanel.classList.add('hidden');
     showChannelsPanel.classList.add('hidden');
@@ -41,11 +41,10 @@ function closePanelWithDelay(panel) {
     }, 150);
 }
 
-// ---------------------- Build Search In panel (exclusive checkboxes, closes with delay) ----------------------
+// ---------------------- Build Search In panel ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
-    // Exclusive logic: only one checkbox can be checked at a time, then close panel with delay
     function setExclusive(clickedCheckbox) {
         const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
         all.forEach(cb => {
@@ -110,7 +109,7 @@ function buildSearchInPanel() {
     });
 }
 
-// ---------------------- Build Show Channels panel (multi-checkbox with separator, closes with delay) ----------------------
+// ---------------------- Build Show Channels panel ----------------------
 function buildShowChannelsPanel() {
     showChannelsPanel.innerHTML = '';
 
@@ -120,12 +119,10 @@ function buildShowChannelsPanel() {
         }, 150);
     }
 
-    // Función para asegurar que al menos un checkbox esté marcado
     function ensureAtLeastOneChecked() {
         const allCheckboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
         const anyChecked = Array.from(allCheckboxes).some(cb => cb.checked);
         if (!anyChecked) {
-            // Si ninguno está marcado, marcar "All Channels"
             const allCb = showChannelsPanel.querySelector('input[value=""]');
             if (allCb) {
                 allCb.checked = true;
@@ -149,11 +146,10 @@ function buildShowChannelsPanel() {
             loadAndDisplayAll();
             closeThisPanelWithDelay();
         } else {
-            // Si intentamos desmarcar "All Channels", pero no hay otro marcado, lo impedimos
             const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
                 .some(cb => cb !== allCb && cb.checked);
             if (!anyOtherChecked) {
-                allCb.checked = true; // mantenerlo marcado
+                allCb.checked = true;
                 return;
             }
             currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
@@ -191,12 +187,10 @@ function buildShowChannelsPanel() {
                 loadAndDisplayAll();
                 closeThisPanelWithDelay();
             } else {
-                // Evitar desmarcar si es el único que queda (y "All Channels" no está marcado)
                 const allCb = showChannelsPanel.querySelector('input[value=""]');
                 const remainingChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
                     .filter(c => c !== cb && c.checked);
                 if (remainingChecked.length === 0 && (!allCb || !allCb.checked)) {
-                    // No se permite desmarcar el último
                     cb.checked = true;
                     return;
                 }
@@ -211,7 +205,7 @@ function buildShowChannelsPanel() {
         showChannelsPanel.appendChild(label);
     });
 
-    ensureAtLeastOneChecked(); // inicial
+    ensureAtLeastOneChecked();
 }
 
 function updateShowChannelsCheckboxes() {
@@ -225,7 +219,6 @@ function updateShowChannelsCheckboxes() {
 // ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    // If opening, close the other panel
     if (searchInPanel.classList.contains('hidden')) {
         showChannelsPanel.classList.add('hidden');
     }
@@ -240,7 +233,6 @@ showChannelsBtn.addEventListener('click', (e) => {
     showChannelsPanel.classList.toggle('hidden');
 });
 
-// Close panels when clicking outside
 document.addEventListener('click', (e) => {
     if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) {
         searchInPanel.classList.add('hidden');
@@ -276,7 +268,6 @@ function toggleFavoriteFilter() {
     loadAndDisplayAll();
 }
 
-// Attach event listeners if buttons exist
 if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchingFilter);
 if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
 
@@ -285,22 +276,71 @@ async function loadAndDisplayAll() {
     await dbReady;
     let allMovies = await getAllMovies();
 
-    // Apply display channel filter
     if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
         allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
     }
 
-    // Apply watching/favorite filters
     if (activeWatchingFilter) {
         allMovies = allMovies.filter(movie => movie.watching === true);
     }
     if (activeFavoriteFilter) {
         allMovies = allMovies.filter(movie => movie.favorite === true);
     }
-    // If both are active, the AND is already applied by successive filters
 
     renderMovies(resultsGrid, allMovies, `Movies (${allMovies.length})`);
 }
+
+// ---------------------- Modal-related functions ----------------------
+async function updateMovieTerms(youtubeId, newTerms) {
+    const db = await openDB();
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
+    const movie = await new Promise((resolve, reject) => {
+        const req = store.get(youtubeId);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+    if (movie) {
+        movie.searchTerms = newTerms;
+        movie.lastUpdated = new Date().toISOString();
+        await new Promise((resolve, reject) => {
+            const req = store.put(movie);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    }
+}
+
+async function toggleFavorite(youtubeId) {
+    const db = await openDB();
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
+    const movie = await new Promise((resolve, reject) => {
+        const req = store.get(youtubeId);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+    if (movie) {
+        movie.favorite = !movie.favorite;
+        movie.lastUpdated = new Date().toISOString();
+        await new Promise((resolve, reject) => {
+            const req = store.put(movie);
+            req.onsuccess = () => resolve(movie.favorite);
+            req.onerror = () => reject(req.error);
+        });
+        return movie.favorite;
+    }
+    return false;
+}
+
+// Expose modal opener for render.js
+window.openMovieModal = (movie) => {
+    openModal(movie, {
+        updateMovieTerms,
+        toggleWatching,   // from db.js
+        toggleFavorite
+    });
+};
 
 // ---------------------- Search ----------------------
 searchBtn.onclick = async () => {
@@ -331,6 +371,7 @@ searchBtn.onclick = async () => {
 // ---------------------- Initialization ----------------------
 buildSearchInPanel();
 buildShowChannelsPanel();
+initModal(() => loadAndDisplayAll()); // refresh after modal changes
 loadAndDisplayAll();
 
 // Listen for watching toggles from cards to refresh filter view
