@@ -96,3 +96,26 @@ export async function getAllMovies() {
         request.onerror = () => reject(request.error);
     });
 }
+
+// Toggle watching status for a movie
+export async function toggleWatching(youtubeId) {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
+    return new Promise((resolve, reject) => {
+        const getRequest = store.get(youtubeId);
+        getRequest.onsuccess = () => {
+            const movie = getRequest.result;
+            if (movie) {
+                movie.watching = !movie.watching;
+                movie.lastUpdated = new Date().toISOString();
+                const putRequest = store.put(movie);
+                putRequest.onsuccess = () => resolve(movie.watching);
+                putRequest.onerror = () => reject(putRequest.error);
+            } else {
+                reject(new Error('Movie not found'));
+            }
+        };
+        getRequest.onerror = () => reject(getRequest.error);
+    });
+}
