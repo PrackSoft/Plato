@@ -1,5 +1,5 @@
 // ==========================================
-// js/app.js - Plato App (consistent dropdowns with delay)
+// js/app.js - Plato App (with filter buttons)
 // ==========================================
 
 import { openDB, getAllMovies, saveMovie } from './db.js';
@@ -16,10 +16,18 @@ const searchInPanel = document.getElementById('searchInPanel');
 const showChannelsBtn = document.getElementById('showChannelsBtn');
 const showChannelsPanel = document.getElementById('showChannelsPanel');
 
+// Filter buttons (added to HTML)
+const filterWatchingBtn = document.getElementById('filterWatchingBtn');
+const filterFavoriteBtn = document.getElementById('filterFavoriteBtn');
+
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
 let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg'; // default: YouTube Free Movies
 let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg']; // default: free movies channel
+
+// Filter state
+let activeWatchingFilter = false;
+let activeFavoriteFilter = false;
 
 // ---------------------- Helper: close all panels with optional delay ----------------------
 function closeAllPanels() {
@@ -242,13 +250,55 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ---------------------- Load and display movies ----------------------
+// ---------------------- Filter buttons logic ----------------------
+function updateFilterButtonsUI() {
+    if (activeWatchingFilter) {
+        filterWatchingBtn.classList.add('active');
+    } else {
+        filterWatchingBtn.classList.remove('active');
+    }
+    if (activeFavoriteFilter) {
+        filterFavoriteBtn.classList.add('active');
+    } else {
+        filterFavoriteBtn.classList.remove('active');
+    }
+}
+
+function toggleWatchingFilter() {
+    activeWatchingFilter = !activeWatchingFilter;
+    updateFilterButtonsUI();
+    loadAndDisplayAll();
+}
+
+function toggleFavoriteFilter() {
+    activeFavoriteFilter = !activeFavoriteFilter;
+    updateFilterButtonsUI();
+    loadAndDisplayAll();
+}
+
+// Attach event listeners if buttons exist
+if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchingFilter);
+if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
+
+// ---------------------- Load and display movies (with filters) ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies = await getAllMovies();
+
+    // Apply display channel filter
     if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
         allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
     }
+
+    // Apply watching/favorite filters
+    if (activeWatchingFilter) {
+        allMovies = allMovies.filter(movie => movie.watching === true);
+    }
+    if (activeFavoriteFilter) {
+        allMovies = allMovies.filter(movie => movie.favorite === true);
+    }
+    // If both are active, the AND is already applied by successive filters
+
     renderMovies(resultsGrid, allMovies, `Movies (${allMovies.length})`);
 }
 
