@@ -240,9 +240,9 @@ export async function toggleWatching(youtubeId) {
 export async function renameTermInAllMovies(oldTerm, newTerm) {
     if (oldTerm === newTerm) return;
     const db = await openDB();
+    const allMovies = await getAllMovies(); // transacción de solo lectura
     const transaction = db.transaction([STORE_MOVIES], 'readwrite');
     const store = transaction.objectStore(STORE_MOVIES);
-    const allMovies = await getAllMovies();
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(oldTerm)) {
             const newTerms = movie.searchTerms.map(t => t === oldTerm ? newTerm : t);

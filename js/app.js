@@ -434,9 +434,9 @@ function renderTermsBar() {
 
 async function removeTermFromAllMovies(term) {
     const db = await openDB();
-    const transaction = db.transaction(['movies'], 'readwrite');
-    const store = transaction.objectStore('movies');
     const allMovies = await getAllMovies();
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(term)) {
             const newTerms = movie.searchTerms.filter(t => t !== term);
