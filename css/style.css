@@ -628,6 +628,7 @@ body {
     background: var(--accent);
     color: var(--text-primary);
 }
+
 .edit-term-input {
     flex: 1;
     background: var(--bg-panel);
@@ -636,6 +637,12 @@ body {
     border-radius: var(--border-radius-lg);
     padding: 4px var(--gap-sm);
     font-size: var(--font-size-medium);
+    outline: none; /* elimina el borde azul por defecto */
+}
+.edit-term-input:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+    border-color: transparent;
 }
 
 /* Responsive */

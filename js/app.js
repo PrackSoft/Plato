@@ -95,25 +95,25 @@ async function renderTermsManagement() {
         itemDiv.appendChild(actionsDiv);
         termsManagementList.appendChild(itemDiv);
 
-        // Edit functionality with explicit save/cancel
+        // Edit functionality: replace only the edit button, keep delete button
         editBtn.onclick = () => {
-            // Replace nameSpan with input field
+            // Replace nameSpan with input
             const input = document.createElement('input');
             input.type = 'text';
             input.value = term;
             input.className = 'edit-term-input';
             itemDiv.replaceChild(input, nameSpan);
 
-            // Replace editBtn with save and cancel buttons
+            // Remove editBtn from actionsDiv and add save/cancel buttons
             const saveBtn = document.createElement('button');
             saveBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
             saveBtn.title = 'Save changes';
             const cancelBtn = document.createElement('button');
             cancelBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
             cancelBtn.title = 'Cancel';
-            actionsDiv.innerHTML = '';
-            actionsDiv.appendChild(saveBtn);
-            actionsDiv.appendChild(cancelBtn);
+            // Replace editBtn with saveBtn and cancelBtn (keep deleteBtn)
+            actionsDiv.replaceChild(saveBtn, editBtn);
+            actionsDiv.insertBefore(cancelBtn, saveBtn.nextSibling);
 
             const saveChanges = async () => {
                 const newTerm = input.value.trim();
@@ -122,23 +122,20 @@ async function renderTermsManagement() {
                     await refreshAvailableTerms();
                     if (activeTermFilter === term) activeTermFilter = newTerm;
                     await loadAndDisplayAll();
-                    renderTermsManagement(); // re-render sidebar list
-                    renderTermsBar(); // update top terms bar
+                    renderTermsManagement();
+                    renderTermsBar();
                 } else {
-                    // No change, just restore original view
+                    // revert
                     itemDiv.replaceChild(nameSpan, input);
-                    actionsDiv.innerHTML = '';
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
+                    actionsDiv.replaceChild(editBtn, saveBtn);
+                    actionsDiv.removeChild(cancelBtn);
                 }
             };
 
             const cancelEdit = () => {
-                // Restore original display without saving
                 itemDiv.replaceChild(nameSpan, input);
-                actionsDiv.innerHTML = '';
-                actionsDiv.appendChild(editBtn);
-                actionsDiv.appendChild(deleteBtn);
+                actionsDiv.replaceChild(editBtn, saveBtn);
+                actionsDiv.removeChild(cancelBtn);
             };
 
             saveBtn.onclick = saveChanges;
@@ -149,7 +146,7 @@ async function renderTermsManagement() {
             input.focus();
         };
 
-        // Delete functionality (unchanged)
+        // Delete button always works
         deleteBtn.onclick = async () => {
             if (confirm(`Delete term "${term}" from all movies? This cannot be undone.`)) {
                 await removeTermFromAllMovies(term);
