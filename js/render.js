@@ -15,9 +15,12 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
 }
 
-function getLocalDateKey(d) {
-    const date = new Date(d);
-    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+// Convert UTC date string to local date key (YYYY-MM-DD) considering timezone offset
+function getLocalDateKey(utcDateString) {
+    const date = new Date(utcDateString);
+    // Adjust to local timezone
+    const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 }
 
 export function renderMovies(container, movies, title, source = 'main', currentSort = 'date', onSortChange = null) {
@@ -26,11 +29,9 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         return;
     }
 
-    // Sort movies according to currentSort
     const sorted = sortMovies(movies, currentSort);
     const isDateSort = (currentSort === 'date');
 
-    // Build HTML header with sort dropdown
     const sortOptions = [
         { value: 'date', label: 'Date' },
         { value: 'title', label: 'Title' },
@@ -50,7 +51,6 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         </div>
     `;
 
-    // Generate movie cards HTML
     function generateCard(movie) {
         return `
             <div class="video-card" data-id="${movie.youtubeId}">
@@ -80,25 +80,24 @@ export function renderMovies(container, movies, title, source = 'main', currentS
 
     let bodyHtml = '';
     if (isDateSort) {
-        // Group by date
-        const todayKey = getLocalDateKey(new Date());
+        const todayKey = getLocalDateKey(new Date().toISOString());
         const yesterdayDate = new Date();
         yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayKey = getLocalDateKey(yesterdayDate);
+        const yesterdayKey = getLocalDateKey(yesterdayDate.toISOString());
         const groups = new Map();
         sorted.forEach(movie => {
             const key = getLocalDateKey(movie.dateSaved);
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(movie);
         });
-        const sortedGroups = Array.from(groups.entries()).sort((a,b) => new Date(b[0]) - new Date(a[0]));
+        const sortedGroups = Array.from(groups.entries()).sort((a, b) => new Date(b[0]) - new Date(a[0]));
         bodyHtml = sortedGroups.map(([dateKey, movieList]) => {
             let label;
             if (dateKey === todayKey) label = 'Today';
             else if (dateKey === yesterdayKey) label = 'Yesterday';
             else {
                 const [year, month, day] = dateKey.split('-');
-                const dateObj = new Date(year, month-1, day);
+                const dateObj = new Date(year, month - 1, day);
                 label = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             }
             return `
@@ -122,7 +121,6 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         ${bodyHtml}
     `;
 
-    // Attach sort change event
     const sortSelect = document.getElementById('sortSelect');
     if (sortSelect && onSortChange) {
         sortSelect.addEventListener('change', (e) => {
@@ -130,7 +128,6 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         });
     }
 
-    // Attach watching icon handlers (only if not trash)
     if (source !== 'trash') {
         document.querySelectorAll('.watching-icon').forEach(icon => {
             const movieId = icon.dataset.id;
@@ -145,7 +142,6 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         });
     }
 
-    // Attach card click handlers for modal
     document.querySelectorAll('.video-card').forEach(card => {
         const movieId = card.dataset.id;
         const movie = movies.find(m => m.youtubeId === movieId);
@@ -157,33 +153,32 @@ export function renderMovies(container, movies, title, source = 'main', currentS
     });
 }
 
-// Sorting function (pure, no DOM)
 function sortMovies(movies, sortBy) {
     const sorted = [...movies];
     switch (sortBy) {
         case 'title':
-            sorted.sort((a,b) => a.title.localeCompare(b.title));
+            sorted.sort((a, b) => a.title.localeCompare(b.title));
             break;
         case 'channel':
-            sorted.sort((a,b) => a.channelTitle.localeCompare(b.channelTitle));
+            sorted.sort((a, b) => a.channelTitle.localeCompare(b.channelTitle));
             break;
         case 'mostViewed':
-            sorted.sort((a,b) => (parseInt(b.viewCount) || 0) - (parseInt(a.viewCount) || 0));
+            sorted.sort((a, b) => (parseInt(b.viewCount) || 0) - (parseInt(a.viewCount) || 0));
             break;
         case 'mostLiked':
-            sorted.sort((a,b) => (parseInt(b.likeCount) || 0) - (parseInt(a.likeCount) || 0));
+            sorted.sort((a, b) => (parseInt(b.likeCount) || 0) - (parseInt(a.likeCount) || 0));
             break;
         case 'mostCommented':
-            sorted.sort((a,b) => (parseInt(b.commentCount) || 0) - (parseInt(a.commentCount) || 0));
+            sorted.sort((a, b) => (parseInt(b.commentCount) || 0) - (parseInt(a.commentCount) || 0));
             break;
         case 'watching':
-            sorted.sort((a,b) => (b.watching ? 1 : 0) - (a.watching ? 1 : 0));
+            sorted.sort((a, b) => (b.watching ? 1 : 0) - (a.watching ? 1 : 0));
             break;
         case 'favorite':
-            sorted.sort((a,b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
+            sorted.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
             break;
-        default: // date
-            sorted.sort((a,b) => new Date(b.dateSaved) - new Date(a.dateSaved));
+        default:
+            sorted.sort((a, b) => new Date(b.dateSaved) - new Date(a.dateSaved));
     }
     return sorted;
 }
