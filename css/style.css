@@ -125,7 +125,9 @@ body {
     flex-direction: column;
     transition: transform 0.3s ease;
     transform: translateX(0);
+    overflow-y: auto;          /* añade scroll vertical */
 }
+
 .sidebar.hidden {
     transform: translateX(100%);
 }
