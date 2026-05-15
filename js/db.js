@@ -235,3 +235,24 @@ export async function toggleWatching(youtubeId) {
         getRequest.onerror = () => reject(getRequest.error);
     });
 }
+
+// Rename a term across all movies
+export async function renameTermInAllMovies(oldTerm, newTerm) {
+    if (oldTerm === newTerm) return;
+    const db = await openDB();
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
+    const allMovies = await getAllMovies();
+    for (const movie of allMovies) {
+        if (movie.searchTerms && movie.searchTerms.includes(oldTerm)) {
+            const newTerms = movie.searchTerms.map(t => t === oldTerm ? newTerm : t);
+            movie.searchTerms = newTerms;
+            movie.lastUpdated = new Date().toISOString();
+            await new Promise((resolve, reject) => {
+                const req = store.put(movie);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+    }
+}

@@ -1,8 +1,8 @@
 // ==========================================
-// js/app.js - Plato App (with terms bar, filter buttons, modal and trash)
+// js/app.js - Plato App (with settings sidebar for term management)
 // ==========================================
 
-import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie } from './db.js';
+import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
 import { CHANNELS } from './channels.js';
@@ -20,6 +20,11 @@ const filterWatchingBtn = document.getElementById('filterWatchingBtn');
 const filterFavoriteBtn = document.getElementById('filterFavoriteBtn');
 const filterTrashBtn = document.getElementById('filterTrashBtn');
 const termsBar = document.getElementById('termsBar');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsSidebar = document.getElementById('settingsSidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const closeSidebarBtn = document.getElementById('closeSidebarBtn');
+const termsManagementList = document.getElementById('termsManagementList');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
@@ -29,10 +34,9 @@ let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
 let activeWatchingFilter = false;
 let activeFavoriteFilter = false;
 let activeTrashFilter = false;
-let activeTermFilter = null;        // term string or null
-let availableTerms = [];             // list of unique terms from all movies
-
-let currentSort = 'date';   // default sort by date
+let activeTermFilter = null;
+let availableTerms = [];
+let currentSort = 'date';
 
 // ---------------------- Helper: close panels ----------------------
 function closeAllPanels() {
@@ -42,6 +46,97 @@ function closeAllPanels() {
 
 function closePanelWithDelay(panel) {
     setTimeout(() => panel.classList.add('hidden'), 150);
+}
+
+// ---------------------- Sidebar functions ----------------------
+function openSettingsSidebar() {
+    settingsSidebar.classList.remove('hidden');
+    sidebarOverlay.classList.remove('hidden');
+    renderTermsManagement(); // populate list when opening
+}
+function closeSettingsSidebar() {
+    settingsSidebar.classList.add('hidden');
+    sidebarOverlay.classList.add('hidden');
+}
+settingsBtn.addEventListener('click', openSettingsSidebar);
+closeSidebarBtn.addEventListener('click', closeSettingsSidebar);
+sidebarOverlay.addEventListener('click', closeSettingsSidebar);
+
+async function renderTermsManagement() {
+    if (!termsManagementList) return;
+    const terms = [...availableTerms];
+    if (terms.length === 0) {
+        termsManagementList.innerHTML = '<div class="terms-placeholder">No terms available</div>';
+        return;
+    }
+    termsManagementList.innerHTML = '';
+    for (const term of terms) {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'term-management-item';
+        itemDiv.dataset.term = term;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'term-management-name';
+        nameSpan.textContent = term;
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'term-management-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '<span class="material-symbols-outlined">edit</span>';
+        editBtn.title = 'Edit term';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+        deleteBtn.title = 'Delete term from all movies';
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(deleteBtn);
+        itemDiv.appendChild(nameSpan);
+        itemDiv.appendChild(actionsDiv);
+        termsManagementList.appendChild(itemDiv);
+
+        // Edit functionality
+        editBtn.onclick = async () => {
+            const oldTerm = term;
+            // Replace nameSpan with input field
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = oldTerm;
+            input.className = 'edit-term-input';
+            itemDiv.replaceChild(input, nameSpan);
+            const saveEdit = async () => {
+                const newTerm = input.value.trim();
+                if (newTerm && newTerm !== oldTerm) {
+                    await renameTermInAllMovies(oldTerm, newTerm);
+                    await refreshAvailableTerms();
+                    if (activeTermFilter === oldTerm) activeTermFilter = newTerm;
+                    await loadAndDisplayAll();
+                    renderTermsManagement(); // re-render sidebar list
+                    renderTermsBar(); // update top terms bar
+                } else {
+                    // revert to original
+                    itemDiv.replaceChild(nameSpan, input);
+                }
+            };
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') saveEdit();
+            });
+            input.focus();
+        };
+
+        // Delete functionality
+        deleteBtn.onclick = async () => {
+            if (confirm(`Delete term "${term}" from all movies? This cannot be undone.`)) {
+                await removeTermFromAllMovies(term);
+                if (activeTermFilter === term) activeTermFilter = null;
+                await refreshAvailableTerms();
+                await loadAndDisplayAll();
+                renderTermsManagement();
+                renderTermsBar();
+            }
+        };
+    }
 }
 
 // ---------------------- Build Search In panel (unchanged) ----------------------
@@ -56,7 +151,6 @@ function buildSearchInPanel() {
         closePanelWithDelay(searchInPanel);
     }
 
-    // All Channels
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
@@ -125,7 +219,6 @@ function buildShowChannelsPanel() {
         });
     }
 
-    // All Channels option
     const allLabel = document.createElement('label');
     const allCb = document.createElement('input');
     allCb.type = 'checkbox';
@@ -195,9 +288,7 @@ function buildShowChannelsPanel() {
     syncCheckboxes();
 }
 
-function updateShowChannelsCheckboxes() {
-    // kept for compatibility (not used directly)
-}
+function updateShowChannelsCheckboxes() {}
 
 // ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
@@ -217,7 +308,7 @@ document.addEventListener('click', (e) => {
     if (!showChannelsBtn.contains(e.target) && !showChannelsPanel.contains(e.target)) showChannelsPanel.classList.add('hidden');
 });
 
-// ---------------------- Filter buttons logic (with trash and term) ----------------------
+// ---------------------- Filter buttons logic ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
     else filterWatchingBtn.classList.remove('active');
@@ -254,7 +345,7 @@ function toggleTrashFilter() {
     if (activeTrashFilter) {
         activeWatchingFilter = false;
         activeFavoriteFilter = false;
-        activeTermFilter = null;          // clear term filter when entering trash
+        activeTermFilter = null;
     }
     updateFilterButtonsUI();
     loadAndDisplayAll();
@@ -265,27 +356,25 @@ if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavorit
 if (filterTrashBtn) filterTrashBtn.addEventListener('click', toggleTrashFilter);
 
 // ---------------------- Terms bar management ----------------------
-// Collect all unique search terms from all movies (main store only)
 async function refreshAvailableTerms() {
     const allMovies = await getAllMovies();
     const termsSet = new Set();
     for (const movie of allMovies) {
         (movie.searchTerms || []).forEach(term => termsSet.add(term));
     }
-    availableTerms = Array.from(termsSet).sort(); // alphabetical order
+    availableTerms = Array.from(termsSet).sort();
     renderTermsBar();
 }
 
 function renderTermsBar() {
     if (activeTrashFilter) {
-        termsBar.innerHTML = ''; // hide terms bar in trash view
+        termsBar.innerHTML = '';
         return;
     }
     if (availableTerms.length === 0) {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
         return;
     }
-    // Use unified button classes: btn, btn-secondary, btn-sm, and btn-active when active
     const html = availableTerms.map(term => `
         <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'btn-active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
@@ -294,46 +383,39 @@ function renderTermsBar() {
     `).join('');
     termsBar.innerHTML = html;
 
-    // Attach click handlers to term buttons (filter) - select .btn within termsBar
     document.querySelectorAll('#termsBar .btn').forEach(btn => {
         const term = btn.dataset.term;
         btn.addEventListener('click', (e) => {
-            // Prevent delete click from triggering filter
             if (e.target.classList.contains('term-delete')) return;
-            // Toggle term filter
-            if (activeTermFilter === term) {
-                activeTermFilter = null;
-            } else {
-                activeTermFilter = term;
-            }
+            if (activeTermFilter === term) activeTermFilter = null;
+            else activeTermFilter = term;
             loadAndDisplayAll();
-            renderTermsBar(); // re-render to show active class
+            renderTermsBar();
         });
     });
 
-    // Attach delete handlers (keep as before)
     document.querySelectorAll('.term-delete').forEach(deleteSpan => {
         deleteSpan.addEventListener('click', async (e) => {
             e.stopPropagation();
             const term = deleteSpan.dataset.term;
-            if (confirm(`Delete term "${term}" from all movies? This action cannot be undone.`)) {
+            if (confirm(`Delete term "${term}" from all movies?`)) {
                 await removeTermFromAllMovies(term);
-                if (activeTermFilter === term) {
-                    activeTermFilter = null;
-                }
+                if (activeTermFilter === term) activeTermFilter = null;
                 await refreshAvailableTerms();
                 loadAndDisplayAll();
+                if (settingsSidebar && !settingsSidebar.classList.contains('hidden')) {
+                    renderTermsManagement(); // update sidebar if open
+                }
             }
         });
     });
 }
 
-// Remove a term from every movie's searchTerms array
 async function removeTermFromAllMovies(term) {
     const db = await openDB();
     const transaction = db.transaction(['movies'], 'readwrite');
     const store = transaction.objectStore('movies');
-    const allMovies = await getAllMovies(); // already uses openDB
+    const allMovies = await getAllMovies();
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(term)) {
             const newTerms = movie.searchTerms.filter(t => t !== term);
@@ -348,7 +430,7 @@ async function removeTermFromAllMovies(term) {
     }
 }
 
-// ---------------------- Load and display movies (with term filter) ----------------------
+// ---------------------- Load and display movies ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies;
@@ -368,10 +450,9 @@ async function loadAndDisplayAll() {
         if (activeFavoriteFilter) allMovies = allMovies.filter(movie => movie.favorite === true);
     }
 
-    // Define callback for sort change
     const onSortChange = (newSort) => {
         currentSort = newSort;
-        loadAndDisplayAll(); // re-render with new sort
+        loadAndDisplayAll();
     };
 
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
@@ -395,11 +476,12 @@ async function updateMovieTerms(youtubeId, newTerms) {
             req.onsuccess = () => resolve();
             req.onerror = () => reject(req.error);
         });
-        // Refresh global terms list after updating a movie's terms
         await refreshAvailableTerms();
-        // If current active term filter was removed from this movie, reload display
         if (activeTermFilter && !movie.searchTerms.includes(activeTermFilter)) {
             loadAndDisplayAll();
+        }
+        if (settingsSidebar && !settingsSidebar.classList.contains('hidden')) {
+            renderTermsManagement();
         }
     }
 }
@@ -459,7 +541,7 @@ searchBtn.onclick = async () => {
         for (const movie of moviesFromAPI) {
             await saveMovie(movie, query);
         }
-        await refreshAvailableTerms();  // update terms list after saving
+        await refreshAvailableTerms();
         await loadAndDisplayAll();
         searchInput.value = '';
     } catch (err) {
@@ -482,14 +564,12 @@ async function init() {
 }
 init();
 
-// Listen for watching toggles from cards to refresh filter view
 window.addEventListener('watching-toggled', () => {
     if (activeWatchingFilter && !activeTrashFilter) {
         loadAndDisplayAll();
     }
 });
 
-// Helper to escape HTML in strings (used in renderTermsBar)
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');

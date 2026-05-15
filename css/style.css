@@ -94,6 +94,113 @@ body {
     font-size: 24px;
 }
 
+
+/* Navbar (logo + settings button) */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--gap-lg);
+}
+#settingsBtn {
+    background: transparent;
+    color: var(--text-secondary);
+}
+#settingsBtn:hover {
+    background: var(--accent);
+    color: var(--text-primary);
+}
+
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 320px;
+    height: 100%;
+    background: var(--bg-header);
+    box-shadow: -2px 0 8px rgba(0,0,0,0.5);
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s ease;
+    transform: translateX(0);
+}
+.sidebar.hidden {
+    transform: translateX(100%);
+}
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+.sidebar-overlay.hidden {
+    display: none;
+}
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--gap-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+.sidebar-section {
+    padding: var(--gap-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+.sidebar-section h3 {
+    margin-bottom: var(--gap-md);
+    font-size: var(--font-size-large);
+}
+.terms-management-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+.term-management-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--button-bg);
+    padding: var(--gap-sm) var(--gap-md);
+    border-radius: var(--border-radius-lg);
+}
+.term-management-name {
+    flex: 1;
+    font-size: var(--font-size-medium);
+    word-break: break-word;
+}
+.term-management-actions {
+    display: flex;
+    gap: var(--gap-sm);
+}
+.term-management-actions button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+}
+.term-management-actions button:hover {
+    color: var(--accent);
+}
+.edit-term-input {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1px solid var(--border-light);
+    color: var(--text-primary);
+    border-radius: var(--border-radius-lg);
+    padding: 4px var(--gap-sm);
+    font-size: var(--font-size-medium);
+}
+
 /* Search box */
 .search-box {
     display: flex;
