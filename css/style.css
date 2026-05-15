@@ -105,7 +105,7 @@ body {
     padding: 0 var(--gap-md);
     height: var(--btn-height);
     background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light);
     color: var(--text-primary);
     font-size: var(--font-size-medium);
     border-radius: var(--border-radius-lg);
@@ -114,6 +114,9 @@ body {
     outline: 2px solid var(--accent-light);
     outline-offset: 2px;
     border-color: transparent;
+}
+#searchInput::placeholder {
+    color: var(--text-secondary);
 }
 
 /* Buttons - unified system */
@@ -411,7 +414,7 @@ body {
     flex: 1;
     padding: 6px var(--gap-md);
     background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light);
     color: var(--text-primary);
     border-radius: var(--border-radius-lg);
 }
@@ -419,6 +422,9 @@ body {
     outline: 2px solid var(--accent-light);
     outline-offset: 2px;
     border-color: transparent;
+}
+.modal-input::placeholder {
+    color: var(--text-secondary);
 }
 .modal-trash-actions {
     display: flex;
@@ -486,7 +492,7 @@ body {
 }
 .sort-control select {
     background: var(--bg-card);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light);
     border-radius: var(--border-radius-lg);
     padding: 0 var(--gap-md);
     height: 32px;
