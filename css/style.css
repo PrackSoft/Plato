@@ -108,15 +108,18 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-primary);
     font-size: var(--font-size-medium);
-}
-/* Unify radius for inputs and buttons */
-#searchInput, .btn, .sort-control select, .modal-input {
     border-radius: var(--border-radius-lg);
+}
+#searchInput:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+    border-color: transparent;
 }
 
 /* Buttons - unified system */
 .btn {
     border: none;
+    border-radius: var(--border-radius-lg);
     height: var(--btn-height);
     padding: 0 var(--btn-padding-x);
     font-size: var(--font-size-medium);
@@ -410,6 +413,12 @@ body {
     background: var(--bg-panel);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
+    border-radius: var(--border-radius-lg);
+}
+.modal-input:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+    border-color: transparent;
 }
 .modal-trash-actions {
     display: flex;
@@ -478,11 +487,17 @@ body {
 .sort-control select {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
     padding: 0 var(--gap-md);
     height: 32px;
     color: var(--text-primary);
     font-size: var(--font-size-small);
     cursor: pointer;
+}
+.sort-control select:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+    border-color: transparent;
 }
 
 /* Date grouping */
