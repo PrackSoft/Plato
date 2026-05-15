@@ -86,7 +86,6 @@ body {
     border-radius: var(--border-radius-sm);
     height: 28px;
     width: 28px;
-    /* border removed for consistency with buttons */
     transition: all 0.2s ease;
 }
 
@@ -113,7 +112,7 @@ body {
 #searchBtn {
     padding: 0 var(--button-padding-x);
     height: var(--button-height);
-    background: var(--accent);
+    background: var(--button-bg);
     border: none;
     border-radius: var(--border-radius-sm);
     color: var(--text-primary);
@@ -123,7 +122,7 @@ body {
     font-size: var(--font-size-medium);
 }
 #searchBtn:hover {
-    background: var(--accent-dark);
+    background: var(--accent);
 }
 #searchBtn:focus {
     outline: 2px solid var(--accent-light);
@@ -147,8 +146,35 @@ body {
     align-items: center;
 }
 
-/* Common button styles for dropdowns, filters, terms */
-.channel-btn, .filter-btn, .term-btn {
+/* Channel buttons (Search In, Show channels) - primary, always red */
+.channel-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--border-radius-lg);
+    height: var(--button-height);
+    padding: 0 var(--button-padding-x);
+    color: var(--text-primary);
+    font-size: var(--font-size-medium);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+.channel-btn:hover {
+    background: var(--accent-dark);
+}
+.channel-btn:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+}
+.channel-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+/* Filter buttons (Watching, Favorites, Trash) - gray, toggle to red when active */
+.filter-btn {
     background: var(--button-bg);
     border: none;
     border-radius: var(--border-radius-lg);
@@ -163,23 +189,19 @@ body {
     transition: background 0.2s;
     white-space: nowrap;
 }
-.channel-btn:hover, .filter-btn:hover, .term-btn:hover {
+.filter-btn:hover {
     background: var(--accent);
 }
-.channel-btn:focus, .filter-btn:focus, .term-btn:focus {
+.filter-btn:focus {
     outline: 2px solid var(--accent-light);
     outline-offset: 2px;
 }
-.channel-btn .material-symbols-outlined,
-.filter-btn .material-symbols-outlined,
-.term-btn .material-symbols-outlined {
-    font-size: 18px;
-}
-
-/* Active state for filter buttons */
 .filter-btn.active {
     background: var(--accent);
     color: var(--text-primary);
+}
+.filter-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 /* Filter buttons group */
@@ -395,10 +417,21 @@ body {
     background: var(--button-bg);
     border: none;
     border-radius: var(--border-radius-lg);
-    height: 32px; /* slightly smaller than main buttons */
+    height: 32px;
     padding: 0 var(--gap-md);
     font-size: var(--font-size-small);
     gap: var(--gap-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+.term-btn:hover {
+    background: var(--accent);
+}
+.term-btn:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
 }
 .term-btn.active {
     background: var(--accent);
