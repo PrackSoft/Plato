@@ -143,6 +143,15 @@ body {
     outline: 2px solid var(--accent-light);
     outline-offset: 2px;
 }
+
+.btn:focus-visible {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+}
+.btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
 .btn-primary {
     background: var(--accent);
     color: var(--text-primary);
