@@ -1,4 +1,4 @@
-// js/app.js (completo)
+// js/app.js (completo) - corrected: replaced 'btn-active' with 'active' in renderTermsBar
 // ==========================================
 // js/app.js - Plato App (with dynamic dropdowns, settings sidebar, term management)
 // ==========================================
@@ -452,8 +452,9 @@ function renderTermsBar() {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
         return;
     }
+    // CORREGIDO: reemplazar 'btn-active' por 'active'
     const html = availableTerms.map(term => `
-        <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'btn-active' : ''}" data-term="${escapeHtml(term)}">
+        <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
             <span class="term-delete" data-term="${escapeHtml(term)}" title="Delete this term from all movies">✖</span>
         </button>
