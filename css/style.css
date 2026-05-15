@@ -383,6 +383,48 @@ body {
     padding: 4px 0;
 }
 
+/* Sort control */
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+.sort-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+.sort-control select {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+/* Date grouping */
+.date-group {
+    margin-bottom: 32px;
+}
+.group-date {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #3a3a3a;
+    color: #ff0000;
+}
+.results-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .top-controls {

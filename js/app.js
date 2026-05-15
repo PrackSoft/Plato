@@ -32,6 +32,8 @@ let activeTrashFilter = false;
 let activeTermFilter = null;        // term string or null
 let availableTerms = [];             // list of unique terms from all movies
 
+let currentSort = 'date';   // default sort by date
+
 // ---------------------- Helper: close panels ----------------------
 function closeAllPanels() {
     searchInPanel.classList.add('hidden');
@@ -355,20 +357,23 @@ async function loadAndDisplayAll() {
         allMovies = await getTrashMovies(channelIds);
     } else {
         allMovies = await getAllMovies();
-        // Apply channel filter
         if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
             allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
         }
-        // Apply term filter
         if (activeTermFilter) {
             allMovies = allMovies.filter(movie => (movie.searchTerms || []).includes(activeTermFilter));
         }
-        // Apply watching/favorite filters
         if (activeWatchingFilter) allMovies = allMovies.filter(movie => movie.watching === true);
         if (activeFavoriteFilter) allMovies = allMovies.filter(movie => movie.favorite === true);
     }
 
-    renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main');
+    // Define callback for sort change
+    const onSortChange = (newSort) => {
+        currentSort = newSort;
+        loadAndDisplayAll(); // re-render with new sort
+    };
+
+    renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
 }
 
 // ---------------------- Modal-related functions ----------------------
