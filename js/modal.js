@@ -1,10 +1,8 @@
 // js/modal.js
-// Modal for movie details, term management, watching/favorite toggles, and trash actions
-
 let currentMovie = null;
 let currentOnUpdate = null;
-let currentMovieSource = null; // 'main' or 'trash'
-let currentTrashFunctions = null; // store trash functions for use in modal
+let currentMovieSource = null;
+let currentTrashFunctions = null;
 
 export function initModal(onUpdateCallback) {
     currentOnUpdate = onUpdateCallback;
@@ -43,12 +41,11 @@ function closeModal() {
 
 function renderModalContent(movie, source) {
     const isInTrash = (source === 'trash');
-    // Show delete button only for main movies; for trash, show restore and permanent delete buttons
     const deleteButtonHtml = isInTrash ? '' : `<span class="material-symbols-outlined modal-delete-btn" title="Move to trash">delete_forever</span>`;
     const trashActionsHtml = isInTrash ? `
-        <div style="display: flex; gap: 10px; margin-top: 15px;">
-            <button id="restoreBtn" class="full-search-btn">Restore</button>
-            <button id="permanentDeleteBtn" class="full-search-btn" style="background:#990000;">Delete Permanently</button>
+        <div class="modal-trash-actions">
+            <button id="restoreBtn" class="btn btn-secondary">Restore</button>
+            <button id="permanentDeleteBtn" class="btn btn-danger">Delete Permanently</button>
         </div>
     ` : '';
 
@@ -56,46 +53,46 @@ function renderModalContent(movie, source) {
         <div class="modal-header">
             ${deleteButtonHtml}
             <h2>${escapeHtml(movie.title)}</h2>
-            <div style="width: 20px;"></div>
+            <div class="modal-spacer"></div>
         </div>
-        <img src="${movie.imageUrl}" style="width:100%; border-radius:8px; margin:10px 0;">
+        <img class="modal-image" src="${movie.imageUrl}" alt="${movie.title}">
         <p><strong>YouTube Premiere:</strong> ${movie.publishedAt ? new Date(movie.publishedAt).toLocaleDateString() : 'Unknown'}</p>
         <div class="modal-description">${escapeHtml(movie.description || 'No Description')}</div>
         <p><strong>Duration:</strong> ${formatDuration(movie.duration)}</p>
         <p><strong>Saved on:</strong> ${new Date(movie.dateSaved).toLocaleString()}</p>
         ${isInTrash ? `<p><strong>Deleted on:</strong> ${movie.deletedAt ? new Date(movie.deletedAt).toLocaleString() : 'Unknown'}</p>` : ''}
         
-        <!-- Terms management (readonly in trash) -->
-        <div style="margin: 15px 0; background: #2a2a2a; padding: 10px; border-radius: 8px;">
+        <!-- Terms management -->
+        <div class="modal-section">
             <strong>Search Terms:</strong>
-            <div id="termsList" style="margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px;">
+            <div id="termsList" class="terms-list">
                 ${(movie.searchTerms || []).map(term => `
                     <span class="term-chip">
                         ${escapeHtml(term)}
-                        ${!isInTrash ? `<span class="remove-term" data-term="${escapeHtml(term)}" style="cursor:pointer; margin-left:6px;">✖</span>` : ''}
+                        ${!isInTrash ? `<span class="remove-term" data-term="${escapeHtml(term)}">✖</span>` : ''}
                     </span>
                 `).join('')}
             </div>
             ${!isInTrash ? `
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-                <input type="text" id="newTermInput" placeholder="Add new term" style="flex:1; padding:6px; background:#1e1e1e; border:1px solid #444; color:white; border-radius:4px;">
-                <button id="addTermBtn" class="full-search-btn" style="padding:6px 12px;">Add</button>
+            <div class="add-term-row">
+                <input type="text" id="newTermInput" class="modal-input" placeholder="Add new term">
+                <button id="addTermBtn" class="btn btn-secondary btn-sm">Add</button>
             </div>
             ` : ''}
         </div>
 
-        <!-- Watching & Favorite toggles (disabled in trash) -->
-        <div style="margin: 15px 0; padding: 10px; background: #2a2a2a; border-radius: 8px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <!-- Watching & Favorite toggles -->
+        <div class="modal-toggles">
+            <div class="toggle-row">
                 <span>Watching:</span>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: ${isInTrash ? 'default' : 'pointer'}; opacity: ${isInTrash ? 0.6 : 1};">
+                <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
                     <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
                     <input type="checkbox" id="modalWatchingCheckbox" ${movie.watching ? 'checked' : ''} ${isInTrash ? 'disabled' : ''}>
                 </label>
             </div>
-            <div style="display: flex; justify-content: space-between;">
+            <div class="toggle-row">
                 <span>Favorite:</span>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: ${isInTrash ? 'default' : 'pointer'}; opacity: ${isInTrash ? 0.6 : 1};">
+                <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
                     <span class="material-symbols-outlined">${movie.favorite ? 'star' : 'star_outline'}</span>
                     <input type="checkbox" id="modalFavoriteCheckbox" ${movie.favorite ? 'checked' : ''} ${isInTrash ? 'disabled' : ''}>
                 </label>
@@ -108,7 +105,6 @@ function renderModalContent(movie, source) {
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    // Delete button (move to trash) - only for main movies
     const deleteBtn = document.querySelector('.modal-delete-btn');
     if (deleteBtn && !isInTrash) {
         deleteBtn.onclick = async () => {
@@ -120,7 +116,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Restore button (only in trash)
     const restoreBtn = document.getElementById('restoreBtn');
     if (restoreBtn && isInTrash) {
         restoreBtn.onclick = async () => {
@@ -130,7 +125,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Permanent delete button (only in trash)
     const permanentDeleteBtn = document.getElementById('permanentDeleteBtn');
     if (permanentDeleteBtn && isInTrash) {
         permanentDeleteBtn.onclick = async () => {
@@ -142,7 +136,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Watching checkbox (disabled in trash)
     const watchingCheckbox = document.getElementById('modalWatchingCheckbox');
     if (watchingCheckbox && !isInTrash) {
         watchingCheckbox.onchange = async (e) => {
@@ -154,7 +147,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite checkbox (disabled in trash)
     const favoriteCheckbox = document.getElementById('modalFavoriteCheckbox');
     if (favoriteCheckbox && !isInTrash) {
         favoriteCheckbox.onchange = async (e) => {
@@ -166,7 +158,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Remove term (only in main)
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {
@@ -180,7 +171,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                     termsContainer.innerHTML = (newTerms.map(t => `
                         <span class="term-chip">
                             ${escapeHtml(t)}
-                            <span class="remove-term" data-term="${escapeHtml(t)}" style="cursor:pointer; margin-left:6px;">✖</span>
+                            <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                         </span>
                     `).join(''));
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
@@ -190,7 +181,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         });
     }
 
-    // Add term (only in main)
     if (!isInTrash) {
         const addBtn = document.getElementById('addTermBtn');
         const newTermInput = document.getElementById('newTermInput');
@@ -207,7 +197,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                         termsContainer.innerHTML = (newTerms.map(t => `
                             <span class="term-chip">
                                 ${escapeHtml(t)}
-                                <span class="remove-term" data-term="${escapeHtml(t)}" style="cursor:pointer; margin-left:6px;">✖</span>
+                                <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                             </span>
                         `).join(''));
                         attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);

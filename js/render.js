@@ -15,10 +15,8 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, c => c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;');
 }
 
-// Convert UTC date string to local date key (YYYY-MM-DD) considering timezone offset
 function getLocalDateKey(utcDateString) {
     const date = new Date(utcDateString);
-    // Adjust to local timezone
     const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
     return `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, '0')}-${String(localDate.getDate()).padStart(2, '0')}`;
 }
@@ -58,18 +56,18 @@ export function renderMovies(container, movies, title, source = 'main', currentS
                 <div class="info">
                     <h3>${escapeHtml(movie.title)}</h3>
                     <div class="channel">${escapeHtml(movie.channelTitle)}</div>
-                    <div class="card-stats" style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #aaa;">
+                    <div class="card-stats">
                         <span class="comments">
-                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">forum</span>
+                            <span class="material-symbols-outlined stat-icon">forum</span>
                             ${formatNumber(movie.commentCount)}
                         </span>
                         <span class="likes">
-                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle;">thumb_up</span>
+                            <span class="material-symbols-outlined stat-icon">thumb_up</span>
                             ${formatNumber(movie.likeCount)}
                         </span>
                         ${source !== 'trash' ? `
-                        <span class="watching-icon" data-id="${movie.youtubeId}" data-watching="${movie.watching}" style="cursor: pointer;">
-                            <span class="material-symbols-outlined" style="font-size: 18px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
+                        <span class="watching-icon" data-id="${movie.youtubeId}" data-watching="${movie.watching}">
+                            <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
                         </span>
                         ` : ''}
                     </div>
