@@ -81,8 +81,8 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching & Favorite toggles -->
-        <div class="modal-toggles">
+        <!-- Watching toggle (separate container) -->
+        <div class="modal-section">
             <div class="toggle-row">
                 <span>Watching:</span>
                 <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
@@ -90,6 +90,10 @@ function renderModalContent(movie, source) {
                     <input type="checkbox" id="modalWatchingCheckbox" ${movie.watching ? 'checked' : ''} ${isInTrash ? 'disabled' : ''}>
                 </label>
             </div>
+        </div>
+
+        <!-- Favorite toggle (separate container) -->
+        <div class="modal-section">
             <div class="toggle-row">
                 <span>Favorite:</span>
                 <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
