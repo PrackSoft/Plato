@@ -95,37 +95,61 @@ async function renderTermsManagement() {
         itemDiv.appendChild(actionsDiv);
         termsManagementList.appendChild(itemDiv);
 
-        // Edit functionality
-        editBtn.onclick = async () => {
-            const oldTerm = term;
+        // Edit functionality with explicit save/cancel
+        editBtn.onclick = () => {
             // Replace nameSpan with input field
             const input = document.createElement('input');
             input.type = 'text';
-            input.value = oldTerm;
+            input.value = term;
             input.className = 'edit-term-input';
             itemDiv.replaceChild(input, nameSpan);
-            const saveEdit = async () => {
+
+            // Replace editBtn with save and cancel buttons
+            const saveBtn = document.createElement('button');
+            saveBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
+            saveBtn.title = 'Save changes';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+            cancelBtn.title = 'Cancel';
+            actionsDiv.innerHTML = '';
+            actionsDiv.appendChild(saveBtn);
+            actionsDiv.appendChild(cancelBtn);
+
+            const saveChanges = async () => {
                 const newTerm = input.value.trim();
-                if (newTerm && newTerm !== oldTerm) {
-                    await renameTermInAllMovies(oldTerm, newTerm);
+                if (newTerm && newTerm !== term) {
+                    await renameTermInAllMovies(term, newTerm);
                     await refreshAvailableTerms();
-                    if (activeTermFilter === oldTerm) activeTermFilter = newTerm;
+                    if (activeTermFilter === term) activeTermFilter = newTerm;
                     await loadAndDisplayAll();
                     renderTermsManagement(); // re-render sidebar list
                     renderTermsBar(); // update top terms bar
                 } else {
-                    // revert to original
+                    // No change, just restore original view
                     itemDiv.replaceChild(nameSpan, input);
+                    actionsDiv.innerHTML = '';
+                    actionsDiv.appendChild(editBtn);
+                    actionsDiv.appendChild(deleteBtn);
                 }
             };
-            input.addEventListener('blur', saveEdit);
+
+            const cancelEdit = () => {
+                // Restore original display without saving
+                itemDiv.replaceChild(nameSpan, input);
+                actionsDiv.innerHTML = '';
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(deleteBtn);
+            };
+
+            saveBtn.onclick = saveChanges;
+            cancelBtn.onclick = cancelEdit;
             input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') saveEdit();
+                if (e.key === 'Enter') saveChanges();
             });
             input.focus();
         };
 
-        // Delete functionality
+        // Delete functionality (unchanged)
         deleteBtn.onclick = async () => {
             if (confirm(`Delete term "${term}" from all movies? This cannot be undone.`)) {
                 await removeTermFromAllMovies(term);
