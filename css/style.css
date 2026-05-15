@@ -73,10 +73,6 @@ body {
     align-items: center;
     margin-bottom: var(--gap-lg);
 }
-#settingsBtn {
-    background: transparent;
-    color: var(--text-secondary);
-}
 #settingsBtn:hover {
     background: var(--accent);
     color: var(--text-primary);
