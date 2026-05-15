@@ -603,12 +603,20 @@ window.openMovieModal = (movie, source = 'main') => {
 
 // ---------------------- Search ----------------------
 searchBtn.onclick = async () => {
-    // Exit trash view if active (consistent with Watching/Favorites buttons)
+    // Salir de los filtros Watching y Favorites si están activos (consistente con Trash)
+    if (activeWatchingFilter) {
+        activeWatchingFilter = false;
+    }
+    if (activeFavoriteFilter) {
+        activeFavoriteFilter = false;
+    }
+    // También salir de la papelera si está activa (ya lo tenías)
     if (activeTrashFilter) {
         activeTrashFilter = false;
-        updateFilterButtonsUI();
     }
-    
+    // Actualizar la interfaz de los botones (quita el rojo si estaba)
+    updateFilterButtonsUI();
+
     const query = searchInput.value.trim();
     if (!query) {
         resultsGrid.innerHTML = '<div class="stats">Enter a search term</div>';
