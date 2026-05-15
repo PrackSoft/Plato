@@ -285,16 +285,17 @@ function renderTermsBar() {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
         return;
     }
+    // Use unified button classes: btn, btn-secondary, btn-sm, and btn-active when active
     const html = availableTerms.map(term => `
-        <button class="term-btn ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
+        <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'btn-active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
             <span class="term-delete" data-term="${escapeHtml(term)}" title="Delete this term from all movies">✖</span>
         </button>
     `).join('');
     termsBar.innerHTML = html;
 
-    // Attach click handlers to term buttons (filter)
-    document.querySelectorAll('.term-btn').forEach(btn => {
+    // Attach click handlers to term buttons (filter) - select .btn within termsBar
+    document.querySelectorAll('#termsBar .btn').forEach(btn => {
         const term = btn.dataset.term;
         btn.addEventListener('click', (e) => {
             // Prevent delete click from triggering filter
@@ -310,7 +311,7 @@ function renderTermsBar() {
         });
     });
 
-    // Attach delete handlers
+    // Attach delete handlers (keep as before)
     document.querySelectorAll('.term-delete').forEach(deleteSpan => {
         deleteSpan.addEventListener('click', async (e) => {
             e.stopPropagation();

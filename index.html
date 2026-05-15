@@ -18,21 +18,20 @@
 
             <div class="search-box">
                 <div class="dropdown-search">
-                    <button id="searchInBtn" class="channel-btn">
+                    <button id="searchInBtn" class="btn btn-primary">
                         <span class="material-symbols-outlined">subscriptions</span> Search in
                         <span class="material-symbols-outlined">arrow_drop_down</span>
                     </button>
                     <div id="searchInPanel" class="dropdown-panel hidden"></div>
                 </div>
                 <input type="text" id="searchInput" placeholder="Search movies..." autocomplete="off">
-                <button id="searchBtn">Search</button>
+                <button id="searchBtn" class="btn btn-secondary">Search</button>
             </div>
 
             <div class="top-controls">
                 <div class="channel-controls">
-                    
                     <div class="dropdown-filter">
-                        <button id="showChannelsBtn" class="channel-btn">
+                        <button id="showChannelsBtn" class="btn btn-primary">
                             <span class="material-symbols-outlined">live_tv</span> Show channels
                             <span class="material-symbols-outlined">arrow_drop_down</span>
                         </button>
@@ -41,31 +40,33 @@
                 </div>
 
                 <div class="filter-buttons">
-                    <button id="filterTrashBtn" class="filter-btn">
+                    <button id="filterTrashBtn" class="btn btn-secondary">
                         <span class="material-symbols-outlined">delete</span> Trashcan
                     </button>
-                    <button id="filterWatchingBtn" class="filter-btn">
+                    <button id="filterWatchingBtn" class="btn btn-secondary">
                         <span class="material-symbols-outlined">visibility</span> Watching
                     </button>
-                    <button id="filterFavoriteBtn" class="filter-btn">
+                    <button id="filterFavoriteBtn" class="btn btn-secondary">
                         <span class="material-symbols-outlined">star</span> Favorites
                     </button>
                 </div>
-
             </div>
+
             <!-- Terms bar (dynamic buttons) -->
             <div id="termsBar" class="terms-bar"></div>
 
             <div id="resultsGrid" class="results"></div>
         </div>
     </div>
+
     <div id="movieModal" class="modal" style="display:none;">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
             <div id="modalBody"></div>
-            <button id="watchMovieBtn" class="primary-btn">Watch on YouTube</button>
+            <button id="watchMovieBtn" class="btn btn-primary" style="width:100%; margin-top:15px;">Watch on YouTube</button>
         </div>
     </div>
+
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
