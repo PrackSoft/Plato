@@ -1,5 +1,6 @@
+// js/app.js (completo)
 // ==========================================
-// js/app.js - Plato App (with settings sidebar for term management)
+// js/app.js - Plato App (with dynamic dropdowns, settings sidebar, term management)
 // ==========================================
 
 import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
@@ -48,11 +49,216 @@ function closePanelWithDelay(panel) {
     setTimeout(() => panel.classList.add('hidden'), 150);
 }
 
+// ---------------------- Build Search In panel (dynamic button text, header) ----------------------
+function buildSearchInPanel() {
+    searchInPanel.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'dropdown-header';
+    header.textContent = 'Search in';
+    searchInPanel.appendChild(header);
+
+    function setExclusive(clickedCheckbox) {
+        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
+        all.forEach(cb => cb.checked = (cb === clickedCheckbox));
+        const checked = Array.from(all).find(cb => cb.checked);
+        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+        updateSearchInButtonText();
+        closePanelWithDelay(searchInPanel);
+    }
+
+    function updateSearchInButtonText() {
+        let label = '';
+        if (currentSearchChannelId === null) {
+            label = 'All Channels';
+        } else {
+            const channel = CHANNELS.find(ch => ch.id === currentSearchChannelId);
+            label = channel ? channel.name : 'All Channels';
+        }
+        searchInBtn.innerHTML = `
+            <span class="material-symbols-outlined">subscriptions</span>
+            ${label}
+            <span class="material-symbols-outlined">arrow_drop_down</span>
+        `;
+    }
+
+    // All Channels
+    const allLabel = document.createElement('label');
+    const allCb = document.createElement('input');
+    allCb.type = 'checkbox';
+    allCb.value = '';
+    allCb.checked = (currentSearchChannelId === null);
+    allCb.addEventListener('change', () => {
+        if (allCb.checked) setExclusive(allCb);
+        else {
+            const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
+            if (!anyChecked) {
+                allCb.checked = true;
+                setExclusive(allCb);
+            } else {
+                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
+                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                updateSearchInButtonText();
+                closePanelWithDelay(searchInPanel);
+            }
+        }
+    });
+    allLabel.appendChild(allCb);
+    allLabel.appendChild(document.createTextNode('All Channels'));
+    searchInPanel.appendChild(allLabel);
+
+    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = channel.id;
+        cb.checked = (currentSearchChannelId === channel.id);
+        cb.addEventListener('change', () => {
+            if (cb.checked) setExclusive(cb);
+            else {
+                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
+                if (!anyChecked) {
+                    const allCb2 = searchInPanel.querySelector('input[value=""]');
+                    if (allCb2) {
+                        allCb2.checked = true;
+                        setExclusive(allCb2);
+                    }
+                } else {
+                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
+                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+                    updateSearchInButtonText();
+                    closePanelWithDelay(searchInPanel);
+                }
+            }
+        });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(channel.name));
+        searchInPanel.appendChild(label);
+    });
+
+    updateSearchInButtonText();
+}
+
+// ---------------------- Build Show Channels panel (dynamic button text, header) ----------------------
+function buildShowChannelsPanel() {
+    showChannelsPanel.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'dropdown-header';
+    header.textContent = 'Show channels';
+    showChannelsPanel.appendChild(header);
+
+    function updateShowChannelsButtonText() {
+        let text = '';
+        if (currentDisplayChannelIds.length === 0) {
+            text = 'None';
+        } else if (currentDisplayChannelIds.includes(null)) {
+            text = 'All Channels';
+        } else if (currentDisplayChannelIds.length === 1) {
+            const channel = CHANNELS.find(ch => ch.id === currentDisplayChannelIds[0]);
+            text = channel ? channel.name : 'Channel';
+        } else {
+            text = `${currentDisplayChannelIds.length} channels`;
+        }
+        showChannelsBtn.innerHTML = `
+            <span class="material-symbols-outlined">live_tv</span>
+            ${text}
+            <span class="material-symbols-outlined">arrow_drop_down</span>
+        `;
+    }
+
+    function closeThisPanelWithDelay() {
+        setTimeout(() => showChannelsPanel.classList.add('hidden'), 150);
+    }
+
+    function syncCheckboxes() {
+        const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            const val = cb.value === '' ? null : cb.value;
+            cb.checked = currentDisplayChannelIds.includes(val);
+        });
+    }
+
+    // All Channels option
+    const allLabel = document.createElement('label');
+    const allCb = document.createElement('input');
+    allCb.type = 'checkbox';
+    allCb.value = '';
+    allCb.checked = currentDisplayChannelIds.includes(null);
+    allCb.addEventListener('change', () => {
+        if (allCb.checked) {
+            currentDisplayChannelIds = [null];
+            syncCheckboxes();
+            updateShowChannelsButtonText();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
+        } else {
+            const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
+                .some(cb => cb !== allCb && cb.checked);
+            if (!anyOtherChecked) {
+                allCb.checked = true;
+                return;
+            }
+            currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
+            syncCheckboxes();
+            updateShowChannelsButtonText();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
+        }
+    });
+    allLabel.appendChild(allCb);
+    allLabel.appendChild(document.createTextNode('All Channels'));
+    showChannelsPanel.appendChild(allLabel);
+
+    const sep = document.createElement('hr');
+    sep.className = 'panel-separator';
+    showChannelsPanel.appendChild(sep);
+
+    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.value = channel.id;
+        cb.checked = currentDisplayChannelIds.includes(channel.id);
+        cb.addEventListener('change', () => {
+            if (cb.checked) {
+                if (currentDisplayChannelIds.includes(null)) {
+                    currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
+                    updateShowChannelsButtonText();
+                }
+                if (!currentDisplayChannelIds.includes(channel.id)) {
+                    currentDisplayChannelIds.push(channel.id);
+                }
+            } else {
+                currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
+                if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
+                    currentDisplayChannelIds = [null];
+                    allCb.checked = true;
+                }
+            }
+            syncCheckboxes();
+            updateShowChannelsButtonText();
+            loadAndDisplayAll();
+            closeThisPanelWithDelay();
+        });
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(channel.name));
+        showChannelsPanel.appendChild(label);
+    });
+
+    if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
+        currentDisplayChannelIds = [null];
+        allCb.checked = true;
+    }
+    syncCheckboxes();
+    updateShowChannelsButtonText();
+}
+
 // ---------------------- Sidebar functions ----------------------
 function openSettingsSidebar() {
     settingsSidebar.classList.remove('hidden');
     sidebarOverlay.classList.remove('hidden');
-    renderTermsManagement(); // populate list when opening
+    renderTermsManagement();
 }
 function closeSettingsSidebar() {
     settingsSidebar.classList.add('hidden');
@@ -95,49 +301,46 @@ async function renderTermsManagement() {
         itemDiv.appendChild(actionsDiv);
         termsManagementList.appendChild(itemDiv);
 
-        // Edit functionality: replace only the edit button, keep delete button
         editBtn.onclick = () => {
-            // Replace nameSpan with input
             const input = document.createElement('input');
             input.type = 'text';
             input.value = term;
             input.className = 'edit-term-input';
             itemDiv.replaceChild(input, nameSpan);
 
-            // Remove editBtn from actionsDiv and add save/cancel buttons
             const saveBtn = document.createElement('button');
             saveBtn.innerHTML = '<span class="material-symbols-outlined">check</span>';
             saveBtn.title = 'Save changes';
             const cancelBtn = document.createElement('button');
             cancelBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
             cancelBtn.title = 'Cancel';
-            // Replace editBtn with saveBtn and cancelBtn (keep deleteBtn)
             actionsDiv.replaceChild(saveBtn, editBtn);
             actionsDiv.insertBefore(cancelBtn, saveBtn.nextSibling);
 
             const saveChanges = async () => {
                 const newTerm = input.value.trim();
-                if (newTerm && newTerm !== term) {
+                if (!newTerm || newTerm === term) {
+                    cancelEdit();
+                    return;
+                }
+                try {
                     await renameTermInAllMovies(term, newTerm);
                     await refreshAvailableTerms();
                     if (activeTermFilter === term) activeTermFilter = newTerm;
                     await loadAndDisplayAll();
                     renderTermsManagement();
                     renderTermsBar();
-                } else {
-                    // revert
-                    itemDiv.replaceChild(nameSpan, input);
-                    actionsDiv.replaceChild(editBtn, saveBtn);
-                    actionsDiv.removeChild(cancelBtn);
+                } catch (err) {
+                    console.error('Error renaming term:', err);
+                    alert('Failed to rename term.');
+                    cancelEdit();
                 }
             };
-
             const cancelEdit = () => {
                 itemDiv.replaceChild(nameSpan, input);
                 actionsDiv.replaceChild(editBtn, saveBtn);
                 actionsDiv.removeChild(cancelBtn);
             };
-
             saveBtn.onclick = saveChanges;
             cancelBtn.onclick = cancelEdit;
             input.addEventListener('keypress', (e) => {
@@ -146,170 +349,23 @@ async function renderTermsManagement() {
             input.focus();
         };
 
-        // Delete button always works
         deleteBtn.onclick = async () => {
             if (confirm(`Delete term "${term}" from all movies? This cannot be undone.`)) {
-                await removeTermFromAllMovies(term);
-                if (activeTermFilter === term) activeTermFilter = null;
-                await refreshAvailableTerms();
-                await loadAndDisplayAll();
-                renderTermsManagement();
-                renderTermsBar();
+                try {
+                    await removeTermFromAllMovies(term);
+                    if (activeTermFilter === term) activeTermFilter = null;
+                    await refreshAvailableTerms();
+                    await loadAndDisplayAll();
+                    renderTermsManagement();
+                    renderTermsBar();
+                } catch (err) {
+                    console.error('Error deleting term:', err);
+                    alert('Failed to delete term.');
+                }
             }
         };
     }
 }
-
-// ---------------------- Build Search In panel (unchanged) ----------------------
-function buildSearchInPanel() {
-    searchInPanel.innerHTML = '';
-
-    function setExclusive(clickedCheckbox) {
-        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
-        all.forEach(cb => cb.checked = (cb === clickedCheckbox));
-        const checked = Array.from(all).find(cb => cb.checked);
-        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-        closePanelWithDelay(searchInPanel);
-    }
-
-    const allLabel = document.createElement('label');
-    const allCb = document.createElement('input');
-    allCb.type = 'checkbox';
-    allCb.value = '';
-    allCb.checked = (currentSearchChannelId === null);
-    allCb.addEventListener('change', () => {
-        if (allCb.checked) setExclusive(allCb);
-        else {
-            const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
-            if (!anyChecked) {
-                allCb.checked = true;
-                setExclusive(allCb);
-            } else {
-                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
-                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                closePanelWithDelay(searchInPanel);
-            }
-        }
-    });
-    allLabel.appendChild(allCb);
-    allLabel.appendChild(document.createTextNode('All Channels'));
-    searchInPanel.appendChild(allLabel);
-
-    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
-        const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = channel.id;
-        cb.checked = (currentSearchChannelId === channel.id);
-        cb.addEventListener('change', () => {
-            if (cb.checked) setExclusive(cb);
-            else {
-                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
-                if (!anyChecked) {
-                    const allCb2 = searchInPanel.querySelector('input[value=""]');
-                    if (allCb2) {
-                        allCb2.checked = true;
-                        setExclusive(allCb2);
-                    }
-                } else {
-                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
-                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                    closePanelWithDelay(searchInPanel);
-                }
-            }
-        });
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(channel.name));
-        searchInPanel.appendChild(label);
-    });
-}
-
-// ---------------------- Build Show Channels panel (unchanged) ----------------------
-function buildShowChannelsPanel() {
-    showChannelsPanel.innerHTML = '';
-
-    function closeThisPanelWithDelay() {
-        setTimeout(() => showChannelsPanel.classList.add('hidden'), 150);
-    }
-
-    function syncCheckboxes() {
-        const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => {
-            const val = cb.value === '' ? null : cb.value;
-            cb.checked = currentDisplayChannelIds.includes(val);
-        });
-    }
-
-    const allLabel = document.createElement('label');
-    const allCb = document.createElement('input');
-    allCb.type = 'checkbox';
-    allCb.value = '';
-    allCb.checked = currentDisplayChannelIds.includes(null);
-    allCb.addEventListener('change', () => {
-        if (allCb.checked) {
-            currentDisplayChannelIds = [null];
-            syncCheckboxes();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        } else {
-            const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
-                .some(cb => cb !== allCb && cb.checked);
-            if (!anyOtherChecked) {
-                allCb.checked = true;
-                return;
-            }
-            currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-            syncCheckboxes();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        }
-    });
-    allLabel.appendChild(allCb);
-    allLabel.appendChild(document.createTextNode('All Channels'));
-    showChannelsPanel.appendChild(allLabel);
-
-    const sep = document.createElement('hr');
-    sep.className = 'panel-separator';
-    showChannelsPanel.appendChild(sep);
-
-    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
-        const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = channel.id;
-        cb.checked = currentDisplayChannelIds.includes(channel.id);
-        cb.addEventListener('change', () => {
-            if (cb.checked) {
-                if (currentDisplayChannelIds.includes(null)) {
-                    currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-                }
-                if (!currentDisplayChannelIds.includes(channel.id)) {
-                    currentDisplayChannelIds.push(channel.id);
-                }
-            } else {
-                currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
-                if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
-                    currentDisplayChannelIds = [null];
-                    allCb.checked = true;
-                }
-            }
-            syncCheckboxes();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        });
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(channel.name));
-        showChannelsPanel.appendChild(label);
-    });
-
-    if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
-        currentDisplayChannelIds = [null];
-        allCb.checked = true;
-    }
-    syncCheckboxes();
-}
-
-function updateShowChannelsCheckboxes() {}
 
 // ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
@@ -420,12 +476,17 @@ function renderTermsBar() {
             e.stopPropagation();
             const term = deleteSpan.dataset.term;
             if (confirm(`Delete term "${term}" from all movies?`)) {
-                await removeTermFromAllMovies(term);
-                if (activeTermFilter === term) activeTermFilter = null;
-                await refreshAvailableTerms();
-                loadAndDisplayAll();
-                if (settingsSidebar && !settingsSidebar.classList.contains('hidden')) {
-                    renderTermsManagement(); // update sidebar if open
+                try {
+                    await removeTermFromAllMovies(term);
+                    if (activeTermFilter === term) activeTermFilter = null;
+                    await refreshAvailableTerms();
+                    loadAndDisplayAll();
+                    if (settingsSidebar && !settingsSidebar.classList.contains('hidden')) {
+                        renderTermsManagement();
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to delete term.');
                 }
             }
         });
@@ -439,8 +500,7 @@ async function removeTermFromAllMovies(term) {
     const store = transaction.objectStore(STORE_MOVIES);
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(term)) {
-            const newTerms = movie.searchTerms.filter(t => t !== term);
-            movie.searchTerms = newTerms;
+            movie.searchTerms = movie.searchTerms.filter(t => t !== term);
             movie.lastUpdated = new Date().toISOString();
             await new Promise((resolve, reject) => {
                 const req = store.put(movie);
@@ -482,8 +542,8 @@ async function loadAndDisplayAll() {
 // ---------------------- Modal-related functions ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
-    const transaction = db.transaction(['movies'], 'readwrite');
-    const store = transaction.objectStore('movies');
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
     const movie = await new Promise((resolve, reject) => {
         const req = store.get(youtubeId);
         req.onsuccess = () => resolve(req.result);
@@ -509,8 +569,8 @@ async function updateMovieTerms(youtubeId, newTerms) {
 
 async function toggleFavorite(youtubeId) {
     const db = await openDB();
-    const transaction = db.transaction(['movies'], 'readwrite');
-    const store = transaction.objectStore('movies');
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
     const movie = await new Promise((resolve, reject) => {
         const req = store.get(youtubeId);
         req.onsuccess = () => resolve(req.result);

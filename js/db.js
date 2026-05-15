@@ -1,14 +1,11 @@
 // js/db.js
-// Handles IndexedDB operations for Plato app
-
 const DB_NAME = 'PlatoDB';
-const DB_VERSION = 2;  // Incremented version to add trash store
+const DB_VERSION = 2;
 const STORE_MOVIES = 'movies';
 const STORE_TRASH = 'trash';
 
 let dbInstance = null;
 
-// Open database connection
 export async function openDB() {
     if (dbInstance) return dbInstance;
     return new Promise((resolve, reject) => {
@@ -20,7 +17,6 @@ export async function openDB() {
         };
         request.onupgradeneeded = (event) => {
             const db = event.target.result;
-            // Create movies store if not exists
             if (!db.objectStoreNames.contains(STORE_MOVIES)) {
                 const store = db.createObjectStore(STORE_MOVIES, { keyPath: 'youtubeId' });
                 store.createIndex('by_dateSaved', 'dateSaved', { unique: false });
@@ -28,7 +24,6 @@ export async function openDB() {
                 store.createIndex('by_favorite', 'favorite', { unique: false });
                 store.createIndex('by_channelId', 'channelId', { unique: false });
             }
-            // Create trash store if not exists (new in version 2)
             if (!db.objectStoreNames.contains(STORE_TRASH)) {
                 const trashStore = db.createObjectStore(STORE_TRASH, { keyPath: 'youtubeId' });
                 trashStore.createIndex('by_deletedAt', 'deletedAt', { unique: false });
@@ -38,18 +33,15 @@ export async function openDB() {
     });
 }
 
-// Save or update a movie: add searchTerm to searchTerms array
 export async function saveMovie(movieData, searchTerm) {
     const db = await openDB();
     const transaction = db.transaction([STORE_MOVIES], 'readwrite');
     const store = transaction.objectStore(STORE_MOVIES);
-    
     return new Promise((resolve, reject) => {
         const getRequest = store.get(movieData.youtubeId);
         getRequest.onsuccess = () => {
             const existing = getRequest.result;
             if (existing) {
-                // Update: merge searchTerms, refresh stats
                 const termsSet = new Set(existing.searchTerms || []);
                 if (searchTerm) termsSet.add(searchTerm);
                 const updated = {
@@ -65,7 +57,6 @@ export async function saveMovie(movieData, searchTerm) {
                 putRequest.onsuccess = () => resolve(updated);
                 putRequest.onerror = () => reject(putRequest.error);
             } else {
-                // Insert new movie
                 const newMovie = {
                     ...movieData,
                     searchTerms: searchTerm ? [searchTerm] : [],
@@ -83,7 +74,6 @@ export async function saveMovie(movieData, searchTerm) {
     });
 }
 
-// Get all movies from main store, sorted by dateSaved desc
 export async function getAllMovies() {
     const db = await openDB();
     const transaction = db.transaction([STORE_MOVIES], 'readonly');
@@ -105,13 +95,11 @@ export async function getAllMovies() {
     });
 }
 
-// Get all movies from trash store, filtered by channelIds if provided, sorted by deletedAt desc
 export async function getTrashMovies(channelIds = null) {
     const db = await openDB();
     const transaction = db.transaction([STORE_TRASH], 'readonly');
     const store = transaction.objectStore(STORE_TRASH);
     const index = store.index('by_deletedAt');
-    console.log('getTrashMovies called with channelIds:', channelIds); // DEBUG
     return new Promise((resolve, reject) => {
         const request = index.openCursor(null, 'prev');
         const movies = [];
@@ -121,9 +109,7 @@ export async function getTrashMovies(channelIds = null) {
                 const movie = cursor.value;
                 let include = false;
                 if (channelIds && channelIds.length > 0 && !channelIds.includes(null)) {
-                    if (channelIds.includes(movie.channelId)) {
-                        include = true;
-                    }
+                    if (channelIds.includes(movie.channelId)) include = true;
                 } else {
                     include = true;
                 }
@@ -137,10 +123,8 @@ export async function getTrashMovies(channelIds = null) {
     });
 }
 
-// Move a movie from main store to trash
 export async function moveMovieToTrash(youtubeId) {
     const db = await openDB();
-    // First get the movie from main store
     const mainStore = db.transaction([STORE_MOVIES], 'readonly').objectStore(STORE_MOVIES);
     const movie = await new Promise((resolve, reject) => {
         const req = mainStore.get(youtubeId);
@@ -148,8 +132,6 @@ export async function moveMovieToTrash(youtubeId) {
         req.onerror = () => reject(req.error);
     });
     if (!movie) throw new Error('Movie not found');
-    
-    // Add to trash with deletedAt timestamp
     const trashMovie = { ...movie, deletedAt: new Date().toISOString() };
     const trashTransaction = db.transaction([STORE_TRASH], 'readwrite');
     const trashStore = trashTransaction.objectStore(STORE_TRASH);
@@ -158,8 +140,6 @@ export async function moveMovieToTrash(youtubeId) {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
     });
-    
-    // Delete from main store
     const mainTransaction = db.transaction([STORE_MOVIES], 'readwrite');
     const mainDeleteStore = mainTransaction.objectStore(STORE_MOVIES);
     await new Promise((resolve, reject) => {
@@ -169,10 +149,8 @@ export async function moveMovieToTrash(youtubeId) {
     });
 }
 
-// Restore a movie from trash back to main store
 export async function restoreMovieFromTrash(youtubeId) {
     const db = await openDB();
-    // Get from trash
     const trashStore = db.transaction([STORE_TRASH], 'readonly').objectStore(STORE_TRASH);
     const trashMovie = await new Promise((resolve, reject) => {
         const req = trashStore.get(youtubeId);
@@ -180,8 +158,6 @@ export async function restoreMovieFromTrash(youtubeId) {
         req.onerror = () => reject(req.error);
     });
     if (!trashMovie) throw new Error('Movie not found in trash');
-    
-    // Remove trash fields (deletedAt) and add to main
     const { deletedAt, ...restoredMovie } = trashMovie;
     const mainTransaction = db.transaction([STORE_MOVIES], 'readwrite');
     const mainStore = mainTransaction.objectStore(STORE_MOVIES);
@@ -190,8 +166,6 @@ export async function restoreMovieFromTrash(youtubeId) {
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
     });
-    
-    // Delete from trash
     const trashDeleteTransaction = db.transaction([STORE_TRASH], 'readwrite');
     const trashDeleteStore = trashDeleteTransaction.objectStore(STORE_TRASH);
     await new Promise((resolve, reject) => {
@@ -201,7 +175,6 @@ export async function restoreMovieFromTrash(youtubeId) {
     });
 }
 
-// Permanently delete a movie from trash
 export async function permanentlyDeleteMovie(youtubeId) {
     const db = await openDB();
     const transaction = db.transaction([STORE_TRASH], 'readwrite');
@@ -213,7 +186,6 @@ export async function permanentlyDeleteMovie(youtubeId) {
     });
 }
 
-// Toggle watching status for a movie (only in main store)
 export async function toggleWatching(youtubeId) {
     const db = await openDB();
     const transaction = db.transaction([STORE_MOVIES], 'readwrite');
@@ -236,16 +208,34 @@ export async function toggleWatching(youtubeId) {
     });
 }
 
-// Rename a term across all movies
 export async function renameTermInAllMovies(oldTerm, newTerm) {
     if (oldTerm === newTerm) return;
     const db = await openDB();
-    const allMovies = await getAllMovies(); // transacción de solo lectura
+    const allMovies = await getAllMovies(); // read-only transaction
     const transaction = db.transaction([STORE_MOVIES], 'readwrite');
     const store = transaction.objectStore(STORE_MOVIES);
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(oldTerm)) {
             const newTerms = movie.searchTerms.map(t => t === oldTerm ? newTerm : t);
+            movie.searchTerms = newTerms;
+            movie.lastUpdated = new Date().toISOString();
+            await new Promise((resolve, reject) => {
+                const req = store.put(movie);
+                req.onsuccess = () => resolve();
+                req.onerror = () => reject(req.error);
+            });
+        }
+    }
+}
+
+async function removeTermFromAllMovies(term) {
+    const db = await openDB();
+    const allMovies = await getAllMovies();
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
+    for (const movie of allMovies) {
+        if (movie.searchTerms && movie.searchTerms.includes(term)) {
+            const newTerms = movie.searchTerms.filter(t => t !== term);
             movie.searchTerms = newTerms;
             movie.lastUpdated = new Date().toISOString();
             await new Promise((resolve, reject) => {

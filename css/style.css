@@ -1,6 +1,5 @@
 /* ========== CSS Variables ========== */
 :root {
-    /* Colors */
     --bg-body: #0f0f0f;
     --bg-header: #1a1a1a;
     --bg-card: #1a1a1a;
@@ -16,20 +15,18 @@
     --button-bg: #2a2a2a;
     --shadow: 0 4px 12px rgba(0,0,0,0.4);
     
-    /* Typography */
-    --font-size-large: 1.25rem;   /* 20px */
-    --font-size-medium: 0.875rem; /* 14px */
-    --font-size-small: 0.75rem;   /* 12px */
+    --font-size-large: 1.25rem;
+    --font-size-medium: 0.875rem;
+    --font-size-small: 0.75rem;
     --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     
-    /* Spacing & Layout */
     --btn-height: 36px;
     --btn-padding-x: 16px;
     --btn-height-sm: 32px;
     --btn-padding-x-sm: 12px;
     --border-radius-sm: 8px;
     --border-radius-md: 12px;
-    --border-radius-lg: 999px;   /* pill shape */
+    --border-radius-lg: 999px;
     --gap-sm: 8px;
     --gap-md: 12px;
     --gap-lg: 20px;
@@ -49,7 +46,6 @@ body {
     line-height: 1.5;
 }
 
-/* Header */
 .header {
     background: linear-gradient(180deg, var(--bg-header) 0%, var(--bg-body) 100%);
     padding: var(--gap-lg) 0;
@@ -66,19 +62,13 @@ body {
     padding: 0 var(--gap-lg);
 }
 
-/* Navbar (logo + settings button) */
 .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: var(--gap-lg);
 }
-#settingsBtn:hover {
-    background: var(--accent);
-    color: var(--text-primary);
-}
 
-/* Logo */
 .logo {
     font-family: 'Monoton', cursive;
     font-size: 33px;
@@ -105,7 +95,6 @@ body {
     font-size: 24px;
 }
 
-/* Search box */
 .search-box {
     display: flex;
     gap: var(--gap-md);
@@ -130,7 +119,6 @@ body {
     color: var(--text-secondary);
 }
 
-/* Buttons - unified system */
 .btn {
     border: none;
     border-radius: var(--border-radius-lg);
@@ -192,7 +180,6 @@ body {
     margin-top: 15px;
 }
 
-/* Card stats */
 .card-stats {
     display: flex;
     justify-content: space-between;
@@ -211,7 +198,6 @@ body {
     font-size: 18px;
 }
 
-/* Top controls layout */
 .top-controls {
     display: flex;
     flex-wrap: wrap;
@@ -230,7 +216,6 @@ body {
     gap: var(--gap-md);
 }
 
-/* Dropdown panels */
 .dropdown-search, .dropdown-filter {
     position: relative;
 }
@@ -271,8 +256,15 @@ body {
     height: 1px;
     background: var(--border-color);
 }
+.dropdown-header {
+    padding: var(--gap-sm) var(--gap-md);
+    font-size: var(--font-size-small);
+    font-weight: bold;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--gap-sm);
+}
 
-/* Results grid */
 .results {
     margin-top: var(--gap-lg);
 }
@@ -326,7 +318,6 @@ body {
     font-size: var(--font-size-medium);
 }
 
-/* Modal styles */
 .modal {
     position: fixed;
     top: 0;
@@ -456,7 +447,6 @@ body {
     cursor: pointer;
 }
 
-/* Terms bar */
 .terms-bar {
     display: flex;
     flex-wrap: wrap;
@@ -483,7 +473,6 @@ body {
     padding: 4px 0;
 }
 
-/* Sort control */
 .history-header {
     display: flex;
     justify-content: space-between;
@@ -517,7 +506,6 @@ body {
     border-color: transparent;
 }
 
-/* Date grouping */
 .date-group {
     margin-bottom: 32px;
 }
@@ -535,7 +523,6 @@ body {
     gap: 24px;
 }
 
-/* Sidebar (settings panel) */
 .sidebar {
     position: fixed;
     top: 0;
@@ -624,7 +611,6 @@ body {
     background: var(--accent);
     color: var(--text-primary);
 }
-
 .edit-term-input {
     flex: 1;
     background: var(--bg-panel);
@@ -633,7 +619,7 @@ body {
     border-radius: var(--border-radius-lg);
     padding: 4px var(--gap-sm);
     font-size: var(--font-size-medium);
-    outline: none; /* elimina el borde azul por defecto */
+    outline: none;
 }
 .edit-term-input:focus {
     outline: 2px solid var(--accent-light);
@@ -641,7 +627,6 @@ body {
     border-color: transparent;
 }
 
-/* Responsive */
 @media (max-width: 768px) {
     .top-controls {
         flex-direction: column;
