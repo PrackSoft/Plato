@@ -5,10 +5,12 @@
     --bg-card: #1a1a1a;
     --bg-panel: #1e1e1e;
     --border-color: #2a2a2a;
+    --border-light: #3a3a3a;
     --text-primary: white;
     --text-secondary: #aaa;
     --text-muted: #666;
     --accent: #ff0000;
+    --accent-dark: #cc0000;
     --accent-light: #ff9999;
     --button-bg: #2a2a2a;
     --button-hover: #ff0000;
@@ -93,13 +95,13 @@ body {
     background: var(--accent);
     border: none;
     border-radius: 8px;
-    color: white;
+    color: var(--text-primary);
     font-weight: bold;
     cursor: pointer;
     transition: background 0.2s;
 }
 #searchBtn:hover {
-    background: #cc0000;
+    background: var(--accent-dark);
 }
 
 /* Top controls wrapper (flex row) */
@@ -144,7 +146,7 @@ body {
 /* Active state for filter buttons */
 .filter-btn.active {
     background: var(--accent);
-    color: white;
+    color: var(--text-primary);
 }
 
 /* Filter buttons group */
@@ -255,7 +257,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Modal styles (similar to original) */
+/* Modal styles */
 .modal {
     position: fixed;
     top: 0;
@@ -270,7 +272,7 @@ body {
     padding-top: 5vh;
 }
 .modal-content {
-    background: #1a1a1a;
+    background: var(--bg-card);
     padding: 20px;
     border-radius: 12px;
     width: 90%;
@@ -287,7 +289,7 @@ body {
 }
 .modal-delete-btn {
     cursor: pointer;
-    color: #ff0000;
+    color: var(--accent);
 }
 .close-modal {
     position: absolute;
@@ -295,7 +297,7 @@ body {
     right: 15px;
     font-size: 24px;
     cursor: pointer;
-    color: #ff0000;
+    color: var(--accent);
 }
 .modal-description {
     white-space: normal;
@@ -303,7 +305,7 @@ body {
     margin: 10px 0;
 }
 .term-chip {
-    background: #2a2a2a;
+    background: var(--button-bg);
     padding: 4px 8px;
     border-radius: 16px;
     font-size: 12px;
@@ -312,15 +314,15 @@ body {
     gap: 6px;
 }
 .term-chip .remove-term {
-    color: #ff0000;
+    color: var(--accent);
 }
 
 .primary-btn {
-    background: var(--accent, #ff0000);
+    background: var(--accent);
     border: none;
     border-radius: 20px;
     padding: 8px 16px;
-    color: white;
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
@@ -333,7 +335,7 @@ body {
     margin-top: 15px;
 }
 .primary-btn:hover {
-    background: #cc0000;
+    background: var(--accent-dark);
 }
 
 /* Terms bar (dynamic term buttons) */
@@ -343,15 +345,15 @@ body {
     gap: 8px;
     margin: 16px 0;
     padding: 8px 0;
-    border-top: 1px solid #2a2a2a;
-    border-bottom: 1px solid #2a2a2a;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
 }
 .term-btn {
-    background: #2a2a2a;
+    background: var(--button-bg);
     border: none;
     border-radius: 20px;
     padding: 6px 12px;
-    color: white;
+    color: var(--text-primary);
     font-size: 13px;
     cursor: pointer;
     display: inline-flex;
@@ -360,25 +362,25 @@ body {
     transition: background 0.2s;
 }
 .term-btn:hover {
-    background: #ff0000;
+    background: var(--accent);
 }
 .term-btn.active {
-    background: #ff0000;
-    color: white;
+    background: var(--accent);
+    color: var(--text-primary);
 }
 .term-delete {
     font-size: 14px;
     font-weight: bold;
     margin-left: 4px;
     cursor: pointer;
-    color: #ff9999;
+    color: var(--accent-light);
     transition: color 0.2s;
 }
 .term-delete:hover {
-    color: white;
+    color: var(--text-primary);
 }
 .terms-placeholder {
-    color: #aaa;
+    color: var(--text-secondary);
     font-size: 13px;
     padding: 4px 0;
 }
@@ -398,11 +400,11 @@ body {
     font-size: 14px;
 }
 .sort-control select {
-    background: #1a1a1a;
-    border: 1px solid #2a2a2a;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 6px 12px;
-    color: white;
+    color: var(--text-primary);
     font-size: 13px;
     cursor: pointer;
 }
@@ -416,8 +418,8 @@ body {
     font-weight: 500;
     margin-bottom: 16px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #3a3a3a;
-    color: #ff0000;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--accent);
 }
 .results-group {
     display: grid;
