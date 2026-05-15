@@ -29,7 +29,7 @@
     --btn-padding-x-sm: 12px;
     --border-radius-sm: 8px;
     --border-radius-md: 12px;
-    --border-radius-lg: 20px;
+    --border-radius-lg: 999px;   /* pill shape */
     --gap-sm: 8px;
     --gap-md: 12px;
     --gap-lg: 20px;
@@ -106,15 +106,17 @@ body {
     height: var(--btn-height);
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-sm);
     color: var(--text-primary);
     font-size: var(--font-size-medium);
+}
+/* Unify radius for inputs and buttons */
+#searchInput, .btn, .sort-control select, .modal-input {
+    border-radius: var(--border-radius-lg);
 }
 
 /* Buttons - unified system */
 .btn {
     border: none;
-    border-radius: var(--border-radius-lg);
     height: var(--btn-height);
     padding: 0 var(--btn-padding-x);
     font-size: var(--font-size-medium);
@@ -162,15 +164,18 @@ body {
 .btn .material-symbols-outlined {
     font-size: 18px;
 }
-/* Danger button for permanent delete */
 .btn-danger {
     background: #990000;
 }
 .btn-danger:hover {
     background: #660000;
 }
+.modal-watch-btn {
+    width: 100%;
+    margin-top: 15px;
+}
 
-/* Card stats (replaces inline styles) */
+/* Card stats */
 .card-stats {
     display: flex;
     justify-content: space-between;
@@ -401,11 +406,10 @@ body {
 }
 .modal-input {
     flex: 1;
-    padding: 6px;
+    padding: 6px var(--gap-md);
     background: var(--bg-panel);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    border-radius: var(--border-radius-sm);
 }
 .modal-trash-actions {
     display: flex;
@@ -415,7 +419,7 @@ body {
 .term-chip {
     background: var(--button-bg);
     padding: 4px var(--gap-sm);
-    border-radius: 16px;
+    border-radius: var(--border-radius-lg);
     font-size: var(--font-size-small);
     display: inline-flex;
     align-items: center;
@@ -474,7 +478,6 @@ body {
 .sort-control select {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
     padding: 0 var(--gap-md);
     height: 32px;
     color: var(--text-primary);
