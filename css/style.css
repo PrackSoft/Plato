@@ -68,7 +68,7 @@ body {
 /* Logo */
 .logo {
     font-family: 'Monoton', cursive;
-    font-size: 33px; /* keeps Monoton unique size */
+    font-size: 33px;
     font-weight: 400;
     color: var(--text-primary);
     display: flex;
@@ -86,7 +86,7 @@ body {
     border-radius: var(--border-radius-sm);
     height: 28px;
     width: 28px;
-    border: 1.5px solid var(--accent-light);
+    /* border removed for consistency with buttons */
     transition: all 0.2s ease;
 }
 
@@ -125,6 +125,10 @@ body {
 #searchBtn:hover {
     background: var(--accent-dark);
 }
+#searchBtn:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+}
 
 /* Top controls wrapper */
 .top-controls {
@@ -161,6 +165,10 @@ body {
 }
 .channel-btn:hover, .filter-btn:hover, .term-btn:hover {
     background: var(--accent);
+}
+.channel-btn:focus, .filter-btn:focus, .term-btn:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
 }
 .channel-btn .material-symbols-outlined,
 .filter-btn .material-symbols-outlined,
@@ -367,6 +375,10 @@ body {
 }
 .primary-btn:hover {
     background: var(--accent-dark);
+}
+.primary-btn:focus {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
 }
 
 /* Terms bar */
