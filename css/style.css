@@ -14,7 +14,6 @@
     --accent-dark: #cc0000;
     --accent-light: #ff9999;
     --button-bg: #2a2a2a;
-    --button-hover: #ff0000;
     --shadow: 0 4px 12px rgba(0,0,0,0.4);
     
     /* Typography */
@@ -24,8 +23,10 @@
     --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     
     /* Spacing & Layout */
-    --button-height: 36px;
-    --button-padding-x: 16px;
+    --btn-height: 36px;
+    --btn-padding-x: 16px;
+    --btn-height-sm: 32px;
+    --btn-padding-x-sm: 12px;
     --border-radius-sm: 8px;
     --border-radius-md: 12px;
     --border-radius-lg: 20px;
@@ -102,34 +103,72 @@ body {
 #searchInput {
     flex: 1;
     padding: 0 var(--gap-md);
-    height: var(--button-height);
+    height: var(--btn-height);
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-sm);
     color: var(--text-primary);
     font-size: var(--font-size-medium);
 }
-#searchBtn {
-    padding: 0 var(--button-padding-x);
-    height: var(--button-height);
-    background: var(--button-bg);
+
+/* Buttons - unified system */
+.btn {
     border: none;
-    border-radius: var(--border-radius-sm);
-    color: var(--text-primary);
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.2s;
+    border-radius: var(--border-radius-lg);
+    height: var(--btn-height);
+    padding: 0 var(--btn-padding-x);
     font-size: var(--font-size-medium);
+    font-weight: normal;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-sm);
+    transition: background 0.2s;
+    white-space: nowrap;
+    background: var(--button-bg);
+    color: var(--text-primary);
 }
-#searchBtn:hover {
+.btn:hover {
     background: var(--accent);
 }
-#searchBtn:focus {
+.btn:focus {
     outline: 2px solid var(--accent-light);
     outline-offset: 2px;
 }
+.btn-primary {
+    background: var(--accent);
+    color: var(--text-primary);
+}
+.btn-primary:hover {
+    background: var(--accent-dark);
+}
+.btn-secondary {
+    background: var(--button-bg);
+    color: var(--text-primary);
+}
+.btn-secondary:hover {
+    background: var(--accent);
+}
+.btn-sm {
+    height: var(--btn-height-sm);
+    padding: 0 var(--btn-padding-x-sm);
+    font-size: var(--font-size-small);
+}
+.btn-active {
+    background: var(--accent);
+    color: var(--text-primary);
+}
+.btn .material-symbols-outlined {
+    font-size: 18px;
+}
 
-/* Top controls wrapper */
+/* Search button specific (can be btn-secondary) */
+#searchBtn {
+    /* uses btn-secondary style */
+}
+
+/* Top controls layout */
 .top-controls {
     display: flex;
     flex-wrap: wrap;
@@ -137,80 +176,18 @@ body {
     gap: var(--gap-lg);
     margin-bottom: var(--gap-lg);
 }
-
-/* Channel dropdowns container */
 .channel-controls {
     display: flex;
     gap: var(--gap-md);
     flex-wrap: wrap;
     align-items: center;
 }
-
-/* Channel buttons (Search In, Show channels) - primary, always red */
-.channel-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: var(--border-radius-lg);
-    height: var(--button-height);
-    padding: 0 var(--button-padding-x);
-    color: var(--text-primary);
-    font-size: var(--font-size-medium);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-sm);
-    transition: background 0.2s;
-    white-space: nowrap;
-}
-.channel-btn:hover {
-    background: var(--accent-dark);
-}
-.channel-btn:focus {
-    outline: 2px solid var(--accent-light);
-    outline-offset: 2px;
-}
-.channel-btn .material-symbols-outlined {
-    font-size: 18px;
-}
-
-/* Filter buttons (Watching, Favorites, Trash) - gray, toggle to red when active */
-.filter-btn {
-    background: var(--button-bg);
-    border: none;
-    border-radius: var(--border-radius-lg);
-    height: var(--button-height);
-    padding: 0 var(--button-padding-x);
-    color: var(--text-primary);
-    font-size: var(--font-size-medium);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--gap-sm);
-    transition: background 0.2s;
-    white-space: nowrap;
-}
-.filter-btn:hover {
-    background: var(--accent);
-}
-.filter-btn:focus {
-    outline: 2px solid var(--accent-light);
-    outline-offset: 2px;
-}
-.filter-btn.active {
-    background: var(--accent);
-    color: var(--text-primary);
-}
-.filter-btn .material-symbols-outlined {
-    font-size: 18px;
-}
-
-/* Filter buttons group */
 .filter-buttons {
     display: flex;
     gap: var(--gap-md);
 }
 
-/* Dropdown panels */
+/* Dropdown panels (unchanged) */
 .dropdown-search, .dropdown-filter {
     position: relative;
 }
@@ -305,8 +282,6 @@ body {
     color: var(--text-secondary);
     font-size: var(--font-size-medium);
 }
-
-/* Card stats */
 .card-stats {
     display: flex;
     justify-content: space-between;
@@ -315,7 +290,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Modal styles */
+/* Modal */
 .modal {
     position: fixed;
     top: 0;
@@ -376,31 +351,10 @@ body {
 .term-chip .remove-term {
     color: var(--accent);
 }
-
 .primary-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: var(--border-radius-lg);
-    height: var(--button-height);
-    padding: 0 var(--button-padding-x);
-    color: var(--text-primary);
-    font-size: var(--font-size-medium);
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--gap-sm);
-    transition: background 0.2s;
+    /* uses .btn-primary */
     width: 100%;
     margin-top: 15px;
-}
-.primary-btn:hover {
-    background: var(--accent-dark);
-}
-.primary-btn:focus {
-    outline: 2px solid var(--accent-light);
-    outline-offset: 2px;
 }
 
 /* Terms bar */
@@ -412,30 +366,6 @@ body {
     padding: var(--gap-sm) 0;
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
-}
-.term-btn {
-    background: var(--button-bg);
-    border: none;
-    border-radius: var(--border-radius-lg);
-    height: 32px;
-    padding: 0 var(--gap-md);
-    font-size: var(--font-size-small);
-    gap: var(--gap-sm);
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    transition: background 0.2s;
-}
-.term-btn:hover {
-    background: var(--accent);
-}
-.term-btn:focus {
-    outline: 2px solid var(--accent-light);
-    outline-offset: 2px;
-}
-.term-btn.active {
-    background: var(--accent);
-    color: var(--text-primary);
 }
 .term-delete {
     font-size: 14px;
@@ -511,7 +441,7 @@ body {
         flex-direction: column;
         align-items: stretch;
     }
-    .channel-btn, .filter-btn {
+    .btn {
         justify-content: center;
     }
     .filter-buttons {
