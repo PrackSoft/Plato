@@ -1,6 +1,5 @@
-// js/app.js (completo) - corrected: replaced 'btn-active' with 'active' in renderTermsBar
 // ==========================================
-// js/app.js - Plato App (with dynamic dropdowns, settings sidebar, term management)
+// js/app.js - Plato App (with fixed modal term management)
 // ==========================================
 
 import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
@@ -49,7 +48,7 @@ function closePanelWithDelay(panel) {
     setTimeout(() => panel.classList.add('hidden'), 150);
 }
 
-// ---------------------- Build Search In panel (dynamic button text, header) ----------------------
+// ---------------------- Build Search In panel ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
@@ -139,7 +138,7 @@ function buildSearchInPanel() {
     updateSearchInButtonText();
 }
 
-// ---------------------- Build Show Channels panel (dynamic button text, header) ----------------------
+// ---------------------- Build Show Channels panel ----------------------
 function buildShowChannelsPanel() {
     showChannelsPanel.innerHTML = '';
 
@@ -396,6 +395,7 @@ function updateFilterButtonsUI() {
 }
 
 function toggleWatchingFilter() {
+    // Si estamos en papelera, salimos de ella (consistente con Search)
     if (activeTrashFilter) {
         activeTrashFilter = false;
         updateFilterButtonsUI();
@@ -452,7 +452,6 @@ function renderTermsBar() {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
         return;
     }
-    // CORREGIDO: reemplazar 'btn-active' por 'active'
     const html = availableTerms.map(term => `
         <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
@@ -497,8 +496,8 @@ function renderTermsBar() {
 async function removeTermFromAllMovies(term) {
     const db = await openDB();
     const allMovies = await getAllMovies();
-    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
-    const store = transaction.objectStore(STORE_MOVIES);
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(term)) {
             movie.searchTerms = movie.searchTerms.filter(t => t !== term);
@@ -543,8 +542,8 @@ async function loadAndDisplayAll() {
 // ---------------------- Modal-related functions ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
-    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
-    const store = transaction.objectStore(STORE_MOVIES);
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
     const movie = await new Promise((resolve, reject) => {
         const req = store.get(youtubeId);
         req.onsuccess = () => resolve(req.result);
@@ -570,8 +569,8 @@ async function updateMovieTerms(youtubeId, newTerms) {
 
 async function toggleFavorite(youtubeId) {
     const db = await openDB();
-    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
-    const store = transaction.objectStore(STORE_MOVIES);
+    const transaction = db.transaction(['movies'], 'readwrite');
+    const store = transaction.objectStore('movies');
     const movie = await new Promise((resolve, reject) => {
         const req = store.get(youtubeId);
         req.onsuccess = () => resolve(req.result);
@@ -610,11 +609,10 @@ searchBtn.onclick = async () => {
     if (activeFavoriteFilter) {
         activeFavoriteFilter = false;
     }
-    // También salir de la papelera si está activa (ya lo tenías)
+    // También salir de la papelera si está activa
     if (activeTrashFilter) {
         activeTrashFilter = false;
     }
-    // Actualizar la interfaz de los botones (quita el rojo si estaba)
     updateFilterButtonsUI();
 
     const query = searchInput.value.trim();
