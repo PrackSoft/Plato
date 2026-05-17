@@ -189,6 +189,22 @@ body {
     margin-top: 15px;
 }
 
+.modal-add-icon {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--text-primary);
+    transition: color 0.2s;
+}
+.modal-add-icon .material-symbols-outlined {
+    font-size: 28px;
+}
+.modal-add-icon:hover {
+    color: var(--accent);
+}
+
 .card-stats {
     display: flex;
     justify-content: space-between;

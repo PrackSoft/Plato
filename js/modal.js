@@ -1,5 +1,4 @@
-// js/modal.js - Favoritos con ícono 'favorite' (lleno) y 'favorite_outline' (vacío)
-
+// js/modal.js
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -38,7 +37,6 @@ function closeModal() {
     currentMovie = null;
     currentMovieSource = null;
     currentTrashFunctions = null;
-    if (currentOnUpdate) currentOnUpdate();
 }
 
 function renderModalContent(movie, source) {
@@ -52,7 +50,7 @@ function renderModalContent(movie, source) {
     ` : '';
 
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
-    const favoriteIconName = movie.favorite ? 'star_shine' : 'star';
+    const favoriteIconName = movie.favorite ? 'star' : 'star_outline';
 
     return `
         <div class="modal-header">
@@ -80,18 +78,20 @@ function renderModalContent(movie, source) {
             ${!isInTrash ? `
             <div class="add-term-row">
                 <input type="text" id="newTermInput" class="modal-input" placeholder="Add new term">
-                <button id="addTermBtn" class="btn btn-secondary btn-sm">Add</button>
+                <span id="addTermBtn" class="modal-add-icon" title="Add term">
+                    <span class="material-symbols-outlined">add</span>
+                </span>
             </div>
             ` : ''}
         </div>
 
-        <!-- Watching toggle -->
+        <!-- Watching toggle (ícono clickeable) -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Watching:</span>
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: ícono lleno (favorite) o vacío (favorite_outline) -->
+        <!-- Favorite toggle (ícono clickeable) -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
             <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
@@ -110,6 +110,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             if (confirm('Move this movie to trash?')) {
                 await moveToTrash(movie.youtubeId);
                 closeModal();
+                if (currentOnUpdate) await currentOnUpdate();
             }
         };
     }
@@ -119,6 +120,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         restoreBtn.onclick = async () => {
             await restoreFromTrash(movie.youtubeId);
             closeModal();
+            if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
@@ -128,35 +130,36 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             if (confirm('Permanently delete this movie? This action cannot be undone.')) {
                 await permanentlyDelete(movie.youtubeId);
                 closeModal();
+                if (currentOnUpdate) await currentOnUpdate();
             }
         };
     }
 
     // Watching toggle
     const watchingRow = document.getElementById('watchingToggleRow');
-    const watchingIcon = document.getElementById('modalWatchingIcon');
-    if (watchingRow && watchingIcon && !isInTrash) {
-        watchingRow.onclick = async (event) => {
-            event.stopPropagation();
+    if (watchingRow && !isInTrash) {
+        const watchingIcon = document.getElementById('modalWatchingIcon');
+        watchingRow.onclick = async () => {
             const newStatus = await toggleWatching(movie.youtubeId);
             movie.watching = newStatus;
-            watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
+            if (watchingIcon) watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
+            if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    // Favorite toggle: cambiamos entre 'star_shine' y 'star'
+    // Favorite toggle
     const favoriteRow = document.getElementById('favoriteToggleRow');
-    const favoriteIcon = document.getElementById('modalFavoriteIcon');
-    if (favoriteRow && favoriteIcon && !isInTrash) {
-        favoriteRow.onclick = async (event) => {
-            event.stopPropagation();
+    if (favoriteRow && !isInTrash) {
+        const favoriteIcon = document.getElementById('modalFavoriteIcon');
+        favoriteRow.onclick = async () => {
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            favoriteIcon.textContent = newStatus ? 'star_shine' : 'star';
+            if (favoriteIcon) favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
+            if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    // Remove term
+    // Remove term (x) inside chips
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {
@@ -173,6 +176,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                             <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                         </span>
                     `).join(''));
+                    // Re-attach events for new remove-term spans
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
                 }
                 if (currentOnUpdate) await currentOnUpdate();
@@ -180,7 +184,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         });
     }
 
-    // Add term
+    // Add term: icon click
     if (!isInTrash) {
         const addBtn = document.getElementById('addTermBtn');
         const newTermInput = document.getElementById('newTermInput');
@@ -205,6 +209,10 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                     if (currentOnUpdate) await currentOnUpdate();
                 }
             };
+            // Optional: press Enter in input triggers add
+            newTermInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addBtn.click();
+            });
         }
     }
 }
