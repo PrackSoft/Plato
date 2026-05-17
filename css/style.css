@@ -205,6 +205,11 @@ body {
     color: var(--accent);
 }
 
+/* Hover effect for watching and favorite icons in modal */
+.toggle-row .material-symbols-outlined:hover {
+    color: var(--accent);
+    transition: color 0.2s;
+}
 .card-stats {
     display: flex;
     justify-content: space-between;

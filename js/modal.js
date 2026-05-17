@@ -88,13 +88,13 @@ function renderModalContent(movie, source) {
         <!-- Watching toggle (ícono clickeable) -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Watching:</span>
-            <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
+            <span class="material-symbols-outlined" id="modalWatchingIcon">${watchingIconName}</span>
         </div>
 
         <!-- Favorite toggle (ícono clickeable) -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
+            <span class="material-symbols-outlined" id="modalFavoriteIcon">${favoriteIconName}</span>
         </div>
 
         ${trashActionsHtml}
