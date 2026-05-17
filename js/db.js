@@ -95,7 +95,7 @@ export async function getAllMovies() {
     });
 }
 
-export async function getTrashMovies(channelIds = null) {
+export async function getTrashMovies() {   // sin parámetros
     const db = await openDB();
     const transaction = db.transaction([STORE_TRASH], 'readonly');
     const store = transaction.objectStore(STORE_TRASH);
@@ -106,14 +106,7 @@ export async function getTrashMovies(channelIds = null) {
         request.onsuccess = () => {
             const cursor = request.result;
             if (cursor) {
-                const movie = cursor.value;
-                let include = false;
-                if (channelIds && channelIds.length > 0 && !channelIds.includes(null)) {
-                    if (channelIds.includes(movie.channelId)) include = true;
-                } else {
-                    include = true;
-                }
-                if (include) movies.push(movie);
+                movies.push(cursor.value);
                 cursor.continue();
             } else {
                 resolve(movies);

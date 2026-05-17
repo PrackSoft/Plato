@@ -213,12 +213,7 @@ body {
     gap: var(--gap-lg);
     margin-bottom: var(--gap-lg);
 }
-.channel-controls {
-    display: flex;
-    gap: var(--gap-md);
-    flex-wrap: wrap;
-    align-items: center;
-}
+
 .filter-buttons {
     display: flex;
     gap: var(--gap-md);
@@ -637,10 +632,6 @@ body {
 
 @media (max-width: 768px) {
     .top-controls {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .channel-controls {
         flex-direction: column;
         align-items: stretch;
     }

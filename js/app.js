@@ -1,11 +1,10 @@
-// ==========================================
-// js/app.js - Plato App (with fixed modal term management)
+// js/app.js - Plato App (with fixed modal term management, removed channel filter)
 // ==========================================
 
 import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
-import { CHANNELS } from './channels.js';
+import { SEARCH_OPTIONS } from './channels.js';
 import { initModal, openModal } from './modal.js';
 
 // ---------------------- DOM elements ----------------------
@@ -14,8 +13,6 @@ const searchBtn = document.getElementById('searchBtn');
 const resultsGrid = document.getElementById('resultsGrid');
 const searchInBtn = document.getElementById('searchInBtn');
 const searchInPanel = document.getElementById('searchInPanel');
-const showChannelsBtn = document.getElementById('showChannelsBtn');
-const showChannelsPanel = document.getElementById('showChannelsPanel');
 const filterWatchingBtn = document.getElementById('filterWatchingBtn');
 const filterFavoriteBtn = document.getElementById('filterFavoriteBtn');
 const filterTrashBtn = document.getElementById('filterTrashBtn');
@@ -28,8 +25,7 @@ const termsManagementList = document.getElementById('termsManagementList');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
-let currentSearchChannelId = 'UCuVPpxrm2VAgpH3Ktln4HXg';
-let currentDisplayChannelIds = ['UCuVPpxrm2VAgpH3Ktln4HXg'];
+let currentSearchOptionId = "UCuVPpxrm2VAgpH3Ktln4HXg"; // default: YouTube Free Movies
 
 let activeWatchingFilter = false;
 let activeFavoriteFilter = false;
@@ -41,14 +37,13 @@ let currentSort = 'date';
 // ---------------------- Helper: close panels ----------------------
 function closeAllPanels() {
     searchInPanel.classList.add('hidden');
-    showChannelsPanel.classList.add('hidden');
 }
 
 function closePanelWithDelay(panel) {
     setTimeout(() => panel.classList.add('hidden'), 150);
 }
 
-// ---------------------- Build Search In panel ----------------------
+// ---------------------- Build Search In panel (exclusive: API or local) ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
@@ -57,23 +52,16 @@ function buildSearchInPanel() {
     header.textContent = 'Search in';
     searchInPanel.appendChild(header);
 
-    function setExclusive(clickedCheckbox) {
-        const all = searchInPanel.querySelectorAll('input[type="checkbox"]');
-        all.forEach(cb => cb.checked = (cb === clickedCheckbox));
-        const checked = Array.from(all).find(cb => cb.checked);
-        currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
+    function setExclusive(clickedOptionId) {
+        currentSearchOptionId = clickedOptionId;
         updateSearchInButtonText();
         closePanelWithDelay(searchInPanel);
+        // No need to reload results automatically; only when search button is pressed
     }
 
     function updateSearchInButtonText() {
-        let label = '';
-        if (currentSearchChannelId === null) {
-            label = 'All Channels';
-        } else {
-            const channel = CHANNELS.find(ch => ch.id === currentSearchChannelId);
-            label = channel ? channel.name : 'All Channels';
-        }
+        const option = SEARCH_OPTIONS.find(opt => opt.id === currentSearchOptionId);
+        const label = option ? option.name : 'Select';
         searchInBtn.innerHTML = `
             <span class="material-symbols-outlined">subscriptions</span>
             ${label}
@@ -81,179 +69,27 @@ function buildSearchInPanel() {
         `;
     }
 
-    // All Channels
-    const allLabel = document.createElement('label');
-    const allCb = document.createElement('input');
-    allCb.type = 'checkbox';
-    allCb.value = '';
-    allCb.checked = (currentSearchChannelId === null);
-    allCb.addEventListener('change', () => {
-        if (allCb.checked) setExclusive(allCb);
-        else {
-            const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(cb => cb.checked);
-            if (!anyChecked) {
-                allCb.checked = true;
-                setExclusive(allCb);
-            } else {
-                const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(cb => cb.checked);
-                currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                updateSearchInButtonText();
-                closePanelWithDelay(searchInPanel);
-            }
-        }
-    });
-    allLabel.appendChild(allCb);
-    allLabel.appendChild(document.createTextNode('All Channels'));
-    searchInPanel.appendChild(allLabel);
-
-    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
+    SEARCH_OPTIONS.forEach(option => {
         const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = channel.id;
-        cb.checked = (currentSearchChannelId === channel.id);
-        cb.addEventListener('change', () => {
-            if (cb.checked) setExclusive(cb);
-            else {
-                const anyChecked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).some(c => c.checked);
-                if (!anyChecked) {
-                    const allCb2 = searchInPanel.querySelector('input[value=""]');
-                    if (allCb2) {
-                        allCb2.checked = true;
-                        setExclusive(allCb2);
-                    }
-                } else {
-                    const checked = Array.from(searchInPanel.querySelectorAll('input[type="checkbox"]')).find(c => c.checked);
-                    currentSearchChannelId = checked ? (checked.value === '' ? null : checked.value) : null;
-                    updateSearchInButtonText();
-                    closePanelWithDelay(searchInPanel);
-                }
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'searchIn';
+        radio.value = option.id;
+        radio.checked = (currentSearchOptionId === option.id);
+        radio.addEventListener('change', () => {
+            if (radio.checked) {
+                setExclusive(option.id);
             }
         });
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(channel.name));
+        label.appendChild(radio);
+        label.appendChild(document.createTextNode(option.name));
         searchInPanel.appendChild(label);
     });
 
     updateSearchInButtonText();
 }
 
-// ---------------------- Build Show Channels panel ----------------------
-function buildShowChannelsPanel() {
-    showChannelsPanel.innerHTML = '';
-
-    const header = document.createElement('div');
-    header.className = 'dropdown-header';
-    header.textContent = 'Show channels';
-    showChannelsPanel.appendChild(header);
-
-    function updateShowChannelsButtonText() {
-        let text = '';
-        if (currentDisplayChannelIds.length === 0) {
-            text = 'None';
-        } else if (currentDisplayChannelIds.includes(null)) {
-            text = 'All Channels';
-        } else if (currentDisplayChannelIds.length === 1) {
-            const channel = CHANNELS.find(ch => ch.id === currentDisplayChannelIds[0]);
-            text = channel ? channel.name : 'Channel';
-        } else {
-            text = `${currentDisplayChannelIds.length} channels`;
-        }
-        showChannelsBtn.innerHTML = `
-            <span class="material-symbols-outlined">live_tv</span>
-            ${text}
-            <span class="material-symbols-outlined">arrow_drop_down</span>
-        `;
-    }
-
-    function closeThisPanelWithDelay() {
-        setTimeout(() => showChannelsPanel.classList.add('hidden'), 150);
-    }
-
-    function syncCheckboxes() {
-        const checkboxes = showChannelsPanel.querySelectorAll('input[type="checkbox"]');
-        checkboxes.forEach(cb => {
-            const val = cb.value === '' ? null : cb.value;
-            cb.checked = currentDisplayChannelIds.includes(val);
-        });
-    }
-
-    // All Channels option
-    const allLabel = document.createElement('label');
-    const allCb = document.createElement('input');
-    allCb.type = 'checkbox';
-    allCb.value = '';
-    allCb.checked = currentDisplayChannelIds.includes(null);
-    allCb.addEventListener('change', () => {
-        if (allCb.checked) {
-            currentDisplayChannelIds = [null];
-            syncCheckboxes();
-            updateShowChannelsButtonText();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        } else {
-            const anyOtherChecked = Array.from(showChannelsPanel.querySelectorAll('input[type="checkbox"]'))
-                .some(cb => cb !== allCb && cb.checked);
-            if (!anyOtherChecked) {
-                allCb.checked = true;
-                return;
-            }
-            currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-            syncCheckboxes();
-            updateShowChannelsButtonText();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        }
-    });
-    allLabel.appendChild(allCb);
-    allLabel.appendChild(document.createTextNode('All Channels'));
-    showChannelsPanel.appendChild(allLabel);
-
-    const sep = document.createElement('hr');
-    sep.className = 'panel-separator';
-    showChannelsPanel.appendChild(sep);
-
-    CHANNELS.filter(ch => ch.id !== null).forEach(channel => {
-        const label = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.value = channel.id;
-        cb.checked = currentDisplayChannelIds.includes(channel.id);
-        cb.addEventListener('change', () => {
-            if (cb.checked) {
-                if (currentDisplayChannelIds.includes(null)) {
-                    currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== null);
-                    updateShowChannelsButtonText();
-                }
-                if (!currentDisplayChannelIds.includes(channel.id)) {
-                    currentDisplayChannelIds.push(channel.id);
-                }
-            } else {
-                currentDisplayChannelIds = currentDisplayChannelIds.filter(id => id !== channel.id);
-                if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
-                    currentDisplayChannelIds = [null];
-                    allCb.checked = true;
-                }
-            }
-            syncCheckboxes();
-            updateShowChannelsButtonText();
-            loadAndDisplayAll();
-            closeThisPanelWithDelay();
-        });
-        label.appendChild(cb);
-        label.appendChild(document.createTextNode(channel.name));
-        showChannelsPanel.appendChild(label);
-    });
-
-    if (currentDisplayChannelIds.length === 0 && !allCb.checked) {
-        currentDisplayChannelIds = [null];
-        allCb.checked = true;
-    }
-    syncCheckboxes();
-    updateShowChannelsButtonText();
-}
-
-// ---------------------- Sidebar functions ----------------------
+// ---------------------- Sidebar functions (unchanged) ----------------------
 function openSettingsSidebar() {
     settingsSidebar.classList.remove('hidden');
     sidebarOverlay.classList.remove('hidden');
@@ -366,25 +202,17 @@ async function renderTermsManagement() {
     }
 }
 
-// ---------------------- Panel toggle logic ----------------------
+// ---------------------- Panel toggle logic (only searchIn) ----------------------
 searchInBtn.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (searchInPanel.classList.contains('hidden')) showChannelsPanel.classList.add('hidden');
     searchInPanel.classList.toggle('hidden');
-});
-
-showChannelsBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (showChannelsPanel.classList.contains('hidden')) searchInPanel.classList.add('hidden');
-    showChannelsPanel.classList.toggle('hidden');
 });
 
 document.addEventListener('click', (e) => {
     if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) searchInPanel.classList.add('hidden');
-    if (!showChannelsBtn.contains(e.target) && !showChannelsPanel.contains(e.target)) showChannelsPanel.classList.add('hidden');
 });
 
-// ---------------------- Filter buttons logic ----------------------
+// ---------------------- Filter buttons logic (unchanged) ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
     else filterWatchingBtn.classList.remove('active');
@@ -395,7 +223,6 @@ function updateFilterButtonsUI() {
 }
 
 function toggleWatchingFilter() {
-    // Si estamos en papelera, salimos de ella (consistente con Search)
     if (activeTrashFilter) {
         activeTrashFilter = false;
         updateFilterButtonsUI();
@@ -432,7 +259,7 @@ if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchin
 if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
 if (filterTrashBtn) filterTrashBtn.addEventListener('click', toggleTrashFilter);
 
-// ---------------------- Terms bar management ----------------------
+// ---------------------- Terms bar management (unchanged) ----------------------
 async function refreshAvailableTerms() {
     const allMovies = await getAllMovies();
     const termsSet = new Set();
@@ -511,19 +338,15 @@ async function removeTermFromAllMovies(term) {
     }
 }
 
-// ---------------------- Load and display movies ----------------------
+// ---------------------- Load and display movies (no channel filter) ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies;
 
     if (activeTrashFilter) {
-        const channelIds = (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) ? currentDisplayChannelIds : null;
-        allMovies = await getTrashMovies(channelIds);
+        allMovies = await getTrashMovies(); // no channelIds parameter
     } else {
         allMovies = await getAllMovies();
-        if (currentDisplayChannelIds.length > 0 && !currentDisplayChannelIds.includes(null)) {
-            allMovies = allMovies.filter(movie => currentDisplayChannelIds.includes(movie.channelId));
-        }
         if (activeTermFilter) {
             allMovies = allMovies.filter(movie => (movie.searchTerms || []).includes(activeTermFilter));
         }
@@ -539,7 +362,7 @@ async function loadAndDisplayAll() {
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
 }
 
-// ---------------------- Modal-related functions ----------------------
+// ---------------------- Modal-related functions (unchanged) ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
     const transaction = db.transaction(['movies'], 'readwrite');
@@ -600,43 +423,69 @@ window.openMovieModal = (movie, source = 'main') => {
     }, source);
 };
 
-// ---------------------- Search ----------------------
+// ---------------------- Search: API or local DB ----------------------
 searchBtn.onclick = async () => {
-    // Salir de los filtros Watching y Favorites si están activos (consistente con Trash)
-    if (activeWatchingFilter) {
-        activeWatchingFilter = false;
-    }
-    if (activeFavoriteFilter) {
-        activeFavoriteFilter = false;
-    }
-    // También salir de la papelera si está activa
+    // Reset filters to show search results (but keep trash filter? Usually search should exit trash mode)
     if (activeTrashFilter) {
         activeTrashFilter = false;
+        updateFilterButtonsUI();
     }
-    updateFilterButtonsUI();
-
+    // We do not reset watching/favorite filters automatically; user may want to combine? But typical search should show all results.
+    // However to be consistent with old behavior, let's keep activeWatchingFilter and activeFavoriteFilter as they are.
+    // But search results should override term filter? We'll clear term filter for new search.
+    activeTermFilter = null;
+    
     const query = searchInput.value.trim();
     if (!query) {
         resultsGrid.innerHTML = '<div class="stats">Enter a search term</div>';
         return;
     }
-    const searchChannelId = currentSearchChannelId;
-    resultsGrid.innerHTML = '<div class="stats">Searching...</div>';
-    try {
-        const moviesFromAPI = await searchYouTube(query, searchChannelId);
-        if (moviesFromAPI.length === 0) {
-            resultsGrid.innerHTML = '<div class="stats">No movies found</div>';
-            return;
+    
+    const selectedOption = SEARCH_OPTIONS.find(opt => opt.id === currentSearchOptionId);
+    if (!selectedOption) return;
+    
+    if (selectedOption.type === 'api') {
+        // Search via YouTube API
+        resultsGrid.innerHTML = '<div class="stats">Searching YouTube...</div>';
+        try {
+            const channelId = selectedOption.id === 'plato_db' ? null : selectedOption.id;
+            const moviesFromAPI = await searchYouTube(query, channelId);
+            if (moviesFromAPI.length === 0) {
+                resultsGrid.innerHTML = '<div class="stats">No movies found on YouTube</div>';
+                return;
+            }
+            for (const movie of moviesFromAPI) {
+                await saveMovie(movie, query);
+            }
+            await refreshAvailableTerms();
+            await loadAndDisplayAll();
+            searchInput.value = '';
+        } catch (err) {
+            console.error(err);
+            resultsGrid.innerHTML = `<div class="stats">Error: ${err.message}</div>`;
         }
-        for (const movie of moviesFromAPI) {
-            await saveMovie(movie, query);
+    } else { // type === 'local' -> Plato DB
+        resultsGrid.innerHTML = '<div class="stats">Searching in Plato DB...</div>';
+        const allMovies = await getAllMovies();
+        const lowerQuery = query.toLowerCase();
+        const filtered = allMovies.filter(movie => {
+            const titleMatch = movie.title.toLowerCase().includes(lowerQuery);
+            const descMatch = movie.description && movie.description.toLowerCase().includes(lowerQuery);
+            const termsMatch = (movie.searchTerms || []).some(term => term.toLowerCase().includes(lowerQuery));
+            return titleMatch || descMatch || termsMatch;
+        });
+        if (filtered.length === 0) {
+            resultsGrid.innerHTML = '<div class="stats">No matching movies found in Plato DB</div>';
+        } else {
+            // Show results directly without saving (they are already in DB)
+            const onSortChange = (newSort) => {
+                currentSort = newSort;
+                // re-render with same filtered list
+                renderMovies(resultsGrid, filtered, `Search results for "${query}" (${filtered.length})`, 'main', currentSort, onSortChange);
+            };
+            renderMovies(resultsGrid, filtered, `Search results for "${query}" (${filtered.length})`, 'main', currentSort, onSortChange);
         }
-        await refreshAvailableTerms();
-        await loadAndDisplayAll();
         searchInput.value = '';
-    } catch (err) {
-        console.error(err);
-        resultsGrid.innerHTML = `<div class="stats">Error: ${err.message}</div>`;
     }
 };
 
@@ -644,7 +493,6 @@ searchBtn.onclick = async () => {
 async function init() {
     await dbReady;
     buildSearchInPanel();
-    buildShowChannelsPanel();
     initModal(() => {
         refreshAvailableTerms();
         loadAndDisplayAll();
