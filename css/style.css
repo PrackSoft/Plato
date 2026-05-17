@@ -377,7 +377,7 @@ body {
     border-radius: var(--border-radius-sm);
     margin: 10px 0;
 }
-.modal-section {
+.modal-section .btn-secondary {
     margin: 15px 0;
     background: var(--button-bg);
     padding: 10px;
