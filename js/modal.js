@@ -1,4 +1,4 @@
-// js/modal.js - Iconos: favorito off = star_outline, favorito on = favorite (corazón)
+// js/modal.js - Iconos: favorito off = star_outline (sin relleno), favorito on = favorite (con relleno)
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -50,9 +50,11 @@ function renderModalContent(movie, source) {
         </div>
     ` : '';
 
-    // Favorite icon: OFF = star_outline, ON = favorite (heart)
+    // Favorite icon: OFF = star_outline (sin relleno), ON = favorite con relleno
     const favoriteIconName = movie.favorite ? 'favorite' : 'star_outline';
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
+    // Forzar relleno del corazón cuando favorite es true
+    const favoriteFillStyle = movie.favorite ? "font-variation-settings: 'FILL' 1;" : "";
 
     return `
         <div class="modal-header">
@@ -91,10 +93,10 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: OFF = star_outline, ON = favorite (heart) -->
+        <!-- Favorite toggle: OFF = star_outline (sin relleno), ON = favorite con relleno -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
+            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px; ${favoriteFillStyle}">${favoriteIconName}</span>
         </div>
 
         ${trashActionsHtml}
@@ -144,7 +146,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle: OFF = star_outline, ON = favorite (heart)
+    // Favorite toggle: OFF = star_outline, ON = favorite con relleno
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
@@ -153,6 +155,12 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             favoriteIcon.textContent = newStatus ? 'favorite' : 'star_outline';
+            // Aplicar o quitar el relleno del corazón
+            if (newStatus) {
+                favoriteIcon.style.fontVariationSettings = "'FILL' 1";
+            } else {
+                favoriteIcon.style.fontVariationSettings = "normal";
+            }
         };
     }
 

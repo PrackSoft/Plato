@@ -206,6 +206,10 @@ body {
     font-size: 18px;
 }
 
+.icon-filled {
+    font-variation-settings: 'FILL' 1;
+}
+
 .top-controls {
     display: flex;
     flex-wrap: wrap;
