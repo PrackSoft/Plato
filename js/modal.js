@@ -1,4 +1,4 @@
-// js/modal.js - Iconos: favorito off = star_outline (contorno), favorito on = favorite (relleno mediante clase filled)
+// js/modal.js - Favoritos: corazón contorno (FILL 0) o corazón lleno (FILL 1)
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -50,10 +50,9 @@ function renderModalContent(movie, source) {
         </div>
     ` : '';
 
-    // Favorite: OFF = star_outline con clase outlined, ON = favorite con clase filled (corazón lleno)
-    const favoriteIconClass = movie.favorite ? 'material-symbols-filled' : 'material-symbols-outlined';
-    const favoriteIconName = 'favorite';  // Siempre 'favorite', el estilo define si es contorno o relleno
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
+    // Para favorito siempre usamos 'favorite', controlamos el relleno con CSS
+    const favoriteFill = movie.favorite ? 1 : 0;
 
     return `
         <div class="modal-header">
@@ -92,10 +91,10 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: usa clase filled para corazón lleno -->
+        <!-- Favorite toggle: corazón con relleno variable -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="${favoriteIconClass}" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
+            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px; font-variation-settings: 'FILL' ${favoriteFill};">favorite</span>
         </div>
 
         ${trashActionsHtml}
@@ -145,7 +144,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle: cambia la clase entre outlined y filled
+    // Favorite toggle: cambiamos el valor de 'FILL' en el estilo
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
@@ -153,8 +152,8 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             event.stopPropagation();
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            // El icono siempre es 'favorite', pero la clase define relleno o contorno
-            favoriteIcon.className = newStatus ? 'material-symbols-filled' : 'material-symbols-outlined';
+            // Actualizamos la variable de relleno
+            favoriteIcon.style.fontVariationSettings = `'FILL' ${newStatus ? 1 : 0}`;
         };
     }
 
