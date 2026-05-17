@@ -95,9 +95,9 @@ function renderModalContent(movie, source) {
         <span
             class="material-symbols-outlined ${movie.favorite ? 'icon-filled' : ''}"
             id="modalFavoriteIcon"
-            style="font-size:28px; font-variation-settings:'FILL' ${movie.favorite ? 1 : 0}, 'wght' 600, 'GRAD' 0, 'opsz' 20;">
+            style="font-size:28px;">
             favorite
-        </span>       
+        </span>      
         </div>
 
         ${trashActionsHtml}
@@ -156,8 +156,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             // Actualizamos la variable de relleno
-            favoriteIcon.classList.toggle('icon-filled', newStatus);
-        };
+            favoriteIcon.classList.toggle('icon-filled', newStatus);        };
     }
 
     // Remove term
