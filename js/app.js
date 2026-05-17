@@ -259,7 +259,7 @@ if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchin
 if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
 if (filterTrashBtn) filterTrashBtn.addEventListener('click', toggleTrashFilter);
 
-// ---------------------- Terms bar management (unchanged) ----------------------
+// ---------------------- Terms bar management ----------------------
 async function refreshAvailableTerms() {
     const allMovies = await getAllMovies();
     const termsSet = new Set();
@@ -267,19 +267,21 @@ async function refreshAvailableTerms() {
         (movie.searchTerms || []).forEach(term => termsSet.add(term));
     }
     availableTerms = Array.from(termsSet).sort();
-    renderTermsBar();
+    renderTermsBar(); // uses global availableTerms
 }
 
-function renderTermsBar() {
+// modified: accepts optional termsArray to show only filtered terms
+function renderTermsBar(termsArray = null) {
     if (activeTrashFilter) {
         termsBar.innerHTML = '';
         return;
     }
-    if (availableTerms.length === 0) {
+    const terms = termsArray !== null ? termsArray : availableTerms;
+    if (terms.length === 0) {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
         return;
     }
-    const html = availableTerms.map(term => `
+    const html = terms.map(term => `
         <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
             <span class="term-delete" data-term="${escapeHtml(term)}" title="Delete this term from all movies">✖</span>
@@ -338,7 +340,7 @@ async function removeTermFromAllMovies(term) {
     }
 }
 
-// ---------------------- Load and display movies (no channel filter) ----------------------
+// ---------------------- Load and display movies ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies;
@@ -360,8 +362,13 @@ async function loadAndDisplayAll() {
     };
 
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
+
+    // Update terms bar based on displayed movies (only for main view)
     if (!activeTrashFilter) {
-        await refreshAvailableTerms();
+        const filteredTerms = Array.from(new Set(allMovies.flatMap(m => m.searchTerms || []))).sort();
+        renderTermsBar(filteredTerms);
+    } else {
+        renderTermsBar(); // will clear bar because activeTrashFilter true
     }
 }
 
