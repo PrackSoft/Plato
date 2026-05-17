@@ -1,4 +1,4 @@
-// js/modal.js
+// js/modal.js - Iconos: favorito off = star_outline, favorito on = favorite (corazón)
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -37,7 +37,6 @@ function closeModal() {
     currentMovie = null;
     currentMovieSource = null;
     currentTrashFunctions = null;
-    // Opcional: refrescar la lista principal al cerrar el modal
     if (currentOnUpdate) currentOnUpdate();
 }
 
@@ -50,6 +49,10 @@ function renderModalContent(movie, source) {
             <button id="permanentDeleteBtn" class="btn btn-danger">Delete Permanently</button>
         </div>
     ` : '';
+
+    // Favorite icon: OFF = star_outline, ON = favorite (heart)
+    const favoriteIconName = movie.favorite ? 'favorite' : 'star_outline';
+    const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
 
     return `
         <div class="modal-header">
@@ -64,7 +67,6 @@ function renderModalContent(movie, source) {
         <p><strong>Saved on:</strong> ${new Date(movie.dateSaved).toLocaleString()}</p>
         ${isInTrash ? `<p><strong>Deleted on:</strong> ${movie.deletedAt ? new Date(movie.deletedAt).toLocaleString() : 'Unknown'}</p>` : ''}
         
-        <!-- Terms management -->
         <div class="modal-section">
             <strong>Search Terms:</strong>
             <div id="termsList" class="terms-list">
@@ -83,16 +85,16 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle: clickable row -->
+        <!-- Watching toggle -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Watching:</span>
-            <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
+            <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: clickable row -->
+        <!-- Favorite toggle: OFF = star_outline, ON = favorite (heart) -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${movie.favorite ? 'star' : 'star_outline'}</span>
+            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
         </div>
 
         ${trashActionsHtml}
@@ -102,7 +104,6 @@ function renderModalContent(movie, source) {
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    // Delete button (move to trash)
     const deleteBtn = document.querySelector('.modal-delete-btn');
     if (deleteBtn && !isInTrash) {
         deleteBtn.onclick = async () => {
@@ -113,7 +114,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Restore and permanent delete for trash
     const restoreBtn = document.getElementById('restoreBtn');
     if (restoreBtn && isInTrash) {
         restoreBtn.onclick = async () => {
@@ -132,37 +132,31 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // ----- Watching toggle (solo manejador en la fila) -----
+    // Watching toggle
     const watchingRow = document.getElementById('watchingToggleRow');
     const watchingIcon = document.getElementById('modalWatchingIcon');
     if (watchingRow && watchingIcon && !isInTrash) {
         watchingRow.onclick = async (event) => {
             event.stopPropagation();
-            console.log('Toggling watching for', movie.youtubeId);
             const newStatus = await toggleWatching(movie.youtubeId);
-            console.log('New watching status:', newStatus);
             movie.watching = newStatus;
             watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
-            // No llamamos a currentOnUpdate aquí para evitar recargar el modal
         };
     }
 
-    // ----- Favorite toggle (solo manejador en la fila) -----
+    // Favorite toggle: OFF = star_outline, ON = favorite (heart)
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
         favoriteRow.onclick = async (event) => {
             event.stopPropagation();
-            console.log('Toggling favorite for', movie.youtubeId);
             const newStatus = await toggleFavorite(movie.youtubeId);
-            console.log('New favorite status:', newStatus);
             movie.favorite = newStatus;
-            favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
-            // No llamamos a currentOnUpdate aquí
+            favoriteIcon.textContent = newStatus ? 'favorite' : 'star_outline';
         };
     }
 
-    // Remove term from modal
+    // Remove term
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {
@@ -179,16 +173,14 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                             <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                         </span>
                     `).join(''));
-                    // Re-attach events for the new remove-term buttons
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
                 }
-                // Refrescamos la lista principal al modificar términos
                 if (currentOnUpdate) await currentOnUpdate();
             };
         });
     }
 
-    // Add new term
+    // Add term
     if (!isInTrash) {
         const addBtn = document.getElementById('addTermBtn');
         const newTermInput = document.getElementById('newTermInput');
