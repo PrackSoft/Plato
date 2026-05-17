@@ -37,6 +37,8 @@ function closeModal() {
     currentMovie = null;
     currentMovieSource = null;
     currentTrashFunctions = null;
+    // Opcional: refrescar la lista principal al cerrar el modal
+    if (currentOnUpdate) currentOnUpdate();
 }
 
 function renderModalContent(movie, source) {
@@ -81,13 +83,13 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle: clickable icon + text -->
+        <!-- Watching toggle: clickable row -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Watching:</span>
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
         </div>
 
-        <!-- Favorite toggle: clickable icon + text -->
+        <!-- Favorite toggle: clickable row -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
             <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${movie.favorite ? 'star' : 'star_outline'}</span>
@@ -107,7 +109,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             if (confirm('Move this movie to trash?')) {
                 await moveToTrash(movie.youtubeId);
                 closeModal();
-                if (currentOnUpdate) await currentOnUpdate();
             }
         };
     }
@@ -118,7 +119,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         restoreBtn.onclick = async () => {
             await restoreFromTrash(movie.youtubeId);
             closeModal();
-            if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
@@ -128,43 +128,38 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             if (confirm('Permanently delete this movie? This action cannot be undone.')) {
                 await permanentlyDelete(movie.youtubeId);
                 closeModal();
-                if (currentOnUpdate) await currentOnUpdate();
             }
         };
     }
 
-    // ----- Watching toggle -----
+    // ----- Watching toggle (solo manejador en la fila) -----
     const watchingRow = document.getElementById('watchingToggleRow');
     const watchingIcon = document.getElementById('modalWatchingIcon');
     if (watchingRow && watchingIcon && !isInTrash) {
-        const toggleWatchingHandler = async (event) => {
+        watchingRow.onclick = async (event) => {
             event.stopPropagation();
             console.log('Toggling watching for', movie.youtubeId);
             const newStatus = await toggleWatching(movie.youtubeId);
             console.log('New watching status:', newStatus);
             movie.watching = newStatus;
             watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
-            if (currentOnUpdate) await currentOnUpdate();
+            // No llamamos a currentOnUpdate aquí para evitar recargar el modal
         };
-        watchingRow.onclick = toggleWatchingHandler;
-        watchingIcon.onclick = toggleWatchingHandler; // also direct click on icon
     }
 
-    // ----- Favorite toggle -----
+    // ----- Favorite toggle (solo manejador en la fila) -----
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
-        const toggleFavoriteHandler = async (event) => {
+        favoriteRow.onclick = async (event) => {
             event.stopPropagation();
             console.log('Toggling favorite for', movie.youtubeId);
             const newStatus = await toggleFavorite(movie.youtubeId);
             console.log('New favorite status:', newStatus);
             movie.favorite = newStatus;
             favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
-            if (currentOnUpdate) await currentOnUpdate();
+            // No llamamos a currentOnUpdate aquí
         };
-        favoriteRow.onclick = toggleFavoriteHandler;
-        favoriteIcon.onclick = toggleFavoriteHandler;
     }
 
     // Remove term from modal
@@ -187,6 +182,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                     // Re-attach events for the new remove-term buttons
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
                 }
+                // Refrescamos la lista principal al modificar términos
                 if (currentOnUpdate) await currentOnUpdate();
             };
         });
