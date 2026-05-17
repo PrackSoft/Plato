@@ -206,14 +206,6 @@ body {
     font-size: 28px;
 }
 
-.icon-filled {
-    font-variation-settings:
-        'FILL' 1,
-        'wght' 600,
-        'GRAD' 0,
-        'opsz' 20;
-}
-
 .top-controls {
     display: flex;
     flex-wrap: wrap;
@@ -227,7 +219,7 @@ body {
     gap: var(--gap-md);
 }
 
-.dropdown-search, .dropdown-filter {
+.dropdown-search {
     position: relative;
 }
 .dropdown-panel {
@@ -261,12 +253,12 @@ body {
 .dropdown-panel input {
     margin: 0;
 }
-.panel-separator {
+/*.panel-separator {
     margin: 6px 0;
     border: 0;
     height: 1px;
     background: var(--border-color);
-}
+}*/
 .dropdown-header {
     padding: var(--gap-sm) var(--gap-md);
     font-size: var(--font-size-small);
@@ -363,7 +355,7 @@ body {
 }
 .modal-delete-btn {
     cursor: pointer;
-    color: var(--accent);
+    color: var(--accent-light);
 }
 .close-modal {
     position: absolute;
@@ -371,7 +363,7 @@ body {
     right: 15px;
     font-size: 24px;
     cursor: pointer;
-    color: var(--accent);
+    color: var(--accent-light);
 }
 .modal-description {
     white-space: normal;
@@ -454,7 +446,7 @@ body {
     gap: 6px;
 }
 .term-chip .remove-term {
-    color: var(--accent);
+    color: var(--accent-light);
     cursor: pointer;
 }
 

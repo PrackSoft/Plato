@@ -52,7 +52,7 @@ function renderModalContent(movie, source) {
     ` : '';
 
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
-    const favoriteIconName = movie.favorite ? 'favorite' : 'star';
+    const favoriteIconName = movie.favorite ? 'star_shine' : 'star';
 
     return `
         <div class="modal-header">
@@ -144,7 +144,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle: cambiamos entre 'favorite' y 'favorite_outline'
+    // Favorite toggle: cambiamos entre 'star_shine' y 'star'
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
