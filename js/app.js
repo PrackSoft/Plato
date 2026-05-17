@@ -360,6 +360,9 @@ async function loadAndDisplayAll() {
     };
 
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
+    if (!activeTrashFilter) {
+        await refreshAvailableTerms();
+    }
 }
 
 // ---------------------- Modal-related functions (unchanged) ----------------------
