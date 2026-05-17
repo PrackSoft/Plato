@@ -1,4 +1,4 @@
-// js/modal.js - Iconos: favorito off = star_outline (sin relleno), favorito on = favorite (con relleno)
+// js/modal.js - Iconos: favorito off = star_outline (contorno), favorito on = favorite (relleno mediante clase filled)
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -50,11 +50,10 @@ function renderModalContent(movie, source) {
         </div>
     ` : '';
 
-    // Favorite icon: OFF = star_outline (sin relleno), ON = favorite con relleno
-    const favoriteIconName = movie.favorite ? 'favorite' : 'star_outline';
+    // Favorite: OFF = star_outline con clase outlined, ON = favorite con clase filled (corazón lleno)
+    const favoriteIconClass = movie.favorite ? 'material-symbols-filled' : 'material-symbols-outlined';
+    const favoriteIconName = 'favorite';  // Siempre 'favorite', el estilo define si es contorno o relleno
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
-    // Forzar relleno del corazón cuando favorite es true
-    const favoriteFillStyle = movie.favorite ? "font-variation-settings: 'FILL' 1;" : "";
 
     return `
         <div class="modal-header">
@@ -93,10 +92,10 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: OFF = star_outline (sin relleno), ON = favorite con relleno -->
+        <!-- Favorite toggle: usa clase filled para corazón lleno -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px; ${favoriteFillStyle}">${favoriteIconName}</span>
+            <span class="${favoriteIconClass}" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
         </div>
 
         ${trashActionsHtml}
@@ -146,7 +145,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle: OFF = star_outline, ON = favorite con relleno
+    // Favorite toggle: cambia la clase entre outlined y filled
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
@@ -154,13 +153,8 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             event.stopPropagation();
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            favoriteIcon.textContent = newStatus ? 'favorite' : 'star_outline';
-            // Aplicar o quitar el relleno del corazón
-            if (newStatus) {
-                favoriteIcon.style.fontVariationSettings = "'FILL' 1";
-            } else {
-                favoriteIcon.style.fontVariationSettings = "normal";
-            }
+            // El icono siempre es 'favorite', pero la clase define relleno o contorno
+            favoriteIcon.className = newStatus ? 'material-symbols-filled' : 'material-symbols-outlined';
         };
     }
 
