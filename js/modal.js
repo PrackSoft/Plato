@@ -1,4 +1,5 @@
-// js/modal.js - Favoritos: corazón contorno (FILL 0) o corazón lleno (FILL 1)
+// js/modal.js - Favoritos con ícono 'favorite' (lleno) y 'favorite_outline' (vacío)
+
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
@@ -51,6 +52,7 @@ function renderModalContent(movie, source) {
     ` : '';
 
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
+    const favoriteIconName = movie.favorite ? 'favorite' : 'favorite_outline';
 
     return `
         <div class="modal-header">
@@ -89,15 +91,10 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle: corazón con relleno variable -->
+        <!-- Favorite toggle: ícono lleno (favorite) o vacío (favorite_outline) -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-        <span
-            class="material-symbols-outlined ${movie.favorite ? 'icon-filled' : ''}"
-            id="modalFavoriteIcon"
-            style="font-size:28px;">
-            favorite
-        </span>      
+            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${favoriteIconName}</span>
         </div>
 
         ${trashActionsHtml}
@@ -147,7 +144,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle: cambiamos el valor de 'FILL' en el estilo
+    // Favorite toggle: cambiamos entre 'favorite' y 'favorite_outline'
     const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
     if (favoriteRow && favoriteIcon && !isInTrash) {
@@ -155,8 +152,8 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             event.stopPropagation();
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            // Actualizamos la variable de relleno
-            favoriteIcon.classList.toggle('icon-filled', newStatus);        };
+            favoriteIcon.textContent = newStatus ? 'favorite' : 'favorite_outline';
+        };
     }
 
     // Remove term
