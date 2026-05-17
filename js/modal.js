@@ -93,10 +93,11 @@ function renderModalContent(movie, source) {
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
         <span
-            class="material-symbols-outlined"            
+            class="material-symbols-outlined"
             id="modalFavoriteIcon"
-            style="font-size:28px; font-variation-settings:'FILL' ${movie.favorite ? 1 : 0}, 'wght' 600, 'GRAD' 0, 'opsz' 20;"            favorite
-        </span>        
+            style="font-size:28px; font-variation-settings:'FILL' ${movie.favorite ? 1 : 0}, 'wght' 600, 'GRAD' 0, 'opsz' 20;">
+            favorite
+        </span>       
         </div>
 
         ${trashActionsHtml}
