@@ -1,4 +1,4 @@
-// js/app.js - Plato App (with fixed modal term management, removed channel filter)
+// js/app.js - Plato App (fixed: terms bar filters with watching/favorites/trash)
 // ==========================================
 
 import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
@@ -25,7 +25,7 @@ const termsManagementList = document.getElementById('termsManagementList');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
-let currentSearchOptionId = "UCuVPpxrm2VAgpH3Ktln4HXg"; // default: YouTube Free Movies
+let currentSearchOptionId = "UCuVPpxrm2VAgpH3Ktln4HXg";
 
 let activeWatchingFilter = false;
 let activeFavoriteFilter = false;
@@ -43,7 +43,7 @@ function closePanelWithDelay(panel) {
     setTimeout(() => panel.classList.add('hidden'), 150);
 }
 
-// ---------------------- Build Search In panel (exclusive: API or local) ----------------------
+// ---------------------- Build Search In panel ----------------------
 function buildSearchInPanel() {
     searchInPanel.innerHTML = '';
 
@@ -56,7 +56,6 @@ function buildSearchInPanel() {
         currentSearchOptionId = clickedOptionId;
         updateSearchInButtonText();
         closePanelWithDelay(searchInPanel);
-        // No need to reload results automatically; only when search button is pressed
     }
 
     function updateSearchInButtonText() {
@@ -89,7 +88,7 @@ function buildSearchInPanel() {
     updateSearchInButtonText();
 }
 
-// ---------------------- Sidebar functions (unchanged) ----------------------
+// ---------------------- Sidebar functions ----------------------
 function openSettingsSidebar() {
     settingsSidebar.classList.remove('hidden');
     sidebarOverlay.classList.remove('hidden');
@@ -202,7 +201,7 @@ async function renderTermsManagement() {
     }
 }
 
-// ---------------------- Panel toggle logic (only searchIn) ----------------------
+// ---------------------- Panel toggle logic ----------------------
 searchInBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     searchInPanel.classList.toggle('hidden');
@@ -212,7 +211,7 @@ document.addEventListener('click', (e) => {
     if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) searchInPanel.classList.add('hidden');
 });
 
-// ---------------------- Filter buttons logic (unchanged) ----------------------
+// ---------------------- Filter buttons logic ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
     else filterWatchingBtn.classList.remove('active');
@@ -267,15 +266,12 @@ async function refreshAvailableTerms() {
         (movie.searchTerms || []).forEach(term => termsSet.add(term));
     }
     availableTerms = Array.from(termsSet).sort();
-    renderTermsBar(); // uses global availableTerms
+    // No llamamos a renderTermsBar aquí porque loadAndDisplayAll se encargará
 }
 
-// modified: accepts optional termsArray to show only filtered terms
+// Render terms bar with optional filtered terms array
 function renderTermsBar(termsArray = null) {
-    if (activeTrashFilter) {
-        termsBar.innerHTML = '';
-        return;
-    }
+    // Siempre mostramos los términos que se pasen (filtrados) o los globales
     const terms = termsArray !== null ? termsArray : availableTerms;
     if (terms.length === 0) {
         termsBar.innerHTML = '<div class="terms-placeholder">No search terms yet</div>';
@@ -289,6 +285,7 @@ function renderTermsBar(termsArray = null) {
     `).join('');
     termsBar.innerHTML = html;
 
+    // Re-attach events
     document.querySelectorAll('#termsBar .btn').forEach(btn => {
         const term = btn.dataset.term;
         btn.addEventListener('click', (e) => {
@@ -296,7 +293,7 @@ function renderTermsBar(termsArray = null) {
             if (activeTermFilter === term) activeTermFilter = null;
             else activeTermFilter = term;
             loadAndDisplayAll();
-            renderTermsBar();
+            // No need to call renderTermsBar again, loadAndDisplayAll will do it
         });
     });
 
@@ -346,7 +343,7 @@ async function loadAndDisplayAll() {
     let allMovies;
 
     if (activeTrashFilter) {
-        allMovies = await getTrashMovies(); // no channelIds parameter
+        allMovies = await getTrashMovies();
     } else {
         allMovies = await getAllMovies();
         if (activeTermFilter) {
@@ -363,16 +360,12 @@ async function loadAndDisplayAll() {
 
     renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
 
-    // Update terms bar based on displayed movies (only for main view)
-    if (!activeTrashFilter) {
-        const filteredTerms = Array.from(new Set(allMovies.flatMap(m => m.searchTerms || []))).sort();
-        renderTermsBar(filteredTerms);
-    } else {
-        renderTermsBar(); // will clear bar because activeTrashFilter true
-    }
+    // Calculate terms from the currently displayed movies (whether main or trash)
+    const filteredTerms = Array.from(new Set(allMovies.flatMap(m => m.searchTerms || []))).sort();
+    renderTermsBar(filteredTerms);
 }
 
-// ---------------------- Modal-related functions (unchanged) ----------------------
+// ---------------------- Modal-related functions ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
     const transaction = db.transaction(['movies'], 'readwrite');
@@ -433,16 +426,12 @@ window.openMovieModal = (movie, source = 'main') => {
     }, source);
 };
 
-// ---------------------- Search: API or local DB ----------------------
+// ---------------------- Search ----------------------
 searchBtn.onclick = async () => {
-    // Reset filters to show search results (but keep trash filter? Usually search should exit trash mode)
     if (activeTrashFilter) {
         activeTrashFilter = false;
         updateFilterButtonsUI();
     }
-    // We do not reset watching/favorite filters automatically; user may want to combine? But typical search should show all results.
-    // However to be consistent with old behavior, let's keep activeWatchingFilter and activeFavoriteFilter as they are.
-    // But search results should override term filter? We'll clear term filter for new search.
     activeTermFilter = null;
     
     const query = searchInput.value.trim();
@@ -455,7 +444,6 @@ searchBtn.onclick = async () => {
     if (!selectedOption) return;
     
     if (selectedOption.type === 'api') {
-        // Search via YouTube API
         resultsGrid.innerHTML = '<div class="stats">Searching YouTube...</div>';
         try {
             const channelId = selectedOption.id === 'plato_db' ? null : selectedOption.id;
@@ -474,7 +462,7 @@ searchBtn.onclick = async () => {
             console.error(err);
             resultsGrid.innerHTML = `<div class="stats">Error: ${err.message}</div>`;
         }
-    } else { // type === 'local' -> Plato DB
+    } else {
         resultsGrid.innerHTML = '<div class="stats">Searching in Plato DB...</div>';
         const allMovies = await getAllMovies();
         const lowerQuery = query.toLowerCase();
@@ -487,10 +475,8 @@ searchBtn.onclick = async () => {
         if (filtered.length === 0) {
             resultsGrid.innerHTML = '<div class="stats">No matching movies found in Plato DB</div>';
         } else {
-            // Show results directly without saving (they are already in DB)
             const onSortChange = (newSort) => {
                 currentSort = newSort;
-                // re-render with same filtered list
                 renderMovies(resultsGrid, filtered, `Search results for "${query}" (${filtered.length})`, 'main', currentSort, onSortChange);
             };
             renderMovies(resultsGrid, filtered, `Search results for "${query}" (${filtered.length})`, 'main', currentSort, onSortChange);
@@ -503,12 +489,12 @@ searchBtn.onclick = async () => {
 async function init() {
     await dbReady;
     buildSearchInPanel();
-    initModal(() => {
-        refreshAvailableTerms();
-        loadAndDisplayAll();
+    initModal(async () => {
+        await refreshAvailableTerms();
+        await loadAndDisplayAll();
     });
     await refreshAvailableTerms();
-    loadAndDisplayAll();
+    await loadAndDisplayAll();
 }
 init();
 
