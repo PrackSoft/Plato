@@ -93,7 +93,7 @@ function renderModalContent(movie, source) {
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
         <span
-            class="${movie.favorite ? 'material-symbols-filled' : 'material-symbols-outlined'}"
+            class="material-symbols-outlined"            
             id="modalFavoriteIcon"
             style="font-size:28px;">
             favorite
@@ -156,10 +156,8 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             // Actualizamos la variable de relleno
-            favoriteIcon.className =
-                newStatus
-                    ? 'material-symbols-filled'
-                    : 'material-symbols-outlined';
+            favoriteIcon.style.fontVariationSettings =
+                `'FILL' ${newStatus ? 1 : 0}, 'wght' 600, 'GRAD' 0, 'opsz' 20`;
         };
     }
 
