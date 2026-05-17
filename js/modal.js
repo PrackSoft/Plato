@@ -52,7 +52,7 @@ function renderModalContent(movie, source) {
     ` : '';
 
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
-    const favoriteIconName = movie.favorite ? 'favorite' : 'favorite_outline';
+    const favoriteIconName = movie.favorite ? 'favorite' : 'star';
 
     return `
         <div class="modal-header">
@@ -152,7 +152,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             event.stopPropagation();
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            favoriteIcon.textContent = newStatus ? 'favorite' : 'favorite_outline';
+            favoriteIcon.textContent = newStatus ? 'star_shine' : 'star';
         };
     }
 
