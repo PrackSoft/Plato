@@ -81,25 +81,21 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle (separate container) -->
-        <div class="modal-section">
-            <div class="toggle-row">
-                <span>Watching:</span>
-                <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
-                    <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                    <input type="checkbox" id="modalWatchingCheckbox" ${movie.watching ? 'checked' : ''} ${isInTrash ? 'disabled' : ''}>
-                </label>
+        <!-- Watching toggle: clickable icon only -->
+        <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
+            <span>Watching:</span>
+            <div class="toggle-label" style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined" id="modalWatchingIcon">${movie.watching ? 'visibility' : 'visibility_off'}</span>
+                <span>${movie.watching ? 'Yes' : 'No'}</span>
             </div>
         </div>
 
-        <!-- Favorite toggle (separate container) -->
-        <div class="modal-section">
-            <div class="toggle-row">
-                <span>Favorite:</span>
-                <label class="${isInTrash ? 'toggle-label-disabled' : 'toggle-label'}">
-                    <span class="material-symbols-outlined">${movie.favorite ? 'star' : 'star_outline'}</span>
-                    <input type="checkbox" id="modalFavoriteCheckbox" ${movie.favorite ? 'checked' : ''} ${isInTrash ? 'disabled' : ''}>
-                </label>
+        <!-- Favorite toggle: clickable icon only -->
+        <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
+            <span>Favorite:</span>
+            <div class="toggle-label" style="display: flex; align-items: center; gap: 8px;">
+                <span class="material-symbols-outlined" id="modalFavoriteIcon">${movie.favorite ? 'star' : 'star_outline'}</span>
+                <span>${movie.favorite ? 'Yes' : 'No'}</span>
             </div>
         </div>
         ${trashActionsHtml}
@@ -140,24 +136,30 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    const watchingCheckbox = document.getElementById('modalWatchingCheckbox');
-    if (watchingCheckbox && !isInTrash) {
-        watchingCheckbox.onchange = async (e) => {
+    // Watching toggle: click on the whole row or icon
+    const watchingRow = document.getElementById('watchingToggleRow');
+    if (watchingRow && !isInTrash) {
+        const watchingIcon = document.getElementById('modalWatchingIcon');
+        const watchingTextSpan = watchingRow.querySelector('.toggle-label span:last-child');
+        watchingRow.onclick = async () => {
             const newStatus = await toggleWatching(movie.youtubeId);
             movie.watching = newStatus;
-            const iconSpan = watchingCheckbox.parentElement.querySelector('.material-symbols-outlined');
-            if (iconSpan) iconSpan.textContent = newStatus ? 'visibility' : 'visibility_off';
+            if (watchingIcon) watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
+            if (watchingTextSpan) watchingTextSpan.textContent = newStatus ? 'Yes' : 'No';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    const favoriteCheckbox = document.getElementById('modalFavoriteCheckbox');
-    if (favoriteCheckbox && !isInTrash) {
-        favoriteCheckbox.onchange = async (e) => {
+    // Favorite toggle: click on the whole row or icon
+    const favoriteRow = document.getElementById('favoriteToggleRow');
+    if (favoriteRow && !isInTrash) {
+        const favoriteIcon = document.getElementById('modalFavoriteIcon');
+        const favoriteTextSpan = favoriteRow.querySelector('.toggle-label span:last-child');
+        favoriteRow.onclick = async () => {
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            const iconSpan = favoriteCheckbox.parentElement.querySelector('.material-symbols-outlined');
-            if (iconSpan) iconSpan.textContent = newStatus ? 'star' : 'star_outline';
+            if (favoriteIcon) favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
+            if (favoriteTextSpan) favoriteTextSpan.textContent = newStatus ? 'Yes' : 'No';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
