@@ -81,23 +81,18 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle: clickable icon only -->
+        <!-- Watching toggle: clickable icon only (no text) -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
             <span>Watching:</span>
-            <div class="toggle-label" style="display: flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-outlined" id="modalWatchingIcon">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                <span>${movie.watching ? 'Yes' : 'No'}</span>
-            </div>
+            <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
         </div>
 
-        <!-- Favorite toggle: clickable icon only -->
+        <!-- Favorite toggle: clickable icon only (no text) -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
             <span>Favorite:</span>
-            <div class="toggle-label" style="display: flex; align-items: center; gap: 8px;">
-                <span class="material-symbols-outlined" id="modalFavoriteIcon">${movie.favorite ? 'star' : 'star_outline'}</span>
-                <span>${movie.favorite ? 'Yes' : 'No'}</span>
-            </div>
+            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${movie.favorite ? 'star' : 'star_outline'}</span>
         </div>
+
         ${trashActionsHtml}
     `;
 }
@@ -137,29 +132,26 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
     }
 
     // Watching toggle: click on the whole row or icon
+    // Watching toggle: click on the whole row toggles the icon
     const watchingRow = document.getElementById('watchingToggleRow');
     if (watchingRow && !isInTrash) {
         const watchingIcon = document.getElementById('modalWatchingIcon');
-        const watchingTextSpan = watchingRow.querySelector('.toggle-label span:last-child');
         watchingRow.onclick = async () => {
             const newStatus = await toggleWatching(movie.youtubeId);
             movie.watching = newStatus;
             if (watchingIcon) watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
-            if (watchingTextSpan) watchingTextSpan.textContent = newStatus ? 'Yes' : 'No';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    // Favorite toggle: click on the whole row or icon
+    // Favorite toggle: click on the whole row toggles the icon
     const favoriteRow = document.getElementById('favoriteToggleRow');
     if (favoriteRow && !isInTrash) {
         const favoriteIcon = document.getElementById('modalFavoriteIcon');
-        const favoriteTextSpan = favoriteRow.querySelector('.toggle-label span:last-child');
         favoriteRow.onclick = async () => {
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             if (favoriteIcon) favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
-            if (favoriteTextSpan) favoriteTextSpan.textContent = newStatus ? 'Yes' : 'No';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
