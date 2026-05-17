@@ -51,8 +51,6 @@ function renderModalContent(movie, source) {
     ` : '';
 
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
-    // Para favorito siempre usamos 'favorite', controlamos el relleno con CSS
-    const favoriteFill = movie.favorite ? 1 : 0;
 
     return `
         <div class="modal-header">
@@ -94,7 +92,12 @@ function renderModalContent(movie, source) {
         <!-- Favorite toggle: corazón con relleno variable -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
             <span>Favorite:</span>
-            <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px; font-variation-settings: 'FILL' ${favoriteFill};">favorite</span>
+        <span
+            class="${movie.favorite ? 'material-symbols-filled' : 'material-symbols-outlined'}"
+            id="modalFavoriteIcon"
+            style="font-size:28px;">
+            favorite
+        </span>        
         </div>
 
         ${trashActionsHtml}
@@ -153,7 +156,10 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             // Actualizamos la variable de relleno
-            favoriteIcon.style.fontVariationSettings = `'FILL' ${newStatus ? 1 : 0}`;
+            favoriteIcon.className =
+                newStatus
+                    ? 'material-symbols-filled'
+                    : 'material-symbols-outlined';
         };
     }
 
