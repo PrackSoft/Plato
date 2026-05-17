@@ -131,27 +131,28 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Watching toggle: click on the whole row or icon
-    // Watching toggle: click on the whole row toggles the icon
-    const watchingRow = document.getElementById('watchingToggleRow');
-    if (watchingRow && !isInTrash) {
-        const watchingIcon = document.getElementById('modalWatchingIcon');
-        watchingRow.onclick = async () => {
-            const newStatus = await toggleWatching(movie.youtubeId);
-            movie.watching = newStatus;
-            if (watchingIcon) watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
+    // Watching toggle: click on the icon toggles
+    const favoriteIcon = document.getElementById('modalFavoriteIcon');
+    if (favoriteIcon && !isInTrash) {
+        favoriteIcon.style.cursor = 'pointer';
+        favoriteIcon.onclick = async (e) => {
+            e.stopPropagation();
+            const newStatus = await toggleFavorite(movie.youtubeId);
+            movie.favorite = newStatus;
+            favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    // Favorite toggle: click on the whole row toggles the icon
-    const favoriteRow = document.getElementById('favoriteToggleRow');
-    if (favoriteRow && !isInTrash) {
-        const favoriteIcon = document.getElementById('modalFavoriteIcon');
-        favoriteRow.onclick = async () => {
+    // Favorite toggle: click on the icon toggles
+    const favoriteIcon = document.getElementById('modalFavoriteIcon');
+    if (favoriteIcon && !isInTrash) {
+        favoriteIcon.style.cursor = 'pointer';
+        favoriteIcon.onclick = async (e) => {
+            e.stopPropagation();
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
-            if (favoriteIcon) favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
+            favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
             if (currentOnUpdate) await currentOnUpdate();
         };
     }

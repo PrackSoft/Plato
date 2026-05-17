@@ -407,7 +407,7 @@ async function toggleFavorite(youtubeId) {
             req.onsuccess = () => resolve(movie.favorite);
             req.onerror = () => reject(req.error);
         });
-        return movie.favorite;
+        return movie.favorite; // esto es crucial
     }
     return false;
 }
