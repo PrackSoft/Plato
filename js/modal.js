@@ -95,8 +95,7 @@ function renderModalContent(movie, source) {
         <span
             class="material-symbols-outlined"            
             id="modalFavoriteIcon"
-            style="font-size:28px;">
-            favorite
+            style="font-size:28px; font-variation-settings:'FILL' ${movie.favorite ? 1 : 0}, 'wght' 600, 'GRAD' 0, 'opsz' 20;"            favorite
         </span>        
         </div>
 
