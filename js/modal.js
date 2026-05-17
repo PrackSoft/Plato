@@ -81,13 +81,13 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle: clickable icon only (no text) -->
+        <!-- Watching toggle: clickable icon only -->
         <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
             <span>Watching:</span>
             <span class="material-symbols-outlined" id="modalWatchingIcon" style="font-size: 28px;">${movie.watching ? 'visibility' : 'visibility_off'}</span>
         </div>
 
-        <!-- Favorite toggle: clickable icon only (no text) -->
+        <!-- Favorite toggle: clickable icon only -->
         <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'};">
             <span>Favorite:</span>
             <span class="material-symbols-outlined" id="modalFavoriteIcon" style="font-size: 28px;">${movie.favorite ? 'star' : 'star_outline'}</span>
@@ -131,32 +131,38 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Watching toggle: click on the icon toggles
+    // Watching toggle: click on the icon (or the whole row)
+    const watchingRow = document.getElementById('watchingToggleRow');
+    const watchingIcon = document.getElementById('modalWatchingIcon');
+    if (watchingRow && watchingIcon && !isInTrash) {
+        const handler = async () => {
+            const newStatus = await toggleWatching(movie.youtubeId);
+            movie.watching = newStatus;
+            watchingIcon.textContent = newStatus ? 'visibility' : 'visibility_off';
+            if (currentOnUpdate) await currentOnUpdate();
+        };
+        watchingRow.onclick = handler;
+        watchingIcon.style.cursor = 'pointer';
+        // Avoid double trigger if clicking on icon (event bubbles)
+        watchingIcon.onclick = (e) => { e.stopPropagation(); handler(); };
+    }
+
+    // Favorite toggle: click on the icon (or the whole row)
+    const favoriteRow = document.getElementById('favoriteToggleRow');
     const favoriteIcon = document.getElementById('modalFavoriteIcon');
-    if (favoriteIcon && !isInTrash) {
-        favoriteIcon.style.cursor = 'pointer';
-        favoriteIcon.onclick = async (e) => {
-            e.stopPropagation();
+    if (favoriteRow && favoriteIcon && !isInTrash) {
+        const handler = async () => {
             const newStatus = await toggleFavorite(movie.youtubeId);
             movie.favorite = newStatus;
             favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
             if (currentOnUpdate) await currentOnUpdate();
         };
-    }
-
-    // Favorite toggle: click on the icon toggles
-    const favoriteIcon = document.getElementById('modalFavoriteIcon');
-    if (favoriteIcon && !isInTrash) {
+        favoriteRow.onclick = handler;
         favoriteIcon.style.cursor = 'pointer';
-        favoriteIcon.onclick = async (e) => {
-            e.stopPropagation();
-            const newStatus = await toggleFavorite(movie.youtubeId);
-            movie.favorite = newStatus;
-            favoriteIcon.textContent = newStatus ? 'star' : 'star_outline';
-            if (currentOnUpdate) await currentOnUpdate();
-        };
+        favoriteIcon.onclick = (e) => { e.stopPropagation(); handler(); };
     }
 
+    // Remove term from modal
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {
@@ -173,6 +179,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                             <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                         </span>
                     `).join(''));
+                    // Re-attach events for the new remove-term buttons
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
                 }
                 if (currentOnUpdate) await currentOnUpdate();
@@ -180,6 +187,7 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         });
     }
 
+    // Add new term
     if (!isInTrash) {
         const addBtn = document.getElementById('addTermBtn');
         const newTermInput = document.getElementById('newTermInput');
