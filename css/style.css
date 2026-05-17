@@ -210,6 +210,16 @@ body {
     color: var(--accent);
     transition: color 0.2s;
 }
+.toggle-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+.toggle-row.disabled {
+    cursor: default;
+}
+
 .card-stats {
     display: flex;
     justify-content: space-between;

@@ -86,13 +86,13 @@ function renderModalContent(movie, source) {
         </div>
 
         <!-- Watching toggle (ícono clickeable) -->
-        <div class="modal-section toggle-row" id="watchingToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-section toggle-row ${isInTrash ? 'disabled' : ''}" id="watchingToggleRow">
             <span>Watching:</span>
             <span class="material-symbols-outlined" id="modalWatchingIcon">${watchingIconName}</span>
         </div>
 
         <!-- Favorite toggle (ícono clickeable) -->
-        <div class="modal-section toggle-row" id="favoriteToggleRow" style="cursor: ${isInTrash ? 'default' : 'pointer'}; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-section toggle-row ${isInTrash ? 'disabled' : ''}" id="favoriteToggleRow">
             <span>Favorite:</span>
             <span class="material-symbols-outlined" id="modalFavoriteIcon">${favoriteIconName}</span>
         </div>
