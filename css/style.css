@@ -168,6 +168,7 @@ body {
     height: var(--btn-height-sm);
     padding: 0 var(--btn-padding-x-sm);
     font-size: var(--font-size-small);
+    background: var(--button-bg);
 }
 /* Unified active state for both filters and terms */
 .btn.active {
@@ -377,7 +378,7 @@ body {
     border-radius: var(--border-radius-sm);
     margin: 10px 0;
 }
-.modal-section .btn-secondary {
+.modal-section {
     margin: 15px 0;
     background: var(--button-bg);
     padding: 10px;
