@@ -93,13 +93,15 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined">delete</span>
         </div>
         ` : `
-        <div class="modal-section toggle-row" id="restoreRow">
-            <span>Restore:</span>
-            <span class="material-symbols-outlined">restore_from_trash</span>
-        </div>
-        <div class="modal-section toggle-row" id="permanentDeleteRow">
-            <span>Delete Permanently:</span>
-            <span class="material-symbols-outlined">delete_forever</span>
+        <div class="modal-section">
+            <div class="toggle-row" id="restoreRow">
+                <span>Restore:</span>
+                <span class="material-symbols-outlined">restore_from_trash</span>
+            </div>
+            <div class="toggle-row" id="permanentDeleteRow">
+                <span>Delete Permanently:</span>
+                <span class="material-symbols-outlined">delete_forever</span>
+            </div>
         </div>
         `}
     `;
