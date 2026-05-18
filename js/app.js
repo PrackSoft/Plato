@@ -410,6 +410,18 @@ searchBtn.onclick = async () => {
 async function init() {
     await dbReady;
     buildSearchInPanel();
+
+    // Agregar estos dos event listeners AQUÍ, DENTRO de init()
+    searchInBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchInPanel.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) {
+            searchInPanel.classList.add('hidden');
+        }
+    });
+
     initModal(async () => {
         await refreshAvailableTerms();
         await loadAndDisplayAll();
