@@ -491,6 +491,9 @@ body {
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
 }
+.terms-bar.hidden {
+    display: none;
+}
 .term-delete {
     font-size: 14px;
     font-weight: bold;

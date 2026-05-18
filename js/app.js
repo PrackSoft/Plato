@@ -22,6 +22,8 @@ const settingsSidebar = document.getElementById('settingsSidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
 const closeSidebarBtn = document.getElementById('closeSidebarBtn');
 const termsManagementList = document.getElementById('termsManagementList');
+const toggleTermsBtn = document.getElementById('toggleTermsBtn');
+const termsBarElement = document.getElementById('termsBar');
 
 // ---------------------- Global state ----------------------
 let dbReady = openDB();
@@ -211,6 +213,18 @@ document.addEventListener('click', (e) => {
     if (!searchInBtn.contains(e.target) && !searchInPanel.contains(e.target)) searchInPanel.classList.add('hidden');
 });
 
+// ---------------------- Terms Search button logic ----------------------
+// Estado inicial: visible (sin clase hidden), botón activo
+if (toggleTermsBtn && termsBarElement) {
+    toggleTermsBtn.addEventListener('click', () => {
+        const isHidden = termsBarElement.classList.toggle('hidden');
+        if (isHidden) {
+            toggleTermsBtn.classList.remove('active');
+        } else {
+            toggleTermsBtn.classList.add('active');
+        }
+    });
+}
 // ---------------------- Filter buttons logic ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
