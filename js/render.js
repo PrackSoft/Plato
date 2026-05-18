@@ -65,11 +65,6 @@ export function renderMovies(container, movies, title, source = 'main', currentS
                             <span class="material-symbols-outlined stat-icon">thumb_up</span>
                             ${formatNumber(movie.likeCount)}
                         </span>
-                        ${source !== 'trash' ? `
-                        <span class="watching-icon" data-id="${movie.youtubeId}" data-watching="${movie.watching}">
-                            <span class="material-symbols-outlined">${movie.watching ? 'visibility' : 'visibility_off'}</span>
-                        </span>
-                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -126,19 +121,8 @@ export function renderMovies(container, movies, title, source = 'main', currentS
         });
     }
 
-    if (source !== 'trash') {
-        document.querySelectorAll('.watching-icon').forEach(icon => {
-            const movieId = icon.dataset.id;
-            const watchingSpan = icon.querySelector('.material-symbols-outlined');
-            icon.onclick = async (e) => {
-                e.stopPropagation();
-                const newStatus = await toggleWatching(movieId);
-                watchingSpan.textContent = newStatus ? 'visibility' : 'visibility_off';
-                icon.dataset.watching = newStatus;
-                window.dispatchEvent(new CustomEvent('watching-toggled', { detail: { movieId, watching: newStatus } }));
-            };
-        });
-    }
+    // No more watching-icon handlers on cards
+    // The watching filter and modal toggle remain functional
 
     document.querySelectorAll('.video-card').forEach(card => {
         const movieId = card.dataset.id;

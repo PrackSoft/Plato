@@ -161,7 +161,7 @@ function renderTermsBar(termsArray = null) {
         });
     });
 
-    // Edit icon (ahora es un span con clase material-symbols-outlined)
+    // Edit icon
     document.querySelectorAll('.term-edit').forEach(editSpan => {
         editSpan.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -404,12 +404,6 @@ async function init() {
     await loadAndDisplayAll();
 }
 init();
-
-window.addEventListener('watching-toggled', () => {
-    if (activeWatchingFilter && !activeTrashFilter) {
-        loadAndDisplayAll();
-    }
-});
 
 function escapeHtml(str) {
     if (!str) return '';
