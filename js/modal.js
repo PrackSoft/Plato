@@ -41,7 +41,6 @@ function closeModal() {
 
 function renderModalContent(movie, source) {
     const isInTrash = (source === 'trash');
-    // Ya no hay botón de papelera en la cabecera
     const trashActionsHtml = isInTrash ? `
         <div class="modal-trash-actions">
             <button id="restoreBtn" class="btn btn-secondary">Restore</button>
@@ -96,10 +95,9 @@ function renderModalContent(movie, source) {
         </div>
 
         ${!isInTrash ? `
-        <div class="modal-section" id="moveToTrashRow">
-            <button class="btn btn-danger" style="width: 100%;" id="moveToTrashBtn">
-                <span class="material-symbols-outlined">delete_forever</span> Move to Trash
-            </button>
+        <div class="modal-section toggle-row" id="moveToTrashRow">
+            <span>Move to Trash:</span>
+            <span class="material-symbols-outlined">delete_forever</span>
         </div>
         ` : ''}
 
@@ -110,16 +108,17 @@ function renderModalContent(movie, source) {
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    // Botón mover a papelera (solo en modo principal)
-    const moveToTrashBtn = document.getElementById('moveToTrashBtn');
-    if (moveToTrashBtn && !isInTrash) {
-        moveToTrashBtn.onclick = async () => {
+    // Fila de mover a papelera (mismo estilo que toggles)
+    const moveToTrashRow = document.getElementById('moveToTrashRow');
+    if (moveToTrashRow && !isInTrash) {
+        moveToTrashRow.onclick = async () => {
             if (confirm('Move this movie to trash?')) {
                 await moveToTrash(movie.youtubeId);
                 closeModal();
                 if (currentOnUpdate) await currentOnUpdate();
             }
         };
+        // Añadir hover consistente (CSS ya lo maneja .toggle-row:hover)
     }
 
     const restoreBtn = document.getElementById('restoreBtn');
