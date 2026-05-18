@@ -263,12 +263,26 @@ async function loadAndDisplayAll() {
         if (activeFavoriteFilter) allMovies = allMovies.filter(movie => movie.favorite === true);
     }
 
+    // Generate title based on active filters
+    let title;
+    if (activeTrashFilter) {
+        title = `Trash (${allMovies.length})`;
+    } else if (activeWatchingFilter) {
+        title = `Watching (${allMovies.length})`;
+    } else if (activeFavoriteFilter) {
+        title = `Favorites (${allMovies.length})`;
+    } else if (activeTermFilter) {
+        title = `Movies: "${activeTermFilter}" (${allMovies.length})`;
+    } else {
+        title = `All Movies (${allMovies.length})`;
+    }
+
     const onSortChange = (newSort) => {
         currentSort = newSort;
         loadAndDisplayAll();
     };
 
-    renderMovies(resultsGrid, allMovies, activeTrashFilter ? `Trash (${allMovies.length})` : `Movies (${allMovies.length})`, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
+    renderMovies(resultsGrid, allMovies, title, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
 
     // Calculate terms from the currently displayed movies (whether main or trash)
     const filteredTerms = Array.from(new Set(allMovies.flatMap(m => m.searchTerms || []))).sort();
