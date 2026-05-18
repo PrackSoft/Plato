@@ -41,13 +41,6 @@ function closeModal() {
 
 function renderModalContent(movie, source) {
     const isInTrash = (source === 'trash');
-    const trashActionsHtml = isInTrash ? `
-        <div class="modal-trash-actions">
-            <button id="restoreBtn" class="btn btn-secondary">Restore</button>
-            <button id="permanentDeleteBtn" class="btn btn-danger">Delete Permanently</button>
-        </div>
-    ` : '';
-
     const watchingIconName = movie.watching ? 'visibility' : 'visibility_off';
     const favoriteIconName = movie.favorite ? 'star_shine' : 'star';
 
@@ -97,18 +90,25 @@ function renderModalContent(movie, source) {
         ${!isInTrash ? `
         <div class="modal-section toggle-row" id="moveToTrashRow">
             <span>Move to Trash:</span>
+            <span class="material-symbols-outlined">delete</span>
+        </div>
+        ` : `
+        <div class="modal-section toggle-row" id="restoreRow">
+            <span>Restore:</span>
+            <span class="material-symbols-outlined">restore_from_trash</span>
+        </div>
+        <div class="modal-section toggle-row" id="permanentDeleteRow">
+            <span>Delete Permanently:</span>
             <span class="material-symbols-outlined">delete_forever</span>
         </div>
-        ` : ''}
-
-        ${trashActionsHtml}
+        `}
     `;
 }
 
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    // Fila de mover a papelera (mismo estilo que toggles)
+    // Fila de mover a papelera (solo en modo principal)
     const moveToTrashRow = document.getElementById('moveToTrashRow');
     if (moveToTrashRow && !isInTrash) {
         moveToTrashRow.onclick = async () => {
@@ -118,21 +118,21 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                 if (currentOnUpdate) await currentOnUpdate();
             }
         };
-        // Añadir hover consistente (CSS ya lo maneja .toggle-row:hover)
     }
 
-    const restoreBtn = document.getElementById('restoreBtn');
-    if (restoreBtn && isInTrash) {
-        restoreBtn.onclick = async () => {
+    // Filas de papelera: Restore y Delete Permanently
+    const restoreRow = document.getElementById('restoreRow');
+    if (restoreRow && isInTrash) {
+        restoreRow.onclick = async () => {
             await restoreFromTrash(movie.youtubeId);
             closeModal();
             if (currentOnUpdate) await currentOnUpdate();
         };
     }
 
-    const permanentDeleteBtn = document.getElementById('permanentDeleteBtn');
-    if (permanentDeleteBtn && isInTrash) {
-        permanentDeleteBtn.onclick = async () => {
+    const permanentDeleteRow = document.getElementById('permanentDeleteRow');
+    if (permanentDeleteRow && isInTrash) {
+        permanentDeleteRow.onclick = async () => {
             if (confirm('Permanently delete this movie? This action cannot be undone.')) {
                 await permanentlyDelete(movie.youtubeId);
                 closeModal();

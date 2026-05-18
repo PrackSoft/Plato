@@ -177,12 +177,12 @@ body {
 .btn .material-symbols-outlined {
     font-size: 18px;
 }
-.btn-danger {
+/*.btn-danger {
     background: #990000;
 }
 .btn-danger:hover {
     background: #660000;
-}
+}*/
 .modal-watch-btn {
     width: 100%;
     margin-top: 15px;
@@ -450,11 +450,12 @@ body {
 .modal-input::placeholder {
     color: var(--text-secondary);
 }
-.modal-trash-actions {
+/*.modal-trash-actions {
     display: flex;
     gap: 10px;
     margin-top: 15px;
-}
+}*/
+
 .term-chip {
     background: var(--button-bg);
     padding: 4px var(--gap-sm);
