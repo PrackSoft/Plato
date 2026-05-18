@@ -41,7 +41,7 @@ function closeModal() {
 
 function renderModalContent(movie, source) {
     const isInTrash = (source === 'trash');
-    const deleteButtonHtml = isInTrash ? '' : `<span class="material-symbols-outlined modal-delete-btn" title="Move to trash">delete_forever</span>`;
+    // Ya no hay botón de papelera en la cabecera
     const trashActionsHtml = isInTrash ? `
         <div class="modal-trash-actions">
             <button id="restoreBtn" class="btn btn-secondary">Restore</button>
@@ -54,7 +54,7 @@ function renderModalContent(movie, source) {
 
     return `
         <div class="modal-header">
-            ${deleteButtonHtml}
+            <div class="modal-spacer"></div>
             <h2>${escapeHtml(movie.title)}</h2>
             <div class="modal-spacer"></div>
         </div>
@@ -95,6 +95,14 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined" id="modalFavoriteIcon">${favoriteIconName}</span>
         </div>
 
+        ${!isInTrash ? `
+        <div class="modal-section" id="moveToTrashRow">
+            <button class="btn btn-danger" style="width: 100%;" id="moveToTrashBtn">
+                <span class="material-symbols-outlined">delete_forever</span> Move to Trash
+            </button>
+        </div>
+        ` : ''}
+
         ${trashActionsHtml}
     `;
 }
@@ -102,9 +110,10 @@ function renderModalContent(movie, source) {
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    const deleteBtn = document.querySelector('.modal-delete-btn');
-    if (deleteBtn && !isInTrash) {
-        deleteBtn.onclick = async () => {
+    // Botón mover a papelera (solo en modo principal)
+    const moveToTrashBtn = document.getElementById('moveToTrashBtn');
+    if (moveToTrashBtn && !isInTrash) {
+        moveToTrashBtn.onclick = async () => {
             if (confirm('Move this movie to trash?')) {
                 await moveToTrash(movie.youtubeId);
                 closeModal();
