@@ -85,13 +85,11 @@ function renderModalContent(movie, source) {
             ` : ''}
         </div>
 
-        <!-- Watching toggle (ícono clickeable) -->
         <div class="modal-section toggle-row ${isInTrash ? 'disabled' : ''}" id="watchingToggleRow">
             <span>Watching:</span>
             <span class="material-symbols-outlined" id="modalWatchingIcon">${watchingIconName}</span>
         </div>
 
-        <!-- Favorite toggle (ícono clickeable) -->
         <div class="modal-section toggle-row ${isInTrash ? 'disabled' : ''}" id="favoriteToggleRow">
             <span>Favorite:</span>
             <span class="material-symbols-outlined" id="modalFavoriteIcon">${favoriteIconName}</span>
@@ -135,7 +133,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Watching toggle
     const watchingRow = document.getElementById('watchingToggleRow');
     if (watchingRow && !isInTrash) {
         const watchingIcon = document.getElementById('modalWatchingIcon');
@@ -147,7 +144,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Favorite toggle
     const favoriteRow = document.getElementById('favoriteToggleRow');
     if (favoriteRow && !isInTrash) {
         const favoriteIcon = document.getElementById('modalFavoriteIcon');
@@ -159,7 +155,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Remove term (x) inside chips
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {
@@ -176,7 +171,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                             <span class="remove-term" data-term="${escapeHtml(t)}">✖</span>
                         </span>
                     `).join(''));
-                    // Re-attach events for new remove-term spans
                     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
                 }
                 if (currentOnUpdate) await currentOnUpdate();
@@ -184,7 +178,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         });
     }
 
-    // Add term: icon click
     if (!isInTrash) {
         const addBtn = document.getElementById('addTermBtn');
         const newTermInput = document.getElementById('newTermInput');
@@ -209,7 +202,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
                     if (currentOnUpdate) await currentOnUpdate();
                 }
             };
-            // Optional: press Enter in input triggers add
             newTermInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') addBtn.click();
             });

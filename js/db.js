@@ -95,7 +95,7 @@ export async function getAllMovies() {
     });
 }
 
-export async function getTrashMovies() {   // sin parámetros
+export async function getTrashMovies() {
     const db = await openDB();
     const transaction = db.transaction([STORE_TRASH], 'readonly');
     const store = transaction.objectStore(STORE_TRASH);
@@ -204,31 +204,12 @@ export async function toggleWatching(youtubeId) {
 export async function renameTermInAllMovies(oldTerm, newTerm) {
     if (oldTerm === newTerm) return;
     const db = await openDB();
-    const allMovies = await getAllMovies(); // read-only transaction
+    const allMovies = await getAllMovies();
     const transaction = db.transaction([STORE_MOVIES], 'readwrite');
     const store = transaction.objectStore(STORE_MOVIES);
     for (const movie of allMovies) {
         if (movie.searchTerms && movie.searchTerms.includes(oldTerm)) {
             const newTerms = movie.searchTerms.map(t => t === oldTerm ? newTerm : t);
-            movie.searchTerms = newTerms;
-            movie.lastUpdated = new Date().toISOString();
-            await new Promise((resolve, reject) => {
-                const req = store.put(movie);
-                req.onsuccess = () => resolve();
-                req.onerror = () => reject(req.error);
-            });
-        }
-    }
-}
-
-async function removeTermFromAllMovies(term) {
-    const db = await openDB();
-    const allMovies = await getAllMovies();
-    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
-    const store = transaction.objectStore(STORE_MOVIES);
-    for (const movie of allMovies) {
-        if (movie.searchTerms && movie.searchTerms.includes(term)) {
-            const newTerms = movie.searchTerms.filter(t => t !== term);
             movie.searchTerms = newTerms;
             movie.lastUpdated = new Date().toISOString();
             await new Promise((resolve, reject) => {

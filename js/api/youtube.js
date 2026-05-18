@@ -1,21 +1,13 @@
 // js/api/youtube.js
-// YouTube API interactions
+import { API_KEY } from '../config.js';
 
-//const API_KEY = 'AIzaSyARahMLz_4ASjG9wiCpaAL_tGblm67Qwj4';  // Replace with your key or move to config
-// js/api/youtube.js
-import { API_KEY } from '../config.js'; // We'll create config.js later
-
-const TARGET_CHANNEL_ID = 'UCuVPpxrm2VAgpH3Ktln4HXg';       // Default channel, will be dynamic later
 const MAX_RESULTS_PER_PAGE = 50;
 
-// Perform search and return enriched items (without saving)
 export async function searchYouTube(query, channelId = null) {
     if (!query || query.trim() === "") {
         throw new Error("Search query cannot be empty");
     }
-    // Build base search URL
     let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=${MAX_RESULTS_PER_PAGE}&q=${encodeURIComponent(query)}&key=${API_KEY}`;
-    // Add channelId only if provided (non-null)
     if (channelId) {
         url += `&channelId=${channelId}`;
     }
