@@ -492,6 +492,7 @@ body {
 .term-delete:hover, .term-edit:hover {
     color: var(--text-primary);
 }
+
 .terms-placeholder {
     color: var(--text-secondary);
     font-size: var(--font-size-small);

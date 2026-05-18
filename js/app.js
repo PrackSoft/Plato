@@ -144,7 +144,7 @@ function renderTermsBar(termsArray = null) {
     const html = terms.map(term => `
         <button class="btn btn-secondary btn-sm ${activeTermFilter === term ? 'active' : ''}" data-term="${escapeHtml(term)}">
             ${escapeHtml(term)}
-            <span class="term-edit" data-term="${escapeHtml(term)}" title="Edit term globally">✏️</span>
+            <span class="term-edit material-symbols-outlined" data-term="${escapeHtml(term)}" title="Edit term globally">edit</span>
             <span class="term-delete" data-term="${escapeHtml(term)}" title="Delete term from all movies">✖</span>
         </button>
     `).join('');
@@ -161,7 +161,7 @@ function renderTermsBar(termsArray = null) {
         });
     });
 
-    // Edit icon
+    // Edit icon (ahora es un span con clase material-symbols-outlined)
     document.querySelectorAll('.term-edit').forEach(editSpan => {
         editSpan.addEventListener('click', async (e) => {
             e.stopPropagation();
