@@ -455,6 +455,10 @@ body {
     gap: 10px;
     margin-top: 15px;
 }*/
+/* Separación entre las filas de acciones de la papelera */
+.trash-actions .toggle-row:first-child {
+    margin-bottom: 16px;
+}
 
 .term-chip {
     background: var(--button-bg);

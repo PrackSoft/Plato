@@ -93,7 +93,7 @@ function renderModalContent(movie, source) {
             <span class="material-symbols-outlined">delete</span>
         </div>
         ` : `
-        <div class="modal-section">
+        <div class="modal-section trash-actions">
             <div class="toggle-row" id="restoreRow">
                 <span>Restore:</span>
                 <span class="material-symbols-outlined">restore_from_trash</span>
