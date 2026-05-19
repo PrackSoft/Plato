@@ -175,37 +175,39 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Extra info button
+    // Extra info button - ahora muestra todos los campos solicitados
     const toggleExtraInfoBtn = document.getElementById('toggleExtraInfoBtn');
     const extraInfoPanel = document.getElementById('extraInfoPanel');
     if (toggleExtraInfoBtn && extraInfoPanel) {
         toggleExtraInfoBtn.onclick = async () => {
             if (extraInfoPanel.classList.contains('hidden')) {
-                // Load extra info from DB
+                // Obtener datos extra de la DB
                 const extra = await getExtraInfo(movie.youtubeId);
-                if (extra) {
-                    const fields = [
-                        { label: 'categoryId', value: extra.categoryId },
-                        { label: 'defaultLanguage', value: extra.defaultLanguage },
-                        { label: 'defaultAudioLanguage', value: extra.defaultAudioLanguage },
-                        { label: 'dimension', value: extra.dimension },
-                        { label: 'definition', value: extra.definition },
-                        { label: 'caption', value: extra.caption },
-                        { label: 'licensedContent', value: extra.licensedContent },
-                        { label: 'projection', value: extra.projection },
-                        { label: 'publicStatsViewable', value: extra.publicStatsViewable },
-                        { label: 'madeForKids', value: extra.madeForKids },
-                        { label: 'selfDeclaredMadeForKids', value: extra.selfDeclaredMadeForKids }
-                    ];
-                    extraInfoPanel.innerHTML = fields.map(f => `
-                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light);">
-                            <strong>${escapeHtml(f.label)}</strong>
-                            <span>${escapeHtml(String(f.value))}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    extraInfoPanel.innerHTML = '<div class="stats" style="padding: 8px;">No extra info available</div>';
-                }
+                // Construir lista de campos con valores desde movie y extra
+                const fields = [
+                    { label: 'channelId', value: movie.channelId || 'N/A' },
+                    { label: 'channelTitle', value: movie.channelTitle || 'N/A' },
+                    { label: 'tags', value: (movie.tags && movie.tags.length) ? movie.tags.join(', ') : 'N/A' },
+                    { label: 'viewCount', value: movie.viewCount || 'N/A' },
+                    { label: 'duration', value: movie.duration || 'N/A' },
+                    { label: 'categoryId', value: extra?.categoryId || 'N/A' },
+                    { label: 'defaultLanguage', value: extra?.defaultLanguage || 'N/A' },
+                    { label: 'defaultAudioLanguage', value: extra?.defaultAudioLanguage || 'N/A' },
+                    { label: 'dimension', value: extra?.dimension || 'N/A' },
+                    { label: 'definition', value: extra?.definition || 'N/A' },
+                    { label: 'caption', value: extra?.caption || 'N/A' },
+                    { label: 'licensedContent', value: extra?.licensedContent !== undefined ? extra.licensedContent : 'N/A' },
+                    { label: 'projection', value: extra?.projection || 'N/A' },
+                    { label: 'publicStatsViewable', value: extra?.publicStatsViewable !== undefined ? extra.publicStatsViewable : 'N/A' },
+                    { label: 'madeForKids', value: extra?.madeForKids !== undefined ? extra.madeForKids : 'N/A' },
+                    { label: 'selfDeclaredMadeForKids', value: extra?.selfDeclaredMadeForKids !== undefined ? extra.selfDeclaredMadeForKids : 'N/A' }
+                ];
+                extraInfoPanel.innerHTML = fields.map(f => `
+                    <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light);">
+                        <strong>${escapeHtml(f.label)}</strong>
+                        <span>${escapeHtml(String(f.value))}</span>
+                    </div>
+                `).join('');
                 extraInfoPanel.classList.remove('hidden');
                 toggleExtraInfoBtn.innerHTML = '<span class="material-symbols-outlined">info</span> Hide Extra Info';
             } else {
