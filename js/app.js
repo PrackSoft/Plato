@@ -1,5 +1,5 @@
-// js/app.js - Plato App (unified term management: edit and delete directly on terms bar)
-import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies } from './db.js';
+// js/app.js - Plato App (unified term management)
+import { openDB, getAllMovies, getTrashMovies, saveMovie, toggleWatching, moveMovieToTrash, restoreMovieFromTrash, permanentlyDeleteMovie, renameTermInAllMovies, saveExtraInfo } from './db.js';
 import { searchYouTube } from './api/youtube.js';
 import { renderMovies } from './render.js';
 import { SEARCH_OPTIONS } from './channels.js';
@@ -86,7 +86,7 @@ function buildSearchInPanel() {
     updateSearchInButtonText();
 }
 
-// ---------------------- Sidebar functions (only general settings now) ----------------------
+// ---------------------- Sidebar functions ----------------------
 function openSettingsSidebar() {
     settingsSidebar.classList.remove('hidden');
     sidebarOverlay.classList.remove('hidden');
@@ -99,7 +99,7 @@ settingsBtn.addEventListener('click', openSettingsSidebar);
 closeSidebarBtn.addEventListener('click', closeSettingsSidebar);
 sidebarOverlay.addEventListener('click', closeSettingsSidebar);
 
-// ---------------------- Terms Bar with Edit and Delete ----------------------
+// ---------------------- Terms Bar ----------------------
 async function refreshAvailableTerms() {
     const allMovies = await getAllMovies();
     const termsSet = new Set();
@@ -150,7 +150,6 @@ function renderTermsBar(termsArray = null) {
     `).join('');
     termsBar.innerHTML = html;
 
-    // Filter on term click (main button area)
     document.querySelectorAll('#termsBar .btn').forEach(btn => {
         const term = btn.dataset.term;
         btn.addEventListener('click', (e) => {
@@ -161,7 +160,6 @@ function renderTermsBar(termsArray = null) {
         });
     });
 
-    // Edit icon
     document.querySelectorAll('.term-edit').forEach(editSpan => {
         editSpan.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -173,7 +171,6 @@ function renderTermsBar(termsArray = null) {
         });
     });
 
-    // Delete icon
     document.querySelectorAll('.term-delete').forEach(deleteSpan => {
         deleteSpan.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -200,7 +197,7 @@ if (toggleTermsBtn && termsBar) {
     });
 }
 
-// ---------------------- Filter buttons logic ----------------------
+// ---------------------- Filter buttons ----------------------
 function updateFilterButtonsUI() {
     if (activeWatchingFilter) filterWatchingBtn.classList.add('active');
     else filterWatchingBtn.classList.remove('active');
@@ -247,7 +244,7 @@ if (filterWatchingBtn) filterWatchingBtn.addEventListener('click', toggleWatchin
 if (filterFavoriteBtn) filterFavoriteBtn.addEventListener('click', toggleFavoriteFilter);
 if (filterTrashBtn) filterTrashBtn.addEventListener('click', toggleTrashFilter);
 
-// ---------------------- Load and display movies ----------------------
+// ---------------------- Load and display ----------------------
 async function loadAndDisplayAll() {
     await dbReady;
     let allMovies;
@@ -263,7 +260,6 @@ async function loadAndDisplayAll() {
         if (activeFavoriteFilter) allMovies = allMovies.filter(movie => movie.favorite === true);
     }
 
-    // Generate title based on active filters
     let title;
     if (activeTrashFilter) {
         title = `Trash (${allMovies.length})`;
@@ -284,12 +280,11 @@ async function loadAndDisplayAll() {
 
     renderMovies(resultsGrid, allMovies, title, activeTrashFilter ? 'trash' : 'main', currentSort, onSortChange);
 
-    // Calculate terms from the currently displayed movies (whether main or trash)
     const filteredTerms = Array.from(new Set(allMovies.flatMap(m => m.searchTerms || []))).sort();
     renderTermsBar(filteredTerms);
 }
 
-// ---------------------- Modal-related functions ----------------------
+// ---------------------- Modal helpers ----------------------
 async function updateMovieTerms(youtubeId, newTerms) {
     const db = await openDB();
     const transaction = db.transaction(['movies'], 'readwrite');
@@ -375,6 +370,19 @@ searchBtn.onclick = async () => {
             }
             for (const movie of moviesFromAPI) {
                 await saveMovie(movie, query);
+                await saveExtraInfo(movie.youtubeId, {
+                    categoryId: movie.categoryId,
+                    defaultLanguage: movie.defaultLanguage,
+                    defaultAudioLanguage: movie.defaultAudioLanguage,
+                    dimension: movie.dimension,
+                    definition: movie.definition,
+                    caption: movie.caption,
+                    licensedContent: movie.licensedContent,
+                    projection: movie.projection,
+                    publicStatsViewable: movie.publicStatsViewable,
+                    madeForKids: movie.madeForKids,
+                    selfDeclaredMadeForKids: movie.selfDeclaredMadeForKids
+                });
             }
             await refreshAvailableTerms();
             await loadAndDisplayAll();
@@ -411,7 +419,6 @@ async function init() {
     await dbReady;
     buildSearchInPanel();
 
-    // Agregar estos dos event listeners AQUÍ, DENTRO de init()
     searchInBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         searchInPanel.classList.toggle('hidden');

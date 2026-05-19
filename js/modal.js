@@ -1,8 +1,11 @@
 // js/modal.js
+import { getExtraInfo } from './db.js';
+
 let currentMovie = null;
 let currentOnUpdate = null;
 let currentMovieSource = null;
 let currentTrashFunctions = null;
+let extraInfoVisible = false;
 
 export function initModal(onUpdateCallback) {
     currentOnUpdate = onUpdateCallback;
@@ -27,6 +30,7 @@ export async function openModal(movie, { updateMovieTerms, toggleWatching, toggl
 
     modalBody.innerHTML = renderModalContent(movie, source);
     modal.style.display = 'flex';
+    extraInfoVisible = false;
 
     attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source);
 }
@@ -37,6 +41,7 @@ function closeModal() {
     currentMovie = null;
     currentMovieSource = null;
     currentTrashFunctions = null;
+    extraInfoVisible = false;
 }
 
 function renderModalContent(movie, source) {
@@ -104,13 +109,19 @@ function renderModalContent(movie, source) {
             </div>
         </div>
         `}
+
+        <div class="modal-section">
+            <button id="toggleExtraInfoBtn" class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 0;">
+                <span class="material-symbols-outlined">info</span> Extra Info
+            </button>
+            <div id="extraInfoPanel" class="extra-info-panel hidden" style="margin-top: 12px;"></div>
+        </div>
     `;
 }
 
 async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, toggleFavorite, moveToTrash, restoreFromTrash, permanentlyDelete }, source) {
     const isInTrash = (source === 'trash');
 
-    // Fila de mover a papelera (solo en modo principal)
     const moveToTrashRow = document.getElementById('moveToTrashRow');
     if (moveToTrashRow && !isInTrash) {
         moveToTrashRow.onclick = async () => {
@@ -122,7 +133,6 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
-    // Filas de papelera: Restore y Delete Permanently
     const restoreRow = document.getElementById('restoreRow');
     if (restoreRow && isInTrash) {
         restoreRow.onclick = async () => {
@@ -165,6 +175,47 @@ async function attachModalEvents(movie, { updateMovieTerms, toggleWatching, togg
         };
     }
 
+    // Extra info button
+    const toggleExtraInfoBtn = document.getElementById('toggleExtraInfoBtn');
+    const extraInfoPanel = document.getElementById('extraInfoPanel');
+    if (toggleExtraInfoBtn && extraInfoPanel) {
+        toggleExtraInfoBtn.onclick = async () => {
+            if (extraInfoPanel.classList.contains('hidden')) {
+                // Load extra info from DB
+                const extra = await getExtraInfo(movie.youtubeId);
+                if (extra) {
+                    const fields = [
+                        { label: 'categoryId', value: extra.categoryId },
+                        { label: 'defaultLanguage', value: extra.defaultLanguage },
+                        { label: 'defaultAudioLanguage', value: extra.defaultAudioLanguage },
+                        { label: 'dimension', value: extra.dimension },
+                        { label: 'definition', value: extra.definition },
+                        { label: 'caption', value: extra.caption },
+                        { label: 'licensedContent', value: extra.licensedContent },
+                        { label: 'projection', value: extra.projection },
+                        { label: 'publicStatsViewable', value: extra.publicStatsViewable },
+                        { label: 'madeForKids', value: extra.madeForKids },
+                        { label: 'selfDeclaredMadeForKids', value: extra.selfDeclaredMadeForKids }
+                    ];
+                    extraInfoPanel.innerHTML = fields.map(f => `
+                        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid var(--border-light);">
+                            <strong>${escapeHtml(f.label)}</strong>
+                            <span>${escapeHtml(String(f.value))}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    extraInfoPanel.innerHTML = '<div class="stats" style="padding: 8px;">No extra info available</div>';
+                }
+                extraInfoPanel.classList.remove('hidden');
+                toggleExtraInfoBtn.innerHTML = '<span class="material-symbols-outlined">info</span> Hide Extra Info';
+            } else {
+                extraInfoPanel.classList.add('hidden');
+                toggleExtraInfoBtn.innerHTML = '<span class="material-symbols-outlined">info</span> Extra Info';
+            }
+        };
+    }
+
+    // Term editing (unchanged)
     if (!isInTrash) {
         document.querySelectorAll('.remove-term').forEach(el => {
             el.onclick = async (e) => {

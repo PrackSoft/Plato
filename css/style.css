@@ -329,6 +329,26 @@ body {
     overflow: hidden;
     line-height: 1.4;
 }
+/* Extra info panel */
+.extra-info-panel {
+    background: var(--bg-panel);
+    border-radius: var(--border-radius-sm);
+    padding: 8px;
+    font-size: var(--font-size-small);
+    margin-top: 8px;
+}
+.extra-info-panel.hidden {
+    display: none;
+}
+.extra-info-panel div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+.extra-info-panel div:last-child {
+    border-bottom: none;
+}
 .channel {
     font-size: var(--font-size-small);
     color: var(--text-secondary);

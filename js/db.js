@@ -1,8 +1,9 @@
 // js/db.js
 const DB_NAME = 'PlatoDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3; // ← incrementado para nuevo store
 const STORE_MOVIES = 'movies';
 const STORE_TRASH = 'trash';
+const STORE_EXTRA = 'movie_extra';
 
 let dbInstance = null;
 
@@ -29,48 +30,10 @@ export async function openDB() {
                 trashStore.createIndex('by_deletedAt', 'deletedAt', { unique: false });
                 trashStore.createIndex('by_channelId', 'channelId', { unique: false });
             }
-        };
-    });
-}
-
-export async function saveMovie(movieData, searchTerm) {
-    const db = await openDB();
-    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
-    const store = transaction.objectStore(STORE_MOVIES);
-    return new Promise((resolve, reject) => {
-        const getRequest = store.get(movieData.youtubeId);
-        getRequest.onsuccess = () => {
-            const existing = getRequest.result;
-            if (existing) {
-                const termsSet = new Set(existing.searchTerms || []);
-                if (searchTerm) termsSet.add(searchTerm);
-                const updated = {
-                    ...existing,
-                    searchTerms: Array.from(termsSet),
-                    viewCount: movieData.viewCount ?? existing.viewCount,
-                    likeCount: movieData.likeCount ?? existing.likeCount,
-                    commentCount: movieData.commentCount ?? existing.commentCount,
-                    duration: movieData.duration ?? existing.duration,
-                    lastUpdated: new Date().toISOString()
-                };
-                const putRequest = store.put(updated);
-                putRequest.onsuccess = () => resolve(updated);
-                putRequest.onerror = () => reject(putRequest.error);
-            } else {
-                const newMovie = {
-                    ...movieData,
-                    searchTerms: searchTerm ? [searchTerm] : [],
-                    watching: false,
-                    favorite: false,
-                    dateSaved: new Date().toISOString(),
-                    lastUpdated: new Date().toISOString()
-                };
-                const addRequest = store.add(newMovie);
-                addRequest.onsuccess = () => resolve(newMovie);
-                addRequest.onerror = () => reject(addRequest.error);
+            if (!db.objectStoreNames.contains(STORE_EXTRA)) {
+                db.createObjectStore(STORE_EXTRA, { keyPath: 'youtubeId' });
             }
         };
-        getRequest.onerror = () => reject(getRequest.error);
     });
 }
 
@@ -113,6 +76,47 @@ export async function getTrashMovies() {
             }
         };
         request.onerror = () => reject(request.error);
+    });
+}
+
+export async function saveMovie(movieData, searchTerm) {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_MOVIES], 'readwrite');
+    const store = transaction.objectStore(STORE_MOVIES);
+    return new Promise((resolve, reject) => {
+        const getRequest = store.get(movieData.youtubeId);
+        getRequest.onsuccess = () => {
+            const existing = getRequest.result;
+            if (existing) {
+                const termsSet = new Set(existing.searchTerms || []);
+                if (searchTerm) termsSet.add(searchTerm);
+                const updated = {
+                    ...existing,
+                    searchTerms: Array.from(termsSet),
+                    viewCount: movieData.viewCount ?? existing.viewCount,
+                    likeCount: movieData.likeCount ?? existing.likeCount,
+                    commentCount: movieData.commentCount ?? existing.commentCount,
+                    duration: movieData.duration ?? existing.duration,
+                    lastUpdated: new Date().toISOString()
+                };
+                const putRequest = store.put(updated);
+                putRequest.onsuccess = () => resolve(updated);
+                putRequest.onerror = () => reject(putRequest.error);
+            } else {
+                const newMovie = {
+                    ...movieData,
+                    searchTerms: searchTerm ? [searchTerm] : [],
+                    watching: false,
+                    favorite: false,
+                    dateSaved: new Date().toISOString(),
+                    lastUpdated: new Date().toISOString()
+                };
+                const addRequest = store.add(newMovie);
+                addRequest.onsuccess = () => resolve(newMovie);
+                addRequest.onerror = () => reject(addRequest.error);
+            }
+        };
+        getRequest.onerror = () => reject(getRequest.error);
     });
 }
 
@@ -219,4 +223,28 @@ export async function renameTermInAllMovies(oldTerm, newTerm) {
             });
         }
     }
+}
+
+// ========== NUEVAS FUNCIONES PARA EXTRA INFO ==========
+export async function saveExtraInfo(youtubeId, extraData) {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_EXTRA], 'readwrite');
+    const store = transaction.objectStore(STORE_EXTRA);
+    const record = { youtubeId, ...extraData };
+    return new Promise((resolve, reject) => {
+        const req = store.put(record);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
+
+export async function getExtraInfo(youtubeId) {
+    const db = await openDB();
+    const transaction = db.transaction([STORE_EXTRA], 'readonly');
+    const store = transaction.objectStore(STORE_EXTRA);
+    return new Promise((resolve, reject) => {
+        const req = store.get(youtubeId);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+    });
 }

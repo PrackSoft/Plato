@@ -16,7 +16,7 @@ export async function searchYouTube(query, channelId = null) {
     if (!searchData.items || searchData.items.length === 0) return [];
 
     const videoIds = searchData.items.map(item => item.id.videoId).filter(id => id);
-    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
+    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails,status&id=${videoIds.join(',')}&key=${API_KEY}`;
     const videosResponse = await fetch(videosUrl);
     const videosData = await videosResponse.json();
 
@@ -34,7 +34,19 @@ export async function searchYouTube(query, channelId = null) {
                 channelTitle: video.snippet.channelTitle,
                 title: video.snippet.title,
                 publishedAt: video.snippet.publishedAt,
-                thumbnails: video.snippet.thumbnails
+                thumbnails: video.snippet.thumbnails,
+                // Extra fields
+                categoryId: video.snippet.categoryId || 'N/A',
+                defaultLanguage: video.snippet.defaultLanguage || 'N/A',
+                defaultAudioLanguage: video.snippet.defaultAudioLanguage || 'N/A',
+                dimension: video.contentDetails.dimension || 'N/A',
+                definition: video.contentDetails.definition || 'N/A',
+                caption: video.contentDetails.caption || 'N/A',
+                licensedContent: video.contentDetails.licensedContent !== undefined ? video.contentDetails.licensedContent : 'N/A',
+                projection: video.contentDetails.projection || 'N/A',
+                publicStatsViewable: video.status.publicStatsViewable !== undefined ? video.status.publicStatsViewable : 'N/A',
+                madeForKids: video.status.madeForKids !== undefined ? video.status.madeForKids : 'N/A',
+                selfDeclaredMadeForKids: video.status.selfDeclaredMadeForKids !== undefined ? video.status.selfDeclaredMadeForKids : 'N/A'
             });
         });
     }
@@ -55,7 +67,19 @@ export async function searchYouTube(query, channelId = null) {
             viewCount: extra.viewCount,
             likeCount: extra.likeCount,
             commentCount: extra.commentCount,
-            tags: extra.tags
+            tags: extra.tags,
+            // Extra fields
+            categoryId: extra.categoryId,
+            defaultLanguage: extra.defaultLanguage,
+            defaultAudioLanguage: extra.defaultAudioLanguage,
+            dimension: extra.dimension,
+            definition: extra.definition,
+            caption: extra.caption,
+            licensedContent: extra.licensedContent,
+            projection: extra.projection,
+            publicStatsViewable: extra.publicStatsViewable,
+            madeForKids: extra.madeForKids,
+            selfDeclaredMadeForKids: extra.selfDeclaredMadeForKids
         };
     });
     return enrichedItems;
